@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  locale       String   @default("ru")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  facebookConnection FacebookConnection?
+  telegramConnection TelegramConnection?
+  facebookPages      FacebookPage[]
+  leads              Lead[]
+  deliveryLogs       DeliveryLog[]
+  webhookEvents      WebhookEvent[]
+  auditLogs          AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+  integrationSettings IntegrationSettings?
+
+  @@map("users")
+}
+
+model IntegrationSettings {
+  id                              String   @id @default(cuid())
+  userId                          String   @unique
+  metaAppId                       String?
+  metaAppSecretEncrypted          String?  @db.Text
+  metaWebhookVerifyTokenEncrypted String?  @db.Text
+  metaWebhookVerifyTokenHash      String?  @unique
+  configured                      Boolean  @default(false)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("integration_settings")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model FacebookConnection {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  accessTokenEncrypted  String   @db.Text
+  tokenExpiresAt        DateTime?
+  facebookUserId        String?
+  status                String   @default("connected")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("facebook_connections")
+}
+
+model FacebookPage {
+  id                        String   @id @default(cuid())
+  userId                    String
+  pageId                    String
+  pageName                  String
+  pageAccessTokenEncrypted  String   @db.Text
+  tokenExpiresAt            DateTime?
+  connected                 Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forms FacebookForm[]
+
+  @@unique([userId, pageId])
+  @@index([pageId])
+  @@map("facebook_pages")
+}
+
+model FacebookForm {
+  id        String   @id @default(cuid())
+  pageId    String
+  formId    String
+  formName  String
+  enabled   Boolean  @default(false)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page  FacebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  leads Lead[]
+
+  @@unique([pageId, formId])
+  @@map("facebook_forms")
+}
+
+model TelegramConnection {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  botTokenEncrypted     String   @db.Text
+  chatId                String
+  notificationLocale    String   @default("ru")
+  verified              Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("telegram_connections")
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  userId      String
+  formId      String?
+  leadgenId   String
+  name        String?
+  phone       String?
+  email       String?
+  fieldData   Json     @default("{}")
+  rawData     Json     @default("{}")
+  status      String   @default("new")
+  createdTime DateTime
+  importedAt  DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  form         FacebookForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  deliveryLogs DeliveryLog[]
+
+  @@unique([userId, leadgenId])
+  @@index([userId, createdTime])
+  @@index([userId, status])
+  @@map("leads")
+}
+
+model DeliveryLog {
+  id           String   @id @default(cuid())
+  leadId       String?
+  userId       String
+  type         String
+  status       String   @default("pending")
+  retryCount   Int      @default(0)
+  retryHistory Json     @default("[]")
+  errorMessage String?
+  message      String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("delivery_logs")
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  userId      String?
+  eventType   String
+  payload     Json
+  status      String    @default("pending")
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("webhook_events")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String?
+  metadata  Json     @default("{}")
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}

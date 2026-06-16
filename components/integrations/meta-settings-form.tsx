@@ -1,0 +1,276 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { FieldLabel } from "@/components/ui/field-label";
+import { Copy, Shield, CheckCircle2, AlertTriangle, Sparkles, Link2 } from "lucide-react";
+
+type IntegrationSettings = {
+  metaAppId: string;
+  hasMetaAppSecret: boolean;
+  hasWebhookToken: boolean;
+  configured: boolean;
+  redirectUri: string;
+  webhookUrl: string;
+};
+
+function CopyBox({
+  label,
+  value,
+  tooltip,
+  onCopy,
+  copyLabel,
+}: {
+  label: string;
+  value: string;
+  tooltip: string;
+  onCopy: () => void;
+  copyLabel: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-muted/40 p-4 space-y-2">
+      <FieldLabel label={label} tooltip={tooltip} />
+      <div className="flex gap-2">
+        <code className="flex-1 rounded-lg border bg-background px-3 py-2.5 text-xs break-all font-mono">
+          {value}
+        </code>
+        <Button variant="outline" size="sm" onClick={onCopy} className="shrink-0 h-auto py-2.5">
+          <Copy className="h-3.5 w-3.5 mr-1.5" />
+          {copyLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function MetaSettingsForm({
+  compact = false,
+  onSaved,
+}: {
+  compact?: boolean;
+  onSaved?: () => void;
+}) {
+  const t = useTranslations("integrations");
+  const tCommon = useTranslations("common");
+  const [settings, setSettings] = useState<IntegrationSettings | null>(null);
+  const [metaAppId, setMetaAppId] = useState("");
+  const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [webhookToken, setWebhookToken] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/integrations")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.data?.settings) {
+          setSettings(res.data.settings);
+          setMetaAppId(res.data.settings.metaAppId ?? "");
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metaAppId,
+          ...(metaAppSecret && { metaAppSecret }),
+          ...(webhookToken && { metaWebhookVerifyToken: webhookToken }),
+        }),
+      });
+      const data = await res.json();
+      if (data.data?.settings) {
+        setSettings(data.data.settings);
+        setMetaAppSecret("");
+        setWebhookToken("");
+        toast.success(t("saved"));
+        onSaved?.();
+      } else {
+        toast.error(data.error?.message ?? tCommon("error"));
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    if (!metaAppSecret && !settings?.hasMetaAppSecret) {
+      toast.error(t("secretRequired"));
+      return;
+    }
+    setTesting(true);
+    try {
+      const res = await fetch("/api/settings/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metaAppId, metaAppSecret: metaAppSecret || "use-stored" }),
+      });
+      const data = await res.json();
+      if (data.data?.valid) {
+        toast.success(t("testSuccess", { name: data.data.appName ?? "" }));
+      } else {
+        toast.error(data.error?.message ?? t("testFailed"));
+      }
+    } catch {
+      toast.error(t("testFailed"));
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function copyText(text: string) {
+    await navigator.clipboard.writeText(text);
+    toast.success(t("copied"));
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+        {tCommon("loading")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {!compact && (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-[#1877F2]/10 to-transparent border border-[#1877F2]/20 p-4">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-[#1877F2]" />
+            <p className="text-sm text-muted-foreground">{t("securityNote")}</p>
+          </div>
+          <Badge variant={settings?.configured ? "success" : "warning"}>
+            {settings?.configured ? (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> {t("configured")}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> {t("notConfigured")}
+              </span>
+            )}
+          </Badge>
+        </div>
+      )}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <FieldLabel
+            htmlFor="metaAppId"
+            label={t("metaAppId")}
+            tooltip={t("tooltipMetaAppId")}
+            required
+          />
+          <Input
+            id="metaAppId"
+            value={metaAppId}
+            onChange={(e) => setMetaAppId(e.target.value)}
+            placeholder="1543348640634245"
+            className="font-mono text-sm h-11"
+          />
+          <p className="text-xs text-muted-foreground">{t("metaAppIdHint")}</p>
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel
+            htmlFor="metaAppSecret"
+            label={t("metaAppSecret")}
+            tooltip={t("tooltipMetaAppSecret")}
+            required={!settings?.hasMetaAppSecret}
+          />
+          <Input
+            id="metaAppSecret"
+            type="password"
+            value={metaAppSecret}
+            onChange={(e) => setMetaAppSecret(e.target.value)}
+            placeholder={settings?.hasMetaAppSecret ? t("secretPlaceholder") : "••••••••••••••••"}
+            className="h-11"
+          />
+          {settings?.hasMetaAppSecret && !metaAppSecret && (
+            <p className="text-xs text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" /> {t("secretStored")}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel
+            htmlFor="webhookToken"
+            label={t("webhookToken")}
+            tooltip={t("tooltipWebhookToken")}
+          />
+          <Input
+            id="webhookToken"
+            type="password"
+            value={webhookToken}
+            onChange={(e) => setWebhookToken(e.target.value)}
+            placeholder={settings?.hasWebhookToken ? t("secretPlaceholder") : "my_secret_token_2026"}
+            className="h-11"
+          />
+          {settings?.hasWebhookToken && !webhookToken && (
+            <p className="text-xs text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" /> {t("webhookStored")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {settings && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CopyBox
+            label={t("redirectUri")}
+            value={settings.redirectUri}
+            tooltip={t("tooltipRedirectUri")}
+            onCopy={() => copyText(settings.redirectUri)}
+            copyLabel={t("copyShort")}
+          />
+          <CopyBox
+            label={t("webhookUrl")}
+            value={settings.webhookUrl}
+            tooltip={t("tooltipWebhookUrl")}
+            onCopy={() => copyText(settings.webhookUrl)}
+            copyLabel={t("copyShort")}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-3 pt-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving || !metaAppId}
+          className="bg-[#1877F2] hover:bg-[#166FE5] text-white"
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          {saving ? tCommon("loading") : tCommon("save")}
+        </Button>
+        <Button variant="outline" onClick={handleTest} disabled={testing || !metaAppId}>
+          <Link2 className="h-4 w-4 mr-2" />
+          {testing ? tCommon("loading") : t("testConnection")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function IntegrationsSettingsCard({ onSaved }: { onSaved?: () => void }) {
+  const t = useTranslations("integrations");
+
+  return (
+    <div className="space-y-6">
+      <MetaSettingsForm onSaved={onSaved} />
+    </div>
+  );
+}
