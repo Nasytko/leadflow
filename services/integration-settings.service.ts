@@ -1,6 +1,7 @@
 import { decrypt, encrypt, hashToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { getRedirectUri, getWebhookUrl } from "@/lib/env";
+import { resetFacebookConnection } from "@/services/facebook.service";
 
 export type MetaCredentials = {
   appId: string;
@@ -102,6 +103,15 @@ export async function saveIntegrationSettings(
     const token = data.metaWebhookVerifyToken.trim();
     updateData.metaWebhookVerifyTokenEncrypted = encrypt(token);
     updateData.metaWebhookVerifyTokenHash = hashToken(token);
+  }
+
+  const appIdChanged =
+    !!existing?.metaAppId &&
+    existing.metaAppId !== data.metaAppId.trim();
+  const secretChanged = !!data.metaAppSecret?.trim();
+
+  if (appIdChanged || secretChanged) {
+    await resetFacebookConnection(userId);
   }
 
   return prisma.integrationSettings.upsert({

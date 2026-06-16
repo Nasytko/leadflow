@@ -6,8 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldLabel } from "@/components/ui/field-label";
-import { Copy, Shield, CheckCircle2, AlertTriangle, Sparkles, Link2 } from "lucide-react";
+import { Copy, Shield, CheckCircle2, AlertTriangle, Sparkles, Link2, Facebook, Send } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import {
+  facebookStatusBadgeVariant,
+  telegramStatusBadgeVariant,
+} from "@/lib/connection-status";
 
 type IntegrationSettings = {
   metaAppId: string;
@@ -47,6 +53,45 @@ function CopyBox({
   );
 }
 
+function IntegrationStatusRow({
+  label,
+  status,
+  lastError,
+  href,
+  icon: Icon,
+}: {
+  label: string;
+  status: string;
+  lastError?: string | null;
+  href: string;
+  icon: React.ElementType;
+}) {
+  const variant =
+    Icon === Facebook
+      ? facebookStatusBadgeVariant(status)
+      : telegramStatusBadgeVariant(status);
+
+  return (
+    <Link
+      href={href}
+      className="flex items-start justify-between gap-3 rounded-xl border p-3 hover:bg-muted/40 transition-colors"
+    >
+      <div className="flex items-start gap-3 min-w-0">
+        <Icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{label}</p>
+          {lastError && (
+            <p className="text-xs text-destructive mt-1 line-clamp-2">{lastError}</p>
+          )}
+        </div>
+      </div>
+      <Badge variant={variant} className="shrink-0">
+        {status}
+      </Badge>
+    </Link>
+  );
+}
+
 export function MetaSettingsForm({
   compact = false,
   onSaved,
@@ -57,6 +102,7 @@ export function MetaSettingsForm({
   const t = useTranslations("integrations");
   const tCommon = useTranslations("common");
   const [settings, setSettings] = useState<IntegrationSettings | null>(null);
+  const [initialMetaAppId, setInitialMetaAppId] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
   const [metaAppSecret, setMetaAppSecret] = useState("");
   const [webhookToken, setWebhookToken] = useState("");
@@ -71,6 +117,7 @@ export function MetaSettingsForm({
         if (res.data?.settings) {
           setSettings(res.data.settings);
           setMetaAppId(res.data.settings.metaAppId ?? "");
+          setInitialMetaAppId(res.data.settings.metaAppId ?? "");
         }
       })
       .finally(() => setLoading(false));
@@ -93,6 +140,7 @@ export function MetaSettingsForm({
         setSettings(data.data.settings);
         setMetaAppSecret("");
         setWebhookToken("");
+        setInitialMetaAppId(data.data.settings.metaAppId ?? metaAppId);
         toast.success(t("saved"));
         onSaved?.();
       } else {
@@ -135,6 +183,9 @@ export function MetaSettingsForm({
     toast.success(t("copied"));
   }
 
+  const showMetaChangeWarning =
+    (initialMetaAppId && metaAppId !== initialMetaAppId) || metaAppSecret.length > 0;
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
@@ -167,6 +218,12 @@ export function MetaSettingsForm({
       )}
 
       <div className="grid gap-5 sm:grid-cols-2">
+        {showMetaChangeWarning && (
+          <div className="sm:col-span-2 flex gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            {t("metaChangeWarning")}
+          </div>
+        )}
         <div className="space-y-2 sm:col-span-2">
           <FieldLabel
             htmlFor="metaAppId"
@@ -267,9 +324,55 @@ export function MetaSettingsForm({
 
 export function IntegrationsSettingsCard({ onSaved }: { onSaved?: () => void }) {
   const t = useTranslations("integrations");
+  const [status, setStatus] = useState<{
+    facebook: { status: string; lastError?: string | null };
+    telegram: { status: string; lastError?: string | null };
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/facebook/status")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.data) {
+          setStatus({
+            facebook: {
+              status: res.data.facebook?.status ?? res.data.connectionStatus ?? "disconnected",
+              lastError: res.data.facebook?.lastError,
+            },
+            telegram: {
+              status: res.data.telegram?.status ?? "disconnected",
+              lastError: res.data.telegram?.lastError,
+            },
+          });
+        }
+      });
+  }, []);
 
   return (
     <div className="space-y-6">
+      {status && (
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t("integrationsStatusTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <IntegrationStatusRow
+              label={t("facebookIntegration")}
+              status={status.facebook.status}
+              lastError={status.facebook.lastError}
+              href="/facebook"
+              icon={Facebook}
+            />
+            <IntegrationStatusRow
+              label={t("telegramIntegration")}
+              status={status.telegram.status}
+              lastError={status.telegram.lastError}
+              href="/telegram"
+              icon={Send}
+            />
+          </CardContent>
+        </Card>
+      )}
       <MetaSettingsForm onSaved={onSaved} />
     </div>
   );

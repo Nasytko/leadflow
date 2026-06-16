@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetaSettingsForm } from "@/components/integrations/meta-settings-form";
+import { FacebookIdentityCard } from "@/components/facebook/facebook-identity-card";
 import {
   Facebook,
   RefreshCw,
@@ -31,14 +32,30 @@ type Page = {
   connected: boolean;
 };
 
+type FacebookInfo = {
+  status: string;
+  facebookUserId?: string | null;
+  facebookUserName?: string | null;
+  facebookUserPictureUrl?: string | null;
+  connectedAt?: string | null;
+  lastCheckedAt?: string | null;
+  lastError?: string | null;
+  lastErrorCode?: string | null;
+  connected?: boolean;
+  tokenInvalid?: boolean;
+};
+
 type StatusData = {
   metaConfigured: boolean;
   connected: boolean;
   connectionStatus: string;
+  tokenInvalid?: boolean;
+  facebook: FacebookInfo;
   pages: Page[];
   connectedPagesCount: number;
   totalPagesCount: number;
   activeFormsCount: number;
+  failedFormsCount?: number;
   telegramConnected: boolean;
   webhookUrl: string;
   redirectUri: string;
@@ -137,22 +154,30 @@ function ProgressStep({
 export function FacebookContent() {
   const t = useTranslations("facebook");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       setError(false);
       const res = await fetchWithTimeout("/api/facebook/status");
       const data = await res.json();
-      if (data.data) setStatus(data.data);
-      else setError(true);
+      if (data.data) {
+        setStatus(data.data);
+        return data.data as StatusData;
+      }
+      setError(true);
+      return null;
     } catch {
       setError(true);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -161,13 +186,26 @@ export function FacebookContent() {
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
-    if (searchParams.get("success") === "connected") {
-      toast.success(t("connectedSuccess"));
-      loadData();
-    }
+    const oauthSuccess = searchParams.get("success") === "connected";
     const err = searchParams.get("error");
     if (err === "oauth_denied") toast.error(t("oauthDenied"));
-    if (err === "oauth_failed" || err === "invalid_state") toast.error(t("oauthFailed"));
+    if (err === "oauth_failed" || err === "invalid_state") {
+      const reason = searchParams.get("reason");
+      toast.error(reason ?? t("oauthFailed"));
+    }
+    if (oauthSuccess) {
+      loadData().then((data) => {
+        if (data?.connected) {
+          toast.success(t("connectedSuccess"));
+        } else if (data?.facebook?.lastError) {
+          toast.error(data.facebook.lastError);
+        } else {
+          toast.error(t("oauthFailed"));
+        }
+      });
+    } else if (err) {
+      loadData();
+    }
   }, [searchParams, t, loadData]);
 
   async function handleConnect() {
@@ -188,10 +226,48 @@ export function FacebookContent() {
     }
   }
 
+  async function handleCheckConnection() {
+    setChecking(true);
+    try {
+      const res = await fetchWithTimeout("/api/facebook/check", { method: "POST" });
+      const data = await res.json();
+      if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
+        toast.error(t("tokenInvalid"));
+      } else if (data.error) {
+        toast.error(data.error.message ?? t("checkConnectionFailed"));
+      } else if (data.data?.ok) {
+        toast.success(t("checkConnectionSuccess"));
+      } else {
+        toast.error(data.data?.facebook?.lastError ?? t("checkConnectionFailed"));
+      }
+      loadData();
+    } catch {
+      toast.error(t("checkConnectionFailed"));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function handleResetFacebook(successMessage?: string) {
+    setResetting(true);
+    try {
+      const res = await fetchWithTimeout("/api/facebook/reset", { method: "POST" });
+      const data = await res.json();
+      if (data.data?.reset) {
+        toast.success(successMessage ?? t("resetConnectionSuccess"));
+        loadData();
+      } else {
+        toast.error(data.error?.message ?? tCommon("error"));
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setResetting(false);
+    }
+  }
+
   async function handleDisconnect() {
-    await fetchWithTimeout("/api/facebook/pages", { method: "DELETE" });
-    toast.success(t("disconnectedSuccess"));
-    loadData();
+    await handleResetFacebook(t("disconnectedSuccess"));
   }
 
   async function handleSync() {
@@ -199,8 +275,15 @@ export function FacebookContent() {
     try {
       const res = await fetchWithTimeout("/api/facebook/pages", { method: "POST" });
       const data = await res.json();
-      if (data.error) toast.error(data.error.message);
-      else { toast.success(tCommon("success")); loadData(); }
+      if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
+        toast.error(t("tokenInvalid"));
+        loadData();
+      } else if (data.error) {
+        toast.error(data.error.message);
+      } else {
+        toast.success(tCommon("success"));
+        loadData();
+      }
     } catch {
       toast.error(tCommon("error"));
     } finally {
@@ -209,11 +292,26 @@ export function FacebookContent() {
   }
 
   async function togglePage(pageId: string, isConnected: boolean) {
-    await fetchWithTimeout(`/api/facebook/pages/${pageId}`, {
-      method: isConnected ? "DELETE" : "POST",
-    });
-    toast.success(isConnected ? t("pageDisconnected") : t("pageConnected"));
-    loadData();
+    try {
+      const res = await fetchWithTimeout(`/api/facebook/pages/${pageId}`, {
+        method: isConnected ? "DELETE" : "POST",
+      });
+      const data = await res.json();
+      if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
+        toast.error(t("tokenInvalid"));
+        loadData();
+        return;
+      }
+      if (data.error) {
+        toast.error(data.error.message ?? tCommon("error"));
+        loadData();
+        return;
+      }
+      toast.success(isConnected ? t("pageDisconnected") : t("pageConnected"));
+      loadData();
+    } catch {
+      toast.error(tCommon("error"));
+    }
   }
 
   if (loading) {
@@ -301,7 +399,16 @@ export function FacebookContent() {
         />
         <StatCard
           label={t("statFacebook")}
-          value={status.connected ? t("fbConnected") : t("fbNotConnected")}
+          value={
+            status.connected
+              ? t("fbConnected")
+              : status.facebook?.lastError
+              ? t("connectionError")
+              : status.connectionStatus === "invalid" ||
+                status.connectionStatus === "expired"
+              ? t("tokenInvalid")
+              : t("fbNotConnected")
+          }
           done={status.connected}
           icon={Facebook}
         />
@@ -347,6 +454,29 @@ export function FacebookContent() {
           <CardDescription>{t("connectSectionDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {status.facebook && status.facebook.status !== "disconnected" && (
+            <FacebookIdentityCard facebook={status.facebook} locale={locale} />
+          )}
+
+          {(status.tokenInvalid ||
+            status.connectionStatus === "invalid" ||
+            status.connectionStatus === "expired") && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+              <p className="text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {t("tokenInvalid")}
+              </p>
+              <Button
+                size="sm"
+                onClick={handleConnect}
+                disabled={!status.metaConfigured || connecting}
+                className="bg-[#1877F2] hover:bg-[#166FE5] text-white shrink-0"
+              >
+                {t("reconnectButton")}
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-3">
             {!status.connected ? (
               <Button
@@ -364,10 +494,35 @@ export function FacebookContent() {
                   <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
                   {t("syncPages")}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleCheckConnection()}
+                  disabled={checking}
+                  size="lg"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", checking && "animate-spin")} />
+                  {t("checkConnection")}
+                </Button>
                 <Button variant="destructive" onClick={handleDisconnect} size="lg">
                   {t("disconnectButton")}
                 </Button>
               </>
+            )}
+            {(status.connected ||
+              status.connectionStatus === "invalid" ||
+              status.connectionStatus === "expired" ||
+              status.connectionStatus === "error" ||
+              status.totalPagesCount > 0) && (
+              <Button
+                variant="outline"
+                onClick={() => void handleResetFacebook()}
+                disabled={resetting}
+                size="lg"
+                className="border-amber-500/40 text-amber-700 dark:text-amber-400"
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-2", resetting && "animate-spin")} />
+                {t("resetConnection")}
+              </Button>
             )}
           </div>
           {!status.metaConfigured && (
@@ -380,7 +535,7 @@ export function FacebookContent() {
       </Card>
 
       {/* Pages */}
-      {status.connected && (
+      {(status.connected || status.totalPagesCount > 0) && (
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle>{t("yourPages")}</CardTitle>

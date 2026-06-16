@@ -29,6 +29,10 @@ import {
   BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  facebookStatusBadgeVariant,
+  telegramStatusBadgeVariant,
+} from "@/lib/connection-status";
 import type { DashboardStats } from "@/types";
 
 type StatsResponse = DashboardStats & {
@@ -205,32 +209,73 @@ export function DashboardContent() {
           <KpiCard
             label={t("facebookStatus")}
             value={
-              <Badge variant={stats?.facebookConnected ? "success" : "secondary"}>
-                {stats?.facebookConnected ? tCommon("connected") : tCommon("notConnected")}
+              <Badge variant={facebookStatusBadgeVariant(stats?.facebookStatus ?? "disconnected")}>
+                {stats?.facebookStatus === "connected"
+                  ? tCommon("connected")
+                  : stats?.facebookStatus === "disconnected"
+                  ? tCommon("notConnected")
+                  : t(`facebookStatus_${stats?.facebookStatus ?? "error"}`)}
               </Badge>
             }
-            sublabel={t("pagesCount", {
-              connected: stats?.connectedPages ?? 0,
-              total: stats?.totalPages ?? 0,
-            })}
+            sublabel={
+              stats?.facebookLastError ??
+              (stats?.facebookUserName
+                ? t("facebookConnectedAs", { name: stats.facebookUserName })
+                : t("pagesCount", {
+                    connected: stats?.connectedPages ?? 0,
+                    total: stats?.totalPages ?? 0,
+                  }))
+            }
             icon={Facebook}
-            variant="facebook"
+            variant={
+              stats?.facebookStatus === "connected"
+                ? "facebook"
+                : stats?.facebookStatus === "disconnected"
+                ? "default"
+                : "warning"
+            }
           />
           <KpiCard
             label={t("telegramStatus")}
             value={
-              <Badge variant={stats?.telegramConnected ? "success" : "secondary"}>
-                {stats?.telegramConnected ? tCommon("connected") : tCommon("notConnected")}
+              <Badge variant={telegramStatusBadgeVariant(stats?.telegramStatus ?? "disconnected")}>
+                {stats?.telegramStatus === "connected"
+                  ? tCommon("connected")
+                  : stats?.telegramStatus === "disconnected"
+                  ? tCommon("notConnected")
+                  : t(`telegramStatus_error`)}
               </Badge>
             }
+            sublabel={stats?.telegramLastError ?? undefined}
             icon={Send}
-            variant={stats?.telegramConnected ? "success" : "default"}
+            variant={stats?.telegramStatus === "connected" ? "success" : "default"}
           />
           <KpiCard
             label={t("activeForms")}
             value={stats?.activeForms ?? 0}
-            sublabel={t("formsCount", { total: stats?.totalForms ?? 0 })}
+            sublabel={
+              stats?.failedFormsSync
+                ? t("formsSyncFailed", { count: stats.failedFormsSync })
+                : t("formsCount", { total: stats?.totalForms ?? 0 })
+            }
             icon={FileText}
+            variant={stats?.failedFormsSync ? "warning" : "default"}
+          />
+          <KpiCard
+            label={t("webhookStatus")}
+            value={
+              <Badge variant={stats?.webhookVerified ? "success" : "warning"}>
+                {stats?.webhookVerified ? t("webhookVerified") : t("webhookNotVerified")}
+              </Badge>
+            }
+            sublabel={
+              stats?.lastWebhookError ??
+              (stats?.lastWebhookAt
+                ? `${stats.lastWebhookStatus ?? "—"} · ${formatDate(stats.lastWebhookAt, locale)}`
+                : undefined)
+            }
+            icon={Activity}
+            variant={stats?.failedWebhookEvents ? "warning" : "default"}
           />
           <KpiCard
             label={t("metaAppStatus")}

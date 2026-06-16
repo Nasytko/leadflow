@@ -4,9 +4,9 @@ import {
   enqueueLeadRetry,
   type LeadProcessingJobData,
 } from "@/lib/queue";
+import { writeSystemLog } from "@/lib/system-log";
 import {
   getLeadDetails,
-  parseLeadFields,
   findPageByFacebookId,
 } from "./facebook.service";
 import {
@@ -15,9 +15,29 @@ import {
   extractLeadFromFacebookData,
 } from "./notification.service";
 import { sendTelegramMessage } from "./telegram.service";
-import type { FacebookLeadData } from "@/types";
 
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
+const SENT_STATUSES = ["success", "sent"];
+
+async function finalizeWebhookEvent(
+  webhookEventId: string | undefined,
+  userId: string,
+  status: "processed" | "ignored" | "failed",
+  lastError?: string
+) {
+  if (!webhookEventId) return;
+  await prisma.webhookEvent.update({
+    where: { id: webhookEventId },
+    data: {
+      status,
+      userId,
+      processedAt: new Date(),
+      ...(lastError
+        ? { lastError, lastErrorAt: new Date() }
+        : { lastError: null, lastErrorCode: null, lastErrorAt: null }),
+    },
+  });
+}
 
 export async function processLeadJob(data: LeadProcessingJobData) {
   const page = await findPageByFacebookId(data.pageId);
@@ -25,25 +45,79 @@ export async function processLeadJob(data: LeadProcessingJobData) {
     throw new Error(`Page not found: ${data.pageId}`);
   }
 
+  if (data.retryDeliveryLogId) {
+    const lead = await prisma.lead.findUnique({
+      where: {
+        userId_leadgenId: {
+          userId: page.userId,
+          leadgenId: data.leadgenId,
+        },
+      },
+      include: { form: true },
+    });
+    if (!lead) {
+      throw new Error(`Lead not found for retry: ${data.leadgenId}`);
+    }
+    const fields = (lead.fieldData as Record<string, string>) ?? {};
+    await deliverToTelegram(
+      page.userId,
+      lead.id,
+      {
+        formName: lead.form?.formName ?? "—",
+        name: lead.name ?? "",
+        phone: lead.phone ?? "",
+        email: lead.email ?? "",
+        createdTime: lead.createdTime.toISOString(),
+        fields,
+      },
+      data.retryDeliveryLogId
+    );
+    return;
+  }
+
+  const enabledForm = await prisma.facebookForm.findFirst({
+    where: {
+      pageId: page.id,
+      enabled: true,
+      ...(data.formId ? { formId: data.formId } : {}),
+    },
+  });
+
+  if (!enabledForm) {
+    await finalizeWebhookEvent(
+      data.webhookEventId,
+      page.userId,
+      "ignored",
+      "Lead form is not enabled"
+    );
+    return;
+  }
+
+  const existingLead = await prisma.lead.findUnique({
+    where: {
+      userId_leadgenId: {
+        userId: page.userId,
+        leadgenId: data.leadgenId,
+      },
+    },
+  });
+
+  if (existingLead) {
+    const priorDelivery = await prisma.deliveryLog.findFirst({
+      where: {
+        leadId: existingLead.id,
+        status: { in: SENT_STATUSES },
+      },
+    });
+    if (priorDelivery || existingLead.status === "delivered") {
+      await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
+      return;
+    }
+  }
+
   const pageToken = decrypt(page.pageAccessTokenEncrypted);
   const leadData = await getLeadDetails(data.leadgenId, pageToken);
-
   const { name, phone, email, fields } = extractLeadFromFacebookData(leadData);
-
-  const form = data.formId
-    ? await prisma.facebookForm.findFirst({
-        where: {
-          formId: data.formId,
-          pageId: page.id,
-          enabled: true,
-        },
-      })
-    : await prisma.facebookForm.findFirst({
-        where: {
-          pageId: page.id,
-          enabled: true,
-        },
-      });
 
   const lead = await prisma.lead.upsert({
     where: {
@@ -54,7 +128,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
     },
     create: {
       userId: page.userId,
-      formId: form?.id,
+      formId: enabledForm.id,
       leadgenId: data.leadgenId,
       name,
       phone,
@@ -65,6 +139,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       status: "new",
     },
     update: {
+      formId: enabledForm.id,
       name,
       phone,
       email,
@@ -74,21 +149,34 @@ export async function processLeadJob(data: LeadProcessingJobData) {
     include: { form: true },
   });
 
-  if (data.webhookEventId) {
-    await prisma.webhookEvent.update({
-      where: { id: data.webhookEventId },
-      data: { status: "processed", processedAt: new Date(), userId: page.userId },
+  try {
+    await deliverToTelegram(page.userId, lead.id, {
+      formName: lead.form?.formName ?? enabledForm.formName,
+      name: name ?? "",
+      phone: phone ?? "",
+      email: email ?? "",
+      createdTime: leadData.created_time,
+      fields,
     });
+    await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Delivery failed";
+    await finalizeWebhookEvent(
+      data.webhookEventId,
+      page.userId,
+      "failed",
+      message
+    );
+    await writeSystemLog({
+      userId: page.userId,
+      level: "error",
+      source: "lead",
+      action: "delivery.failed",
+      message,
+      metadata: { leadgenId: data.leadgenId, pageId: data.pageId },
+    });
+    throw error;
   }
-
-  await deliverToTelegram(page.userId, lead.id, {
-    formName: lead.form?.formName ?? "Unknown",
-    name: name ?? "",
-    phone: phone ?? "",
-    email: email ?? "",
-    createdTime: leadData.created_time,
-    fields,
-  }, data.retryDeliveryLogId);
 }
 
 async function deliverToTelegram(
@@ -108,7 +196,7 @@ async function deliverToTelegram(
     where: { userId },
   });
 
-  if (!telegram?.verified) {
+  if (!telegram || telegram.status !== "connected") {
     await prisma.deliveryLog.create({
       data: {
         userId,
@@ -116,6 +204,15 @@ async function deliverToTelegram(
         type: "telegram",
         status: "failed",
         errorMessage: "Telegram not connected",
+        lastErrorAt: new Date(),
+      },
+    });
+    await prisma.telegramConnection.updateMany({
+      where: { userId },
+      data: {
+        status: "error",
+        lastError: "Telegram not connected",
+        lastErrorAt: new Date(),
       },
     });
     return;
@@ -134,10 +231,23 @@ async function deliverToTelegram(
   });
 
   let deliveryLog = existingDeliveryLogId
-    ? await prisma.deliveryLog.findUnique({ where: { id: existingDeliveryLogId } })
+    ? await prisma.deliveryLog.findFirst({
+        where: { id: existingDeliveryLogId, userId },
+      })
     : null;
 
   if (!deliveryLog) {
+    const existingSent = await prisma.deliveryLog.findFirst({
+      where: { leadId, userId, status: { in: SENT_STATUSES } },
+    });
+    if (existingSent) {
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: { status: "delivered" },
+      });
+      return;
+    }
+
     deliveryLog = await prisma.deliveryLog.create({
       data: {
         userId,
@@ -147,6 +257,11 @@ async function deliverToTelegram(
         message,
       },
     });
+  } else {
+    await prisma.deliveryLog.update({
+      where: { id: deliveryLog.id },
+      data: { status: "retrying" },
+    });
   }
 
   const result = await sendTelegramMessage(botToken, telegram.chatId, message);
@@ -154,7 +269,12 @@ async function deliverToTelegram(
   if (result.ok) {
     await prisma.deliveryLog.update({
       where: { id: deliveryLog.id },
-      data: { status: "success" },
+      data: {
+        status: "sent",
+        errorMessage: null,
+        lastErrorCode: null,
+        lastErrorAt: null,
+      },
     });
     await prisma.lead.update({
       where: { id: leadId },
@@ -168,6 +288,7 @@ async function deliverToTelegram(
   retryHistory.push({
     attempt: retryCount + 1,
     error: result.error,
+    errorCode: result.errorCode,
     at: new Date().toISOString(),
   });
 
@@ -176,23 +297,25 @@ async function deliverToTelegram(
     await prisma.deliveryLog.update({
       where: { id: deliveryLog.id },
       data: {
-        status: "pending",
+        status: "retrying",
         retryCount: retryCount + 1,
         retryHistory,
         errorMessage: result.error,
+        lastErrorCode: result.errorCode,
+        lastErrorAt: new Date(),
       },
     });
 
-    const page = await prisma.lead.findUnique({
+    const lead = await prisma.lead.findUnique({
       where: { id: leadId },
       include: { form: { include: { page: true } } },
     });
 
-    if (page) {
+    if (lead) {
       await enqueueLeadRetry(
         {
-          leadgenId: page.leadgenId,
-          pageId: page.form?.page.pageId ?? "",
+          leadgenId: lead.leadgenId,
+          pageId: lead.form?.page.pageId ?? "",
           retryDeliveryLogId: deliveryLog.id,
           userId,
         },
@@ -207,11 +330,21 @@ async function deliverToTelegram(
         retryCount: retryCount + 1,
         retryHistory,
         errorMessage: result.error,
+        lastErrorCode: result.errorCode,
+        lastErrorAt: new Date(),
       },
     });
     await prisma.lead.update({
       where: { id: leadId },
       data: { status: "delivery_failed" },
+    });
+    await writeSystemLog({
+      userId,
+      level: "error",
+      source: "telegram",
+      action: "send.failed",
+      message: result.error ?? "Telegram delivery failed",
+      metadata: { leadId, errorCode: result.errorCode },
     });
   }
 }
@@ -228,60 +361,73 @@ export async function importLeadsForUser(
     include: { page: true },
   });
 
+  if (forms.length === 0) {
+    return { imported: 0 };
+  }
+
   let imported = 0;
+
+  const { getFormLeads, handleFacebookGraphError, isInvalidOAuthTokenError } =
+    await import("./facebook.service");
 
   for (const form of forms) {
     const pageToken = decrypt(form.page.pageAccessTokenEncrypted);
     let after: string | undefined;
 
-    do {
-      const { getFormLeads } = await import("./facebook.service");
-      const response = await getFormLeads(form.formId, pageToken, after);
-      const leads = response.data ?? [];
+    try {
+      do {
+        const response = await getFormLeads(form.formId, pageToken, after);
+        const leads = response.data ?? [];
 
-      for (const leadData of leads) {
-        const existing = await prisma.lead.findUnique({
-          where: {
-            userId_leadgenId: { userId, leadgenId: leadData.id },
-          },
-        });
-
-        if (existing) continue;
-
-        const { name, phone, email, fields } =
-          extractLeadFromFacebookData(leadData);
-
-        const lead = await prisma.lead.create({
-          data: {
-            userId,
-            formId: form.id,
-            leadgenId: leadData.id,
-            name,
-            phone,
-            email,
-            fieldData: fields,
-            rawData: leadData as object,
-            createdTime: new Date(leadData.created_time),
-            status: "imported",
-          },
-        });
-
-        imported++;
-
-        if (sendToTelegram) {
-          await deliverToTelegram(userId, lead.id, {
-            formName: form.formName,
-            name: name ?? "",
-            phone: phone ?? "",
-            email: email ?? "",
-            createdTime: leadData.created_time,
-            fields,
+        for (const leadData of leads) {
+          const existing = await prisma.lead.findUnique({
+            where: {
+              userId_leadgenId: { userId, leadgenId: leadData.id },
+            },
           });
-        }
-      }
 
-      after = response.paging?.cursors?.after;
-    } while (after);
+          if (existing) continue;
+
+          const { name, phone, email, fields } =
+            extractLeadFromFacebookData(leadData);
+
+          const lead = await prisma.lead.create({
+            data: {
+              userId,
+              formId: form.id,
+              leadgenId: leadData.id,
+              name,
+              phone,
+              email,
+              fieldData: fields,
+              rawData: leadData as object,
+              createdTime: new Date(leadData.created_time),
+              status: "imported",
+            },
+          });
+
+          imported++;
+
+          if (sendToTelegram) {
+            await deliverToTelegram(userId, lead.id, {
+              formName: form.formName,
+              name: name ?? "",
+              phone: phone ?? "",
+              email: email ?? "",
+              createdTime: leadData.created_time,
+              fields,
+            });
+          }
+        }
+
+        after = response.paging?.cursors?.after;
+      } while (after);
+    } catch (error) {
+      if (isInvalidOAuthTokenError(error)) {
+        await handleFacebookGraphError(userId, error);
+      }
+      throw error;
+    }
   }
 
   return { imported };
@@ -290,7 +436,7 @@ export async function importLeadsForUser(
 export async function saveLeadFromData(
   userId: string,
   formId: string | null,
-  leadData: FacebookLeadData
+  leadData: import("@/types").FacebookLeadData
 ) {
   const { name, phone, email, fields } = extractLeadFromFacebookData(leadData);
 

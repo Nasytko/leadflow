@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
-import { saveTelegramConnection } from "@/services/telegram.service";
+import {
+  saveTelegramConnection,
+  mapTelegramConnectionPublic,
+} from "@/services/telegram.service";
 
 const schema = z.object({
   botToken: z.string().min(1),
@@ -18,15 +21,13 @@ export async function GET(request: Request) {
   });
 
   if (!conn) {
-    return apiSuccess({ connected: false });
+    return apiSuccess({
+      connected: false,
+      status: "disconnected",
+    });
   }
 
-  return apiSuccess({
-    connected: true,
-    chatId: conn.chatId,
-    notificationLocale: conn.notificationLocale,
-    verified: conn.verified,
-  });
+  return apiSuccess(mapTelegramConnectionPublic(conn));
 }
 
 export async function POST(request: Request) {
@@ -50,14 +51,9 @@ export async function POST(request: Request) {
       parsed.data.notificationLocale
     );
 
-    return apiSuccess({
-      connected: true,
-      verified: conn.verified,
-      chatId: conn.chatId,
-      notificationLocale: conn.notificationLocale,
-    });
+    return apiSuccess(mapTelegramConnectionPublic(conn));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Save failed";
-    return apiError("SAVE_FAILED", message, 500);
+    return apiError("SAVE_FAILED", message, 400);
   }
 }

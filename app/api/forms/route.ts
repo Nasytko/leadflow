@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { decrypt } from "@/lib/encryption";
-import { getLeadgenForms } from "@/services/facebook.service";
-import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import {
+  syncUserForms,
+  InvalidFacebookTokenError,
+} from "@/services/facebook.service";
 
 export async function GET(request: Request) {
   const authResult = await requireAuth();
@@ -10,11 +12,17 @@ export async function GET(request: Request) {
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
 
-  const forms = await prisma.facebookForm.findMany({
-    where: { page: { userId: authResult.session.user.id } },
-    include: { page: { select: { pageName: true, pageId: true } } },
-    orderBy: { formName: "asc" },
-  });
+  const [forms, facebookConn] = await Promise.all([
+    prisma.facebookForm.findMany({
+      where: { page: { userId: authResult.session.user.id } },
+      include: { page: { select: { pageName: true, pageId: true } } },
+      orderBy: { formName: "asc" },
+    }),
+    prisma.facebookConnection.findUnique({
+      where: { userId: authResult.session.user.id },
+      select: { status: true, lastError: true },
+    }),
+  ]);
 
   return apiSuccess({
     forms: forms.map((f) => ({
@@ -23,10 +31,15 @@ export async function GET(request: Request) {
       formName: f.formName,
       enabled: f.enabled,
       status: f.status,
+      syncStatus: f.syncStatus,
+      lastSyncError: f.lastSyncError,
+      lastSyncAt: f.lastSyncAt,
       createdAt: f.createdAt,
       pageName: f.page.pageName,
       pageId: f.page.pageId,
     })),
+    facebookStatus: facebookConn?.status ?? "disconnected",
+    facebookLastError: facebookConn?.lastError,
   });
 }
 
@@ -37,36 +50,14 @@ export async function POST(request: Request) {
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
 
-  const pages = await prisma.facebookPage.findMany({
-    where: { userId: authResult.session.user.id, connected: true },
-  });
-
-  let synced = 0;
-
-  for (const page of pages) {
-    const pageToken = decrypt(page.pageAccessTokenEncrypted);
-    const { data: forms } = await getLeadgenForms(page.pageId, pageToken);
-
-    for (const form of forms) {
-      await prisma.facebookForm.upsert({
-        where: {
-          pageId_formId: { pageId: page.id, formId: form.id },
-        },
-        create: {
-          pageId: page.id,
-          formId: form.id,
-          formName: form.name,
-          status: form.status,
-          enabled: false,
-        },
-        update: {
-          formName: form.name,
-          status: form.status,
-        },
-      });
-      synced++;
+  try {
+    const { synced } = await syncUserForms(authResult.session.user.id);
+    return apiSuccess({ synced });
+  } catch (error) {
+    if (error instanceof InvalidFacebookTokenError) {
+      return apiError("INVALID_FACEBOOK_TOKEN", error.message, 401);
     }
+    const message = error instanceof Error ? error.message : "Sync failed";
+    return apiError("SYNC_FAILED", message, 500);
   }
-
-  return apiSuccess({ synced });
 }

@@ -20,6 +20,7 @@ export async function GET() {
     totalPages,
     activeForms,
     totalForms,
+    failedFormsSync,
     leadsToday,
     leadsThisWeek,
     leadsThisMonth,
@@ -39,6 +40,9 @@ export async function GET() {
       where: { enabled: true, page: { userId, connected: true } },
     }),
     prisma.facebookForm.count({ where: { page: { userId } } }),
+    prisma.facebookForm.count({
+      where: { syncStatus: "failed", page: { userId } },
+    }),
     prisma.lead.count({
       where: { userId, createdTime: { gte: startOfDay } },
     }),
@@ -53,7 +57,7 @@ export async function GET() {
       where: { userId, createdAt: { gte: startOfDay } },
     }),
     prisma.deliveryLog.count({
-      where: { userId, status: "success" },
+      where: { userId, status: { in: ["success", "sent"] } },
     }),
     prisma.deliveryLog.count({ where: { userId } }),
     prisma.lead.findMany({
@@ -82,24 +86,48 @@ export async function GET() {
       ? Math.round((successfulDeliveries / totalDeliveries) * 100)
       : null;
 
+  const [lastSuccessVerification, lastWebhookEvent, failedWebhookEvents] =
+    await Promise.all([
+      prisma.webhookVerificationLog.findFirst({
+        where: { userId, success: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.webhookEvent.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.webhookEvent.count({
+        where: { userId, status: "failed" },
+      }),
+    ]);
+
+  const facebookStatus = facebookConnection?.status ?? "disconnected";
+  const telegramStatus = telegramConnection?.status ?? "disconnected";
+
   const setupSteps = {
     metaApp: !!integrationSettings?.configured,
-    facebookOAuth: !!facebookConnection,
+    facebookOAuth: facebookStatus === "connected",
     pagesSelected: connectedPages > 0,
     formsEnabled: activeForms > 0,
-    telegram: !!telegramConnection?.verified,
+    telegram: telegramStatus === "connected",
   };
 
   const setupCompleted = Object.values(setupSteps).filter(Boolean).length;
 
   return apiSuccess({
-    facebookConnected: !!facebookConnection,
-    telegramConnected: !!telegramConnection?.verified,
+    facebookConnected: facebookStatus === "connected",
+    facebookStatus,
+    facebookLastError: facebookConnection?.lastError ?? null,
+    facebookUserName: facebookConnection?.facebookUserName ?? null,
+    telegramConnected: telegramStatus === "connected",
+    telegramStatus,
+    telegramLastError: telegramConnection?.lastError ?? null,
     metaConfigured: !!integrationSettings?.configured,
     connectedPages,
     totalPages,
     activeForms,
     totalForms,
+    failedFormsSync,
     leadsToday,
     leadsThisWeek,
     leadsThisMonth,
@@ -110,6 +138,11 @@ export async function GET() {
     setupSteps,
     setupCompleted,
     setupTotal: 5,
+    webhookVerified: !!lastSuccessVerification,
+    lastWebhookAt: lastWebhookEvent?.createdAt ?? null,
+    lastWebhookStatus: lastWebhookEvent?.status ?? null,
+    lastWebhookError: lastWebhookEvent?.lastError ?? null,
+    failedWebhookEvents,
     recentLeads,
     recentLogs,
   });

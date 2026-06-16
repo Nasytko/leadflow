@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -14,10 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Send, BookOpen } from "lucide-react";
+import { Send, BookOpen, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
+import { telegramStatusBadgeVariant } from "@/lib/connection-status";
+
+type TelegramStatus = {
+  connected: boolean;
+  status: string;
+  chatId?: string;
+  notificationLocale?: string;
+  lastError?: string | null;
+};
 
 export function TelegramContent() {
   const t = useTranslations("telegram");
@@ -25,54 +35,74 @@ export function TelegramContent() {
   const [botToken, setBotToken] = useState("");
   const [chatId, setChatId] = useState("");
   const [notificationLocale, setNotificationLocale] = useState("ru");
+  const [connStatus, setConnStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
+  async function loadStatus() {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch("/api/telegram", { signal: controller.signal });
+      clearTimeout(id);
+      const data = await res.json();
+      if (data.data) {
+        setConnStatus(data.data);
+        if (data.data.chatId) setChatId(data.data.chatId);
+        if (data.data.notificationLocale) setNotificationLocale(data.data.notificationLocale);
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 10000);
-    fetch("/api/telegram", { signal: controller.signal })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.data?.connected) {
-          setChatId(res.data.chatId);
-          setNotificationLocale(res.data.notificationLocale);
-        }
-      })
-      .catch(() => toast.error(tCommon("error")))
-      .finally(() => {
-        clearTimeout(id);
-        setLoading(false);
-      });
+    loadStatus();
   }, [tCommon]);
 
   async function handleSave() {
     setSaving(true);
-    const res = await fetch("/api/telegram", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ botToken, chatId, notificationLocale }),
-    });
-    const data = await res.json();
-    if (data.data?.connected) {
-      toast.success(t("connectionSaved"));
-    } else {
-      toast.error(data.error?.message ?? tCommon("error"));
+    try {
+      const res = await fetch("/api/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botToken, chatId, notificationLocale }),
+      });
+      const data = await res.json();
+      if (data.data?.connected) {
+        toast.success(t("connectionSaved"));
+        setConnStatus(data.data);
+      } else {
+        toast.error(data.error?.message ?? t("saveFailed"));
+        await loadStatus();
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function handleTest() {
     setTesting(true);
-    const res = await fetch("/api/telegram/test", { method: "POST" });
-    const data = await res.json();
-    if (data.data?.sent) {
-      toast.success(t("testSuccess"));
-    } else {
+    try {
+      const res = await fetch("/api/telegram/test", { method: "POST" });
+      const data = await res.json();
+      if (data.data?.sent) {
+        toast.success(t("testSuccess"));
+        await loadStatus();
+      } else {
+        toast.error(data.error?.message ?? t("testFailed"));
+        await loadStatus();
+      }
+    } catch {
       toast.error(t("testFailed"));
+    } finally {
+      setTesting(false);
     }
-    setTesting(false);
   }
 
   if (loading) {
@@ -95,12 +125,38 @@ export function TelegramContent() {
         </Button>
       </PageHeader>
 
+      {connStatus && connStatus.status !== "disconnected" && (
+        <Card className="rounded-2xl">
+          <CardContent className="pt-6 space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant={telegramStatusBadgeVariant(connStatus.status)}>
+                {connStatus.status === "connected"
+                  ? t("statusConnected")
+                  : t("statusError")}
+              </Badge>
+              {connStatus.status === "connected" && (
+                <span className="text-sm text-muted-foreground">
+                  Chat ID: {connStatus.chatId}
+                </span>
+              )}
+            </div>
+            {connStatus.lastError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-destructive">{connStatus.lastError}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
             Telegram Bot
           </CardTitle>
+          <CardDescription>{t("botSetupDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -143,7 +199,11 @@ export function TelegramContent() {
             <Button onClick={handleSave} disabled={saving || !botToken || !chatId}>
               {t("saveConnection")}
             </Button>
-            <Button variant="outline" onClick={handleTest} disabled={testing}>
+            <Button
+              variant="outline"
+              onClick={handleTest}
+              disabled={testing || connStatus?.status !== "connected"}
+            >
               {t("sendTest")}
             </Button>
           </div>

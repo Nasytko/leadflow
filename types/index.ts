@@ -16,12 +16,18 @@ export type PaginatedResponse<T> = {
 
 export type DashboardStats = {
   facebookConnected: boolean;
+  facebookStatus: string;
+  facebookLastError: string | null;
+  facebookUserName: string | null;
   telegramConnected: boolean;
+  telegramStatus: string;
+  telegramLastError: string | null;
   metaConfigured: boolean;
   connectedPages: number;
   totalPages: number;
   activeForms: number;
   totalForms: number;
+  failedFormsSync: number;
   leadsToday: number;
   leadsThisWeek: number;
   leadsThisMonth: number;
@@ -38,6 +44,11 @@ export type DashboardStats = {
   };
   setupCompleted: number;
   setupTotal: number;
+  webhookVerified: boolean;
+  lastWebhookAt: string | null;
+  lastWebhookStatus: string | null;
+  lastWebhookError: string | null;
+  failedWebhookEvents: number;
 };
 
 export type LeadField = {

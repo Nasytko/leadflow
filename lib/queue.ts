@@ -40,7 +40,11 @@ export async function enqueueLeadProcessing(
   options?: JobsOptions
 ) {
   const queue = await getLeadQueue();
-  return queue.add("process-lead", data, options);
+  const jobId = `lead:${data.pageId}:${data.leadgenId}`;
+  return queue.add("process-lead", data, {
+    ...options,
+    jobId,
+  });
 }
 
 export async function enqueueLeadRetry(

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
-import { enqueueImportLeads } from "@/lib/queue";
+import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { importLeadsForUser } from "@/services/lead.service";
+import { InvalidFacebookTokenError } from "@/services/facebook.service";
 
 const importSchema = z.object({
   sendToTelegram: z.boolean().default(false),
@@ -70,13 +71,35 @@ export async function POST(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
 
+  const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
+  if (rateLimitError) return rateLimitError;
+
   const body = await request.json();
   const parsed = importSchema.safeParse(body);
 
-  await enqueueImportLeads({
-    userId: authResult.session.user.id,
-    sendToTelegram: parsed.success ? parsed.data.sendToTelegram : false,
+  const fbConn = await prisma.facebookConnection.findUnique({
+    where: { userId: authResult.session.user.id },
   });
 
-  return apiSuccess({ queued: true });
+  if (!fbConn || fbConn.status !== "connected") {
+    return apiError(
+      "FACEBOOK_NOT_CONNECTED",
+      fbConn?.lastError ?? "Facebook is not connected or token is invalid",
+      400
+    );
+  }
+
+  try {
+    const result = await importLeadsForUser(
+      authResult.session.user.id,
+      parsed.success ? parsed.data.sendToTelegram : false
+    );
+    return apiSuccess(result);
+  } catch (error) {
+    if (error instanceof InvalidFacebookTokenError) {
+      return apiError("INVALID_FACEBOOK_TOKEN", error.message, 401);
+    }
+    const message = error instanceof Error ? error.message : "Import failed";
+    return apiError("IMPORT_FAILED", message, 500);
+  }
 }

@@ -90,5 +90,24 @@ export async function POST(request: Request) {
     return apiError("INVALID_CREDENTIALS", result.error ?? "Invalid", 400);
   }
 
-  return apiSuccess({ valid: true, appName: result.appName });
+  const { getRedirectUri, getWebhookUrl } = await import("@/lib/env");
+  const { getFacebookAuthUrl } = await import("@/services/facebook-auth.service");
+
+  let authorizeUrl: string | null = null;
+  try {
+    authorizeUrl = await getFacebookAuthUrl(
+      authResult.session.user.id,
+      "meta-settings-preview"
+    );
+  } catch {
+    authorizeUrl = null;
+  }
+
+  return apiSuccess({
+    valid: true,
+    appName: result.appName,
+    redirectUri: getRedirectUri(),
+    webhookUrl: getWebhookUrl(),
+    authorizeUrl,
+  });
 }

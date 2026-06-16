@@ -4,7 +4,13 @@ import {
   exchangeCodeForToken,
   getLongLivedToken,
 } from "@/services/facebook-auth.service";
-import { saveFacebookConnection } from "@/services/facebook.service";
+import {
+  getFacebookProfile,
+  resetFacebookConnection,
+  saveFacebookConnection,
+  markFacebookConnectionInvalid,
+} from "@/services/facebook.service";
+import { getMetaCredentials } from "@/services/integration-settings.service";
 import { getAppUrl } from "@/lib/env";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
@@ -33,27 +39,51 @@ export async function GET(request: Request) {
   await deleteOAuthState(`fb_oauth_state:${state}`);
 
   try {
+    const creds = await getMetaCredentials(userId);
+    if (!creds) {
+      throw new Error("Meta App not configured");
+    }
+
     const shortToken = await exchangeCodeForToken(userId, code);
     const longToken = await getLongLivedToken(userId, shortToken.accessToken);
+    const profile = await getFacebookProfile(longToken.access_token);
 
-    await saveFacebookConnection(
-      userId,
-      longToken.access_token,
-      longToken.expires_in
-    );
+    await resetFacebookConnection(userId);
+
+    await saveFacebookConnection(userId, longToken.access_token, {
+      expiresIn: longToken.expires_in,
+      facebookUserId: profile.id,
+      facebookUserName: profile.name,
+      facebookUserPictureUrl: profile.pictureUrl,
+      metaAppIdAtAuth: creds.appId,
+    });
 
     await createAuditLog({
       userId,
       action: "facebook.connect",
       ipAddress: getClientIp(request),
+      metadata: {
+        facebookUserId: profile.id,
+        facebookUserName: profile.name,
+        metaAppId: creds.appId,
+      },
     });
 
     return NextResponse.redirect(
       new URL(`/${locale}/facebook?success=connected`, baseUrl)
     );
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "OAuth failed";
+    try {
+      await markFacebookConnectionInvalid(userId, err);
+    } catch {
+      // no existing connection to update
+    }
     return NextResponse.redirect(
-      new URL(`/${locale}/facebook?error=oauth_failed`, baseUrl)
+      new URL(
+        `/${locale}/facebook?error=oauth_failed&reason=${encodeURIComponent(message)}`,
+        baseUrl
+      )
     );
   }
 }

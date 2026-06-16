@@ -1,5 +1,5 @@
 import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
-import { connectPage, disconnectPage } from "@/services/facebook.service";
+import { connectPage, disconnectPage, InvalidFacebookTokenError } from "@/services/facebook.service";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 
@@ -25,6 +25,9 @@ export async function POST(
     });
     return apiSuccess({ page });
   } catch (error) {
+    if (error instanceof InvalidFacebookTokenError) {
+      return apiError("INVALID_FACEBOOK_TOKEN", error.message, 401);
+    }
     const message = error instanceof Error ? error.message : "Connect failed";
     return apiError("CONNECT_FAILED", message, 500);
   }

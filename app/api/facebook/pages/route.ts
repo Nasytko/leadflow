@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
-import { syncUserPages } from "@/services/facebook.service";
+import {
+  syncUserPages,
+  resetFacebookConnection,
+  InvalidFacebookTokenError,
+} from "@/services/facebook.service";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 
@@ -21,13 +25,16 @@ export async function GET(request: Request) {
   });
 
   return apiSuccess({
-    connected: !!connection,
+    connected: !!connection && connection.status === "connected",
     status: connection?.status ?? "not_connected",
     pages: pages.map((p) => ({
       id: p.id,
       pageId: p.pageId,
       pageName: p.pageName,
       connected: p.connected,
+      syncStatus: p.syncStatus,
+      webhookStatus: p.webhookStatus,
+      lastError: p.lastError,
     })),
   });
 }
@@ -50,6 +57,9 @@ export async function POST(request: Request) {
       })),
     });
   } catch (error) {
+    if (error instanceof InvalidFacebookTokenError) {
+      return apiError("INVALID_FACEBOOK_TOKEN", error.message, 401);
+    }
     const message = error instanceof Error ? error.message : "Sync failed";
     return apiError("SYNC_FAILED", message, 500);
   }
@@ -59,13 +69,7 @@ export async function DELETE(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
 
-  await prisma.facebookConnection.deleteMany({
-    where: { userId: authResult.session.user.id },
-  });
-  await prisma.facebookPage.updateMany({
-    where: { userId: authResult.session.user.id },
-    data: { connected: false },
-  });
+  await resetFacebookConnection(authResult.session.user.id);
 
   await createAuditLog({
     userId: authResult.session.user.id,

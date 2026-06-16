@@ -23,6 +23,8 @@ model User {
   deliveryLogs       DeliveryLog[]
   webhookEvents      WebhookEvent[]
   auditLogs          AuditLog[]
+  systemLogs         SystemLog[]
+  webhookVerificationLogs WebhookVerificationLog[]
   passwordResetTokens PasswordResetToken[]
   integrationSettings IntegrationSettings?
 
@@ -60,14 +62,22 @@ model PasswordResetToken {
 }
 
 model FacebookConnection {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  accessTokenEncrypted  String   @db.Text
-  tokenExpiresAt        DateTime?
-  facebookUserId        String?
-  status                String   @default("connected")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  accessTokenEncrypted   String    @db.Text
+  tokenExpiresAt         DateTime?
+  facebookUserId         String?
+  facebookUserName       String?
+  facebookUserPictureUrl String?
+  metaAppIdAtAuth        String?
+  status                 String    @default("connected")
+  connectedAt            DateTime?
+  lastCheckedAt          DateTime?
+  lastError              String?
+  lastErrorCode          String?
+  lastErrorAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -75,15 +85,19 @@ model FacebookConnection {
 }
 
 model FacebookPage {
-  id                        String   @id @default(cuid())
+  id                        String    @id @default(cuid())
   userId                    String
   pageId                    String
   pageName                  String
-  pageAccessTokenEncrypted  String   @db.Text
+  pageAccessTokenEncrypted  String    @db.Text
   tokenExpiresAt            DateTime?
-  connected                 Boolean  @default(false)
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  connected                 Boolean   @default(false)
+  syncStatus                String    @default("pending")
+  webhookStatus             String    @default("pending")
+  lastError                 String?
+  lastErrorAt               DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   forms FacebookForm[]
@@ -94,14 +108,17 @@ model FacebookPage {
 }
 
 model FacebookForm {
-  id        String   @id @default(cuid())
-  pageId    String
-  formId    String
-  formName  String
-  enabled   Boolean  @default(false)
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  pageId        String
+  formId        String
+  formName      String
+  enabled       Boolean   @default(false)
+  status        String    @default("active")
+  syncStatus    String    @default("pending")
+  lastSyncError String?
+  lastSyncAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   page  FacebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
   leads Lead[]
@@ -111,14 +128,18 @@ model FacebookForm {
 }
 
 model TelegramConnection {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  botTokenEncrypted     String   @db.Text
-  chatId                String
-  notificationLocale    String   @default("ru")
-  verified              Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  botTokenEncrypted  String    @db.Text
+  chatId             String
+  notificationLocale String    @default("ru")
+  verified           Boolean   @default(false)
+  status             String    @default("disconnected")
+  lastError          String?
+  lastErrorAt        DateTime?
+  lastCheckedAt      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -158,6 +179,8 @@ model DeliveryLog {
   retryCount   Int      @default(0)
   retryHistory Json     @default("[]")
   errorMessage String?
+  lastErrorCode String?
+  lastErrorAt  DateTime?
   message      String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -171,19 +194,64 @@ model DeliveryLog {
 }
 
 model WebhookEvent {
-  id          String    @id @default(cuid())
-  userId      String?
-  eventType   String
-  payload     Json
-  status      String    @default("pending")
-  processedAt DateTime?
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  userId        String?
+  eventType     String
+  payload       Json
+  status        String    @default("received")
+  pageId        String?
+  formId        String?
+  leadgenId     String?
+  lastError     String?
+  lastErrorCode String?
+  lastErrorAt   DateTime?
+  sourceIp      String?
+  userAgent     String?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([status])
+  @@index([leadgenId])
   @@map("webhook_events")
+}
+
+model WebhookVerificationLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  mode             String?
+  tokenMasked      String?
+  challengePresent Boolean  @default(false)
+  success          Boolean  @default(false)
+  ipAddress        String?
+  userAgent        String?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([success, createdAt])
+  @@map("webhook_verification_logs")
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  level     String   @default("info")
+  source    String
+  action    String
+  message   String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([source, level, createdAt])
+  @@map("system_logs")
 }
 
 model AuditLog {
