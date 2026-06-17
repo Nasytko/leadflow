@@ -13,6 +13,7 @@ const schema = z.object({
   metaAppId: z.string().min(1),
   metaAppSecret: z.string().optional(),
   metaWebhookVerifyToken: z.string().optional(),
+  metaLoginConfigId: z.string().optional(),
 });
 
 export async function GET(request: Request) {

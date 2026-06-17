@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
+import { getIntegrationSettingsPublic } from "@/services/integration-settings.service";
 
 export async function GET(request: Request) {
   const authResult = await requireAuth();
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   const userId = authResult.session.user.id;
   const limit = 20;
 
-  const [verificationLogs, webhookEvents, lastSuccessVerification] =
+  const [verificationLogs, webhookEvents, lastSuccessVerification, integration] =
     await Promise.all([
       prisma.webhookVerificationLog.findMany({
         where: { OR: [{ userId }, { userId: null }] },
@@ -27,12 +28,14 @@ export async function GET(request: Request) {
         where: { userId, success: true },
         orderBy: { createdAt: "desc" },
       }),
+      getIntegrationSettingsPublic(userId),
     ]);
 
   const lastEvent = webhookEvents[0] ?? null;
 
   return apiSuccess({
     webhookVerified: !!lastSuccessVerification,
+    hasWebhookVerifyToken: integration.hasWebhookToken,
     lastVerificationAt: lastSuccessVerification?.createdAt ?? null,
     lastWebhookAt: lastEvent?.createdAt ?? null,
     lastWebhookStatus: lastEvent?.status ?? null,

@@ -61,6 +61,9 @@ export async function POST(request: Request) {
       return apiError("INVALID_FACEBOOK_TOKEN", error.message, 401);
     }
     const message = error instanceof Error ? error.message : "Sync failed";
+    if (message.includes("page access") || message.includes("PAGES_ACCESS")) {
+      return apiError("PAGES_ACCESS_MISSING", message, 400);
+    }
     return apiError("SYNC_FAILED", message, 500);
   }
 }

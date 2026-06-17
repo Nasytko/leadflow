@@ -4,9 +4,12 @@ import {
   isMetaConfiguredForUser,
   getRedirectUri,
   getWebhookUrl,
+  getLoginConfigId,
+  getIntegrationSettingsPublic,
 } from "@/services/integration-settings.service";
-import { mapFacebookConnectionPublic } from "@/services/facebook.service";
+import { mapFacebookConnectionPublic, mapFacebookPagePublic, mapFacebookBusinessPublic } from "@/services/facebook.service";
 import { mapTelegramConnectionPublic } from "@/services/telegram.service";
+import { buildWizardSteps } from "@/lib/facebook-diagnosis";
 
 export async function GET(request: Request) {
   const authResult = await requireAuth();
@@ -18,9 +21,21 @@ export async function GET(request: Request) {
   const userId = authResult.session.user.id;
   const metaConfigured = await isMetaConfiguredForUser(userId);
 
-  const [connection, pages, forms, telegram, failedForms] = await Promise.all([
+  const [connection, pages, businesses, forms, telegram, failedForms, integrationSettings, leadsCount, lastSuccessVerification] =
+    await Promise.all([
     prisma.facebookConnection.findUnique({ where: { userId } }),
-    prisma.facebookPage.findMany({ where: { userId } }),
+    prisma.facebookPage.findMany({
+      where: { userId },
+      include: {
+        business: true,
+        forms: { select: { id: true, enabled: true } },
+      },
+      orderBy: { pageName: "asc" },
+    }),
+    prisma.facebookBusiness.findMany({
+      where: { userId },
+      orderBy: { name: "asc" },
+    }),
     prisma.facebookForm.count({
       where: { enabled: true, page: { userId, connected: true } },
     }),
@@ -28,16 +43,30 @@ export async function GET(request: Request) {
     prisma.facebookForm.count({
       where: { syncStatus: "failed", page: { userId } },
     }),
+    getIntegrationSettingsPublic(userId),
+    prisma.lead.count({ where: { userId } }),
+    prisma.webhookVerificationLog.findFirst({
+      where: { userId, success: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
+  const hasLoginConfigId = integrationSettings.hasMetaLoginConfigId;
   const connectedPages = pages.filter((p) => p.connected);
   const facebook = connection
-    ? mapFacebookConnectionPublic(connection)
+    ? mapFacebookConnectionPublic(connection, { hasLoginConfigId })
     : {
         status: "disconnected",
+        uiStatus: "disconnected" as const,
+        diagnosis: "disconnected" as const,
         facebookUserId: null,
         facebookUserName: null,
         facebookUserPictureUrl: null,
+        appIdUsed: null,
+        loginConfigIdAtAuth: null,
+        grantedScopes: [],
+        granularScopes: [],
+        missingScopes: [],
         connectedAt: null,
         lastCheckedAt: null,
         lastError: null,
@@ -46,11 +75,27 @@ export async function GET(request: Request) {
         tokenExpiresAt: null,
         connected: false,
         tokenInvalid: false,
+        pagesCountAtAuth: 0,
+        pagesAccessMissing: false,
       };
+
+  const wizardSteps = buildWizardSteps({
+    metaConfigured,
+    hasLoginConfigId,
+    hasFacebookProfile: !!facebook.facebookUserId,
+    connectedPagesCount: connectedPages.length,
+    activeFormsCount: forms,
+    telegramConnected: telegram?.status === "connected",
+    webhookVerified: !!lastSuccessVerification,
+    leadsCount,
+  });
 
   return apiSuccess({
     metaConfigured,
+    hasLoginConfigId,
     connected: facebook.connected,
+    integrationStatus: facebook.uiStatus,
+    diagnosis: facebook.diagnosis,
     connectionStatus: facebook.status,
     tokenInvalid: facebook.tokenInvalid,
     tokenExpiresAt: facebook.tokenExpiresAt,
@@ -63,28 +108,18 @@ export async function GET(request: Request) {
           lastError: null,
           lastErrorAt: null,
         },
-    pages: pages.map((p) => ({
-      id: p.id,
-      pageId: p.pageId,
-      pageName: p.pageName,
-      connected: p.connected,
-      syncStatus: p.syncStatus,
-      webhookStatus: p.webhookStatus,
-      lastError: p.lastError,
-    })),
+    pages: pages.map(mapFacebookPagePublic),
+    businesses: businesses.map(mapFacebookBusinessPublic),
+    businessesCount: businesses.length,
     connectedPagesCount: connectedPages.length,
     totalPagesCount: pages.length,
     activeFormsCount: forms,
     failedFormsCount: failedForms,
+    leadsCount,
     telegramConnected: telegram?.status === "connected",
     webhookUrl: getWebhookUrl(),
     redirectUri: getRedirectUri(),
-    setupSteps: {
-      metaApp: metaConfigured,
-      facebookOAuth: facebook.connected,
-      pagesSelected: connectedPages.length > 0,
-      formsEnabled: forms > 0,
-      telegram: telegram?.status === "connected",
-    },
+    webhookVerified: !!lastSuccessVerification,
+    setupSteps: wizardSteps,
   });
 }

@@ -66,8 +66,12 @@ export async function getIntegrationSettingsPublic(userId: string) {
     where: { userId },
   });
 
+  const envLoginConfigId = getEnvLoginConfigId();
+
   return {
     metaAppId: settings?.metaAppId ?? "",
+    metaLoginConfigId: settings?.metaLoginConfigId ?? envLoginConfigId ?? "",
+    hasMetaLoginConfigId: !!(settings?.metaLoginConfigId || envLoginConfigId),
     hasMetaAppSecret: !!settings?.metaAppSecretEncrypted,
     hasWebhookToken: !!settings?.metaWebhookVerifyTokenEncrypted,
     configured: settings?.configured ?? false,
@@ -76,12 +80,32 @@ export async function getIntegrationSettingsPublic(userId: string) {
   };
 }
 
+function getEnvLoginConfigId(): string | null {
+  const id =
+    process.env.META_LOGIN_CONFIG_ID ??
+    process.env.FACEBOOK_LOGIN_CONFIG_ID ??
+    "";
+  if (!id || isPlaceholder(id)) return null;
+  return id.trim();
+}
+
+export async function getLoginConfigId(userId: string): Promise<string | null> {
+  const settings = await prisma.integrationSettings.findUnique({
+    where: { userId },
+    select: { metaLoginConfigId: true },
+  });
+  const fromDb = settings?.metaLoginConfigId?.trim();
+  if (fromDb && !isPlaceholder(fromDb)) return fromDb;
+  return getEnvLoginConfigId();
+}
+
 export async function saveIntegrationSettings(
   userId: string,
   data: {
     metaAppId: string;
     metaAppSecret?: string;
     metaWebhookVerifyToken?: string;
+    metaLoginConfigId?: string;
   }
 ) {
   const existing = await prisma.integrationSettings.findUnique({
@@ -105,12 +129,21 @@ export async function saveIntegrationSettings(
     updateData.metaWebhookVerifyTokenHash = hashToken(token);
   }
 
+  if (data.metaLoginConfigId !== undefined) {
+    const trimmed = data.metaLoginConfigId.trim();
+    updateData.metaLoginConfigId = trimmed || null;
+  }
+
   const appIdChanged =
     !!existing?.metaAppId &&
     existing.metaAppId !== data.metaAppId.trim();
   const secretChanged = !!data.metaAppSecret?.trim();
+  const loginConfigChanged =
+    data.metaLoginConfigId !== undefined &&
+    (existing?.metaLoginConfigId?.trim() || null) !==
+      (data.metaLoginConfigId.trim() || null);
 
-  if (appIdChanged || secretChanged) {
+  if (appIdChanged || secretChanged || loginConfigChanged) {
     await resetFacebookConnection(userId);
   }
 
@@ -128,6 +161,7 @@ export async function saveIntegrationSettings(
       metaWebhookVerifyTokenHash: data.metaWebhookVerifyToken
         ? hashToken(data.metaWebhookVerifyToken.trim())
         : undefined,
+      metaLoginConfigId: data.metaLoginConfigId?.trim() || null,
       configured: true,
     },
     update: updateData,

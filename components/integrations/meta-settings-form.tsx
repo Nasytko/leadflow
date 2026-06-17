@@ -17,6 +17,8 @@ import {
 
 type IntegrationSettings = {
   metaAppId: string;
+  metaLoginConfigId?: string;
+  hasMetaLoginConfigId?: boolean;
   hasMetaAppSecret: boolean;
   hasWebhookToken: boolean;
   configured: boolean;
@@ -104,6 +106,7 @@ export function MetaSettingsForm({
   const [settings, setSettings] = useState<IntegrationSettings | null>(null);
   const [initialMetaAppId, setInitialMetaAppId] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
+  const [metaLoginConfigId, setMetaLoginConfigId] = useState("");
   const [metaAppSecret, setMetaAppSecret] = useState("");
   const [webhookToken, setWebhookToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -117,6 +120,7 @@ export function MetaSettingsForm({
         if (res.data?.settings) {
           setSettings(res.data.settings);
           setMetaAppId(res.data.settings.metaAppId ?? "");
+          setMetaLoginConfigId(res.data.settings.metaLoginConfigId ?? "");
           setInitialMetaAppId(res.data.settings.metaAppId ?? "");
         }
       })
@@ -131,6 +135,7 @@ export function MetaSettingsForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           metaAppId,
+          metaLoginConfigId,
           ...(metaAppSecret && { metaAppSecret }),
           ...(webhookToken && { metaWebhookVerifyToken: webhookToken }),
         }),
@@ -239,6 +244,22 @@ export function MetaSettingsForm({
             className="font-mono text-sm h-11"
           />
           <p className="text-xs text-muted-foreground">{t("metaAppIdHint")}</p>
+        </div>
+
+        <div className="space-y-2 sm:col-span-2">
+          <FieldLabel
+            htmlFor="metaLoginConfigId"
+            label={t("metaLoginConfigId")}
+            tooltip={t("tooltipMetaLoginConfigId")}
+          />
+          <Input
+            id="metaLoginConfigId"
+            value={metaLoginConfigId}
+            onChange={(e) => setMetaLoginConfigId(e.target.value)}
+            placeholder="1234567890123456"
+            className="font-mono text-sm h-11"
+          />
+          <p className="text-xs text-muted-foreground">{t("metaLoginConfigIdHint")}</p>
         </div>
 
         <div className="space-y-2">

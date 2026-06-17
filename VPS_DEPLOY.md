@@ -367,13 +367,26 @@ curl -I https://fb.nasytko.ru/ru/login
 
 Откройте [developers.facebook.com](https://developers.facebook.com) → ваше приложение.
 
-### 9.1 Facebook Login
+### 9.1 Facebook Login for Business
 
 **Settings → Valid OAuth Redirect URIs:**
 
 ```
 https://fb.nasytko.ru/api/facebook/callback
 ```
+
+**Configuration (обязательно для страниц из Business Manager):**
+
+1. Meta Developers → ваше приложение → **Facebook Login for Business**
+2. **Configurations** → **Create configuration**
+3. Добавьте permissions: `pages_show_list`, `pages_read_engagement`, `leads_retrieval`, `ads_read`, `pages_manage_ads`, `business_management`
+4. Включите выбор **Pages** (и при необходимости Business assets)
+5. Скопируйте **Configuration ID**
+6. В LeadFlow: **Facebook** → Meta App settings → поле **Facebook Login Configuration ID** (или env `META_LOGIN_CONFIG_ID`)
+
+Без `config_id` OAuth может подключить профиль (`/me`), но `/me/accounts` вернёт пустой список, если страницы управляются через Business Manager.
+
+Диагностика в UI: кнопка **Проверить разрешения** или API `GET /api/facebook/debug-permissions`.
 
 ### 9.2 Webhooks
 
@@ -388,11 +401,14 @@ https://fb.nasytko.ru/api/facebook/callback
 
 ### 9.3 Permissions
 
+- `public_profile`
+- `email`
 - `pages_show_list`
 - `pages_read_engagement`
 - `leads_retrieval`
 - `ads_read`
 - `pages_manage_ads`
+- `business_management`
 
 ---
 

@@ -36,6 +36,7 @@ export function FacebookIdentityCard({
 
   const statusKey = `status_${facebook.status}` as
     | "status_connected"
+    | "status_pending_pages"
     | "status_invalid"
     | "status_expired"
     | "status_error"
@@ -43,6 +44,7 @@ export function FacebookIdentityCard({
 
   const statusLabel = [
     "connected",
+    "pending_pages",
     "invalid",
     "expired",
     "error",
@@ -56,12 +58,16 @@ export function FacebookIdentityCard({
     facebook.status === "expired" ||
     facebook.status === "error";
 
+  const isPendingPages = facebook.status === "pending_pages";
+
   return (
     <div
       className={cn(
         "rounded-xl border p-4 space-y-3",
         hasError
           ? "border-destructive/30 bg-destructive/5"
+          : isPendingPages
+          ? "border-amber-500/30 bg-amber-500/5"
           : "border-emerald-500/30 bg-emerald-500/5",
         className
       )}

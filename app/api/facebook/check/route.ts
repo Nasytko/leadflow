@@ -4,6 +4,7 @@ import {
   InvalidFacebookTokenError,
   mapFacebookConnectionPublic,
 } from "@/services/facebook.service";
+import { getIntegrationSettingsPublic } from "@/services/integration-settings.service";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -21,14 +22,21 @@ export async function POST(request: Request) {
     const result = await checkFacebookConnection(userId);
 
     if (!result.ok) {
-      const conn = await prisma.facebookConnection.findUnique({ where: { userId } });
+      const [conn, settings] = await Promise.all([
+        prisma.facebookConnection.findUnique({ where: { userId } }),
+        getIntegrationSettingsPublic(userId),
+      ]);
       return apiSuccess({
         ok: false,
         facebook: conn
-          ? mapFacebookConnectionPublic(conn)
+          ? mapFacebookConnectionPublic(conn, {
+              hasLoginConfigId: settings.hasMetaLoginConfigId,
+            })
           : { status: result.status, lastError: result.lastError },
       });
     }
+
+    const settings = await getIntegrationSettingsPublic(userId);
 
     await createAuditLog({
       userId,
@@ -38,7 +46,9 @@ export async function POST(request: Request) {
 
     return apiSuccess({
       ok: true,
-      facebook: mapFacebookConnectionPublic(result.connection),
+      facebook: mapFacebookConnectionPublic(result.connection, {
+        hasLoginConfigId: settings.hasMetaLoginConfigId,
+      }),
     });
   } catch (error) {
     if (error instanceof InvalidFacebookTokenError) {

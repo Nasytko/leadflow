@@ -1,6 +1,7 @@
 export const FACEBOOK_STATUSES = [
   "disconnected",
   "connected",
+  "pending_pages",
   "invalid",
   "expired",
   "error",
@@ -18,6 +19,7 @@ export function facebookStatusBadgeVariant(
   status: string
 ): "success" | "destructive" | "secondary" | "warning" {
   if (status === "connected") return "success";
+  if (status === "pending_pages") return "warning";
   if (status === "invalid" || status === "expired" || status === "error") {
     return "destructive";
   }

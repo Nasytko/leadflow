@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetaSettingsForm } from "@/components/integrations/meta-settings-form";
-import { FacebookIdentityCard } from "@/components/facebook/facebook-identity-card";
+import { FacebookStatusCard } from "@/components/facebook/facebook-status-card";
+import { FacebookSetupWizard } from "@/components/facebook/facebook-setup-wizard";
+import { FacebookWebhookDiagnostics } from "@/components/facebook/facebook-webhook-diagnostics";
+import { FacebookBusinessesSection } from "@/components/facebook/facebook-businesses-section";
+import { FacebookPagesSection } from "@/components/facebook/facebook-pages-section";
 import {
   Facebook,
   RefreshCw,
-  CheckCircle2,
   AlertTriangle,
   Copy,
   ArrowRight,
@@ -29,43 +32,89 @@ type Page = {
   id: string;
   pageId: string;
   pageName: string;
+  pictureUrl?: string | null;
+  category?: string | null;
+  link?: string | null;
+  tasks?: string[];
   connected: boolean;
+  webhookStatus?: string;
+  syncStatus?: string;
+  activeFormsCount?: number;
+  totalFormsCount?: number;
+  business?: {
+    name: string;
+    businessId: string;
+  } | null;
+};
+
+type Business = {
+  id: string;
+  businessId: string;
+  name: string;
+  verificationStatus: string | null;
+  pictureUrl: string | null;
+  link: string | null;
 };
 
 type FacebookInfo = {
   status: string;
+  uiStatus?: string;
+  diagnosis?: string;
   facebookUserId?: string | null;
   facebookUserName?: string | null;
   facebookUserPictureUrl?: string | null;
+  appIdUsed?: string | null;
+  loginConfigIdAtAuth?: string | null;
+  grantedScopes?: string[];
+  missingScopes?: string[];
   connectedAt?: string | null;
   lastCheckedAt?: string | null;
   lastError?: string | null;
   lastErrorCode?: string | null;
   connected?: boolean;
   tokenInvalid?: boolean;
+  pagesAccessMissing?: boolean;
 };
 
 type StatusData = {
   metaConfigured: boolean;
+  hasLoginConfigId?: boolean;
   connected: boolean;
+  integrationStatus?: string;
+  diagnosis?: string;
   connectionStatus: string;
   tokenInvalid?: boolean;
   facebook: FacebookInfo;
   pages: Page[];
+  businesses: Business[];
+  businessesCount: number;
   connectedPagesCount: number;
   totalPagesCount: number;
   activeFormsCount: number;
   failedFormsCount?: number;
   telegramConnected: boolean;
+  webhookVerified?: boolean;
   webhookUrl: string;
   redirectUri: string;
   setupSteps: {
     metaApp: boolean;
-    facebookOAuth: boolean;
+    businessLoginConfig: boolean;
+    facebookAccount: boolean;
     pagesSelected: boolean;
     formsEnabled: boolean;
     telegram: boolean;
+    testLead: boolean;
   };
+};
+
+type DebugData = {
+  diagnosis?: string;
+  uiStatus?: string;
+  missingScopes?: string[];
+  pagesCount?: number;
+  granularPageIds?: string[];
+  hasLoginConfigId?: boolean;
+  debug?: { scopes?: string[]; granularScopes?: Array<{ scope: string; target_ids?: string[] }> };
 };
 
 async function fetchWithTimeout(url: string, options?: RequestInit, ms = 10000) {
@@ -114,43 +163,6 @@ function StatCard({
   );
 }
 
-function ProgressStep({
-  done,
-  active,
-  title,
-  step,
-}: {
-  done: boolean;
-  active: boolean;
-  title: string;
-  step: number;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-      <div
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all",
-          done
-            ? "bg-emerald-500 text-white"
-            : active
-            ? "bg-[#1877F2] text-white ring-4 ring-[#1877F2]/20"
-            : "bg-muted text-muted-foreground"
-        )}
-      >
-        {done ? <CheckCircle2 className="h-4 w-4" /> : step}
-      </div>
-      <p
-        className={cn(
-          "text-[10px] sm:text-xs text-center leading-tight max-w-[72px]",
-          active ? "text-foreground font-medium" : "text-muted-foreground"
-        )}
-      >
-        {title}
-      </p>
-    </div>
-  );
-}
-
 export function FacebookContent() {
   const t = useTranslations("facebook");
   const tCommon = useTranslations("common");
@@ -160,9 +172,12 @@ export function FacebookContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingBusinesses, setSyncingBusinesses] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [debugging, setDebugging] = useState(false);
+  const [debugData, setDebugData] = useState<DebugData | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -186,21 +201,24 @@ export function FacebookContent() {
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
-    const oauthSuccess = searchParams.get("success") === "connected";
+    const oauthFullSuccess = searchParams.get("success") === "connected";
+    const oauthNoPages = searchParams.get("success") === "connected_no_pages";
     const err = searchParams.get("error");
     if (err === "oauth_denied") toast.error(t("oauthDenied"));
     if (err === "oauth_failed" || err === "invalid_state") {
       const reason = searchParams.get("reason");
       toast.error(reason ?? t("oauthFailed"));
     }
-    if (oauthSuccess) {
+    if (oauthFullSuccess || oauthNoPages) {
       loadData().then((data) => {
-        if (data?.connected) {
+        if (oauthNoPages || data?.integrationStatus === "pages_missing" || data?.integrationStatus === "permissions_missing") {
+          toast.warning(t("pagesAccessMissing"));
+        } else if (data?.connected) {
           toast.success(t("connectedSuccess"));
         } else if (data?.facebook?.lastError) {
           toast.error(data.facebook.lastError);
-        } else {
-          toast.error(t("oauthFailed"));
+        } else if (oauthFullSuccess) {
+          toast.success(t("connectedSuccess"));
         }
       });
     } else if (err) {
@@ -237,6 +255,8 @@ export function FacebookContent() {
         toast.error(data.error.message ?? t("checkConnectionFailed"));
       } else if (data.data?.ok) {
         toast.success(t("checkConnectionSuccess"));
+      } else if (data.data?.facebook?.uiStatus === "pages_missing" || data.data?.facebook?.uiStatus === "permissions_missing") {
+        toast.warning(t("pagesAccessMissing"));
       } else {
         toast.error(data.data?.facebook?.lastError ?? t("checkConnectionFailed"));
       }
@@ -245,6 +265,26 @@ export function FacebookContent() {
       toast.error(t("checkConnectionFailed"));
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function handleDebugPermissions() {
+    setDebugging(true);
+    try {
+      const res = await fetchWithTimeout("/api/facebook/debug-permissions");
+      const data = await res.json();
+      if (data.data) {
+        setDebugData(data.data);
+        const d = data.data;
+        toast.message(t("debugPermissionsTitle"), {
+          description: t(`diagnosis_${d.diagnosis}` as "diagnosis_fully_connected"),
+          duration: 8000,
+        });
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setDebugging(false);
     }
   }
 
@@ -270,6 +310,24 @@ export function FacebookContent() {
     await handleResetFacebook(t("disconnectedSuccess"));
   }
 
+  async function handleSyncBusinesses() {
+    setSyncingBusinesses(true);
+    try {
+      const res = await fetchWithTimeout("/api/facebook/businesses", { method: "POST" });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error.message);
+      } else {
+        toast.success(tCommon("success"));
+        loadData();
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setSyncingBusinesses(false);
+    }
+  }
+
   async function handleSync() {
     setSyncing(true);
     try {
@@ -277,6 +335,9 @@ export function FacebookContent() {
       const data = await res.json();
       if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
         toast.error(t("tokenInvalid"));
+        loadData();
+      } else if (data.error?.code === "PAGES_ACCESS_MISSING") {
+        toast.warning(t("pagesAccessMissing"));
         loadData();
       } else if (data.error) {
         toast.error(data.error.message);
@@ -338,22 +399,16 @@ export function FacebookContent() {
     );
   }
 
-  const steps = status.setupSteps;
-  const completedCount = [
-    steps.metaApp,
-    steps.facebookOAuth,
-    steps.pagesSelected,
-    steps.formsEnabled,
-    steps.telegram,
-  ].filter(Boolean).length;
+  const pagesAccessMissing =
+    status.integrationStatus === "pages_missing" ||
+    status.integrationStatus === "permissions_missing" ||
+    status.facebook?.pagesAccessMissing;
 
-  const progressSteps = [
-    { done: steps.metaApp, title: t("progressStep1"), active: !steps.metaApp },
-    { done: steps.facebookOAuth, title: t("progressStep2"), active: steps.metaApp && !steps.facebookOAuth },
-    { done: steps.pagesSelected, title: t("progressStep3"), active: steps.facebookOAuth && !steps.pagesSelected },
-    { done: steps.formsEnabled, title: t("progressStep4"), active: steps.pagesSelected && !steps.formsEnabled },
-    { done: steps.telegram, title: t("progressStep5"), active: steps.formsEnabled && !steps.telegram },
-  ];
+  const hasFacebookSession =
+    status.integrationStatus !== "disconnected" &&
+    !!status.facebook?.facebookUserId;
+
+  const wizardSteps = status.setupSteps;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -367,25 +422,10 @@ export function FacebookContent() {
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("title")}</h1>
             <p className="text-muted-foreground mt-1 max-w-xl">{t("subtitle")}</p>
-            <div className="flex items-center gap-3 mt-4">
-              <div className="flex-1 max-w-xs h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#1877F2] to-emerald-500 transition-all duration-500"
-                  style={{ width: `${(completedCount / 5) * 100}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">
-                {t("progressLabel", { done: completedCount, total: 5 })}
-              </span>
-            </div>
           </div>
         </div>
-
-        {/* Progress steps */}
-        <div className="relative flex items-start justify-between gap-1 mt-8 pt-6 border-t border-border/50">
-          {progressSteps.map((s, i) => (
-            <ProgressStep key={i} step={i + 1} done={s.done} active={s.active} title={s.title} />
-          ))}
+        <div className="relative mt-8 pt-6 border-t border-border/50">
+          <FacebookSetupWizard steps={wizardSteps} />
         </div>
       </div>
 
@@ -400,13 +440,10 @@ export function FacebookContent() {
         <StatCard
           label={t("statFacebook")}
           value={
-            status.connected
+            status.integrationStatus
+              ? t(`uiStatus_${status.integrationStatus}` as "uiStatus_disconnected")
+              : status.connected
               ? t("fbConnected")
-              : status.facebook?.lastError
-              ? t("connectionError")
-              : status.connectionStatus === "invalid" ||
-                status.connectionStatus === "expired"
-              ? t("tokenInvalid")
               : t("fbNotConnected")
           }
           done={status.connected}
@@ -454,8 +491,28 @@ export function FacebookContent() {
           <CardDescription>{t("connectSectionDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {status.facebook && status.facebook.status !== "disconnected" && (
-            <FacebookIdentityCard facebook={status.facebook} locale={locale} />
+          {(hasFacebookSession || status.integrationStatus !== "disconnected") && (
+            <FacebookStatusCard
+              facebook={status.facebook}
+              locale={locale}
+              hasLoginConfigId={status.hasLoginConfigId}
+            />
+          )}
+
+          {debugData && (
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm">
+              <p className="font-medium">{t("debugPanelTitle")}</p>
+              <p className="text-muted-foreground">
+                {t(`diagnosis_${debugData.diagnosis}` as "diagnosis_fully_connected")}
+              </p>
+              <p className="text-xs font-mono text-muted-foreground">
+                {t("debugPagesCount", { count: debugData.pagesCount ?? 0 })}
+                {" · "}
+                {t("debugGranularPages", {
+                  count: debugData.granularPageIds?.length ?? 0,
+                })}
+              </p>
+            </div>
           )}
 
           {(status.tokenInvalid ||
@@ -479,15 +536,43 @@ export function FacebookContent() {
 
           <div className="flex flex-wrap gap-3">
             {!status.connected ? (
-              <Button
-                onClick={handleConnect}
-                disabled={!status.metaConfigured || connecting}
-                size="lg"
-                className="bg-[#1877F2] hover:bg-[#166FE5] text-white shadow-md shadow-[#1877F2]/20"
-              >
-                <Facebook className="h-4 w-4 mr-2" />
-                {connecting ? tCommon("loading") : t("connectButton")}
-              </Button>
+              <>
+                <Button
+                  onClick={handleConnect}
+                  disabled={!status.metaConfigured || connecting}
+                  size="lg"
+                  className="bg-[#1877F2] hover:bg-[#166FE5] text-white shadow-md shadow-[#1877F2]/20"
+                >
+                  <Facebook className="h-4 w-4 mr-2" />
+                  {connecting
+                    ? tCommon("loading")
+                    : hasFacebookSession
+                    ? t("reconnectButton")
+                    : t("connectButton")}
+                </Button>
+                {hasFacebookSession && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleCheckConnection()}
+                      disabled={checking}
+                      size="lg"
+                    >
+                      <RefreshCw className={cn("h-4 w-4 mr-2", checking && "animate-spin")} />
+                      {t("checkConnection")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleDebugPermissions()}
+                      disabled={debugging}
+                      size="lg"
+                    >
+                      <RefreshCw className={cn("h-4 w-4 mr-2", debugging && "animate-spin")} />
+                      {t("debugPermissions")}
+                    </Button>
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <Button variant="outline" onClick={handleSync} disabled={syncing} size="lg">
@@ -503,12 +588,22 @@ export function FacebookContent() {
                   <RefreshCw className={cn("h-4 w-4 mr-2", checking && "animate-spin")} />
                   {t("checkConnection")}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleDebugPermissions()}
+                  disabled={debugging}
+                  size="lg"
+                >
+                  <RefreshCw className={cn("h-4 w-4 mr-2", debugging && "animate-spin")} />
+                  {t("debugPermissions")}
+                </Button>
                 <Button variant="destructive" onClick={handleDisconnect} size="lg">
                   {t("disconnectButton")}
                 </Button>
               </>
             )}
             {(status.connected ||
+              hasFacebookSession ||
               status.connectionStatus === "invalid" ||
               status.connectionStatus === "expired" ||
               status.connectionStatus === "error" ||
@@ -534,57 +629,26 @@ export function FacebookContent() {
         </CardContent>
       </Card>
 
+      {/* Businesses */}
+      {hasFacebookSession && (
+        <FacebookBusinessesSection
+          businesses={status.businesses ?? []}
+          pagesCount={status.totalPagesCount}
+          syncing={syncingBusinesses}
+          onSync={() => void handleSyncBusinesses()}
+        />
+      )}
+
       {/* Pages */}
-      {(status.connected || status.totalPagesCount > 0) && (
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle>{t("yourPages")}</CardTitle>
-            <CardDescription>
-              {t("pagesConnected", { count: status.connectedPagesCount })} / {status.totalPagesCount}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {status.pages.length === 0 ? (
-              <div className="text-center py-10 space-y-4 rounded-xl border border-dashed">
-                <Layers className="h-10 w-10 text-muted-foreground mx-auto opacity-50" />
-                <p className="text-muted-foreground text-sm">{t("noPages")}</p>
-                <Button onClick={handleSync} disabled={syncing}>
-                  <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-                  {t("syncPages")}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {status.pages.map((page) => (
-                  <div
-                    key={page.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-4 hover:border-[#1877F2]/30 hover:bg-[#1877F2]/[0.02] transition-all"
-                  >
-                    <div>
-                      <p className="font-medium">{page.pageName}</p>
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                        ID: {page.pageId}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant={page.connected ? "success" : "secondary"}>
-                        {page.connected ? tCommon("connected") : tCommon("notConnected")}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant={page.connected ? "outline" : "default"}
-                        className={!page.connected ? "bg-[#1877F2] hover:bg-[#166FE5] text-white" : ""}
-                        onClick={() => togglePage(page.id, page.connected)}
-                      >
-                        {page.connected ? t("disconnectPage") : t("connectPage")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {(status.connected || status.totalPagesCount > 0 || hasFacebookSession) && (
+        <FacebookPagesSection
+          pages={status.pages}
+          connectedPagesCount={status.connectedPagesCount}
+          hasFacebookSession={hasFacebookSession}
+          syncing={syncing}
+          onSync={() => void handleSync()}
+          onTogglePage={(id, connected) => void togglePage(id, connected)}
+        />
       )}
 
       {/* Next steps */}
@@ -605,6 +669,8 @@ export function FacebookContent() {
           </Button>
         </div>
       )}
+
+      <FacebookWebhookDiagnostics />
 
       {/* Wiki link */}
       <Card className="rounded-2xl border-primary/15 bg-primary/[0.03]">

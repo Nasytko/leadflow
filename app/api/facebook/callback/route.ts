@@ -3,14 +3,17 @@ import { getOAuthState, deleteOAuthState } from "@/lib/oauth-state";
 import {
   exchangeCodeForToken,
   getLongLivedToken,
+  debugAccessToken,
 } from "@/services/facebook-auth.service";
 import {
-  getFacebookProfile,
   resetFacebookConnection,
   saveFacebookConnection,
   markFacebookConnectionInvalid,
+  fetchPagesAccess,
+  syncFacebookIdentity,
+  getFacebookProfile,
 } from "@/services/facebook.service";
-import { getMetaCredentials } from "@/services/integration-settings.service";
+import { getMetaCredentials, getLoginConfigId } from "@/services/integration-settings.service";
 import { getAppUrl } from "@/lib/env";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
@@ -46,9 +49,18 @@ export async function GET(request: Request) {
 
     const shortToken = await exchangeCodeForToken(userId, code);
     const longToken = await getLongLivedToken(userId, shortToken.accessToken);
-    const profile = await getFacebookProfile(longToken.access_token);
+    const [profile, debug, pagesAccess] = await Promise.all([
+      getFacebookProfile(longToken.access_token),
+      debugAccessToken(userId, longToken.access_token),
+      fetchPagesAccess(longToken.access_token),
+    ]);
 
     await resetFacebookConnection(userId);
+
+    const loginConfigId = await getLoginConfigId(userId);
+
+    const connectionStatus =
+      pagesAccess.pagesCount > 0 ? "connected" : "pending_pages";
 
     await saveFacebookConnection(userId, longToken.access_token, {
       expiresIn: longToken.expires_in,
@@ -56,6 +68,15 @@ export async function GET(request: Request) {
       facebookUserName: profile.name,
       facebookUserPictureUrl: profile.pictureUrl,
       metaAppIdAtAuth: creds.appId,
+      metaLoginConfigIdAtAuth: loginConfigId ?? undefined,
+      grantedScopes: debug.scopes,
+      granularScopes: debug.granularScopes,
+      pagesCountAtAuth: pagesAccess.pagesCount,
+      status: connectionStatus,
+    });
+
+    const identity = await syncFacebookIdentity(userId, {
+      accessToken: longToken.access_token,
     });
 
     await createAuditLog({
@@ -63,14 +84,25 @@ export async function GET(request: Request) {
       action: "facebook.connect",
       ipAddress: getClientIp(request),
       metadata: {
-        facebookUserId: profile.id,
-        facebookUserName: profile.name,
+        facebookUserId: identity.profile.id,
+        facebookUserName: identity.profile.name,
         metaAppId: creds.appId,
+        grantedScopes: debug.scopes,
+        granularScopes: debug.granularScopes,
+        metaLoginConfigId: loginConfigId,
+        businessesCount: identity.businessesCount,
+        pagesCount: identity.pagesCount,
+        status: connectionStatus,
       },
     });
 
+    const query =
+      connectionStatus === "connected"
+        ? "success=connected"
+        : "success=connected_no_pages";
+
     return NextResponse.redirect(
-      new URL(`/${locale}/facebook?success=connected`, baseUrl)
+      new URL(`/${locale}/facebook?${query}`, baseUrl)
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "OAuth failed";

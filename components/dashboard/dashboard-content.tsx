@@ -53,10 +53,12 @@ type StatsResponse = DashboardStats & {
 
 const SETUP_STEPS = [
   { key: "metaApp", href: "/facebook", labelKey: "setupMeta" },
-  { key: "facebookOAuth", href: "/facebook", labelKey: "setupFacebook" },
+  { key: "businessLoginConfig", href: "/facebook", labelKey: "setupBusinessLogin" },
+  { key: "facebookAccount", href: "/facebook", labelKey: "setupFacebook" },
   { key: "pagesSelected", href: "/facebook", labelKey: "setupPages" },
   { key: "formsEnabled", href: "/forms", labelKey: "setupForms" },
   { key: "telegram", href: "/telegram", labelKey: "setupTelegram" },
+  { key: "testLead", href: "/leads", labelKey: "setupTestLead" },
 ] as const;
 
 export function DashboardContent() {

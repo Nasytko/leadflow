@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, apiSuccess } from "@/lib/api-helpers";
+import { getIntegrationSettingsPublic } from "@/services/integration-settings.service";
+import { buildWizardSteps } from "@/lib/facebook-diagnosis";
 
 export async function GET() {
   const authResult = await requireAuth();
@@ -103,14 +105,18 @@ export async function GET() {
 
   const facebookStatus = facebookConnection?.status ?? "disconnected";
   const telegramStatus = telegramConnection?.status ?? "disconnected";
+  const integrationPublic = await getIntegrationSettingsPublic(userId);
 
-  const setupSteps = {
-    metaApp: !!integrationSettings?.configured,
-    facebookOAuth: facebookStatus === "connected",
-    pagesSelected: connectedPages > 0,
-    formsEnabled: activeForms > 0,
-    telegram: telegramStatus === "connected",
-  };
+  const setupSteps = buildWizardSteps({
+    metaConfigured: !!integrationSettings?.configured,
+    hasLoginConfigId: integrationPublic.hasMetaLoginConfigId,
+    hasFacebookProfile: !!facebookConnection?.facebookUserId,
+    connectedPagesCount: connectedPages,
+    activeFormsCount: activeForms,
+    telegramConnected: telegramStatus === "connected",
+    webhookVerified: !!lastSuccessVerification,
+    leadsCount: totalLeads,
+  });
 
   const setupCompleted = Object.values(setupSteps).filter(Boolean).length;
 
@@ -137,7 +143,7 @@ export async function GET() {
     deliverySuccessRate,
     setupSteps,
     setupCompleted,
-    setupTotal: 5,
+    setupTotal: 7,
     webhookVerified: !!lastSuccessVerification,
     lastWebhookAt: lastWebhookEvent?.createdAt ?? null,
     lastWebhookStatus: lastWebhookEvent?.status ?? null,
