@@ -108,7 +108,17 @@ export async function GET(request: Request) {
           lastErrorAt: null,
         },
     pages: pages.map(mapFacebookPagePublic),
-    businesses: businesses.map(mapFacebookBusinessPublic),
+    businesses: businesses.map((business) => {
+      const businessPages = pages.filter((page) => page.businessId === business.id);
+      const formsCount = businessPages.reduce(
+        (sum, page) => sum + page.forms.length,
+        0
+      );
+      return mapFacebookBusinessPublic(business, {
+        pagesCount: businessPages.length,
+        formsCount,
+      });
+    }),
     businessesCount: businesses.length,
     connectedPagesCount: connectedPages.length,
     totalPagesCount: pages.length,
@@ -119,6 +129,7 @@ export async function GET(request: Request) {
     webhookUrl: getWebhookUrl(),
     redirectUri: getRedirectUri(),
     webhookVerified: !!lastSuccessVerification,
+    showAdvancedMetaSettings: integrationSettings.showAdvancedSettings,
     setupSteps: wizardSteps,
   });
 }

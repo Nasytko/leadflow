@@ -190,7 +190,7 @@ export async function getLeadDetails(
   pageAccessToken: string
 ): Promise<FacebookLeadData> {
   return graphFetch<FacebookLeadData>(
-    `/${leadgenId}?fields=id,created_time,field_data`,
+    `/${leadgenId}?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name`,
     pageAccessToken
   );
 }
@@ -697,15 +697,18 @@ export async function syncFacebookIdentity(
   };
 }
 
-export function mapFacebookBusinessPublic(business: {
-  id: string;
-  businessId: string;
-  name: string;
-  verificationStatus: string | null;
-  pictureUrl: string | null;
-  link: string | null;
-  updatedAt: Date;
-}) {
+export function mapFacebookBusinessPublic(
+  business: {
+    id: string;
+    businessId: string;
+    name: string;
+    verificationStatus: string | null;
+    pictureUrl: string | null;
+    link: string | null;
+    updatedAt: Date;
+  },
+  counts?: { pagesCount?: number; formsCount?: number }
+) {
   return {
     id: business.id,
     businessId: business.businessId,
@@ -714,6 +717,8 @@ export function mapFacebookBusinessPublic(business: {
     pictureUrl: business.pictureUrl,
     link: business.link,
     updatedAt: business.updatedAt,
+    pagesCount: counts?.pagesCount ?? 0,
+    formsCount: counts?.formsCount ?? 0,
   };
 }
 
@@ -838,6 +843,7 @@ export async function syncUserForms(userId: string) {
             formId: form.id,
             formName: form.name,
             status: form.status,
+            metaCreatedAt: form.created_time ? new Date(form.created_time) : null,
             enabled: false,
             syncStatus: "success",
             lastSyncError: null,
@@ -846,6 +852,7 @@ export async function syncUserForms(userId: string) {
           update: {
             formName: form.name,
             status: form.status,
+            metaCreatedAt: form.created_time ? new Date(form.created_time) : undefined,
             syncStatus: "success",
             lastSyncError: null,
             lastSyncAt: new Date(),

@@ -28,6 +28,10 @@ type WebhookDiagnostics = {
   lastWebhookAt: string | null;
   lastWebhookStatus: string | null;
   lastWebhookError: string | null;
+  webhookCount24h?: number;
+  lastLeadgenId?: string | null;
+  lastLeadgenAt?: string | null;
+  lastLeadgenStatus?: string | null;
   verificationLogs: VerificationLog[];
 };
 
@@ -79,7 +83,7 @@ export function FacebookWebhookDiagnostics() {
           <p className="text-sm text-muted-foreground">{t("webhookLoading")}</p>
         ) : data ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
               <div className="rounded-xl border p-3">
                 <p className="text-xs text-muted-foreground">{t("webhookTokenConfigured")}</p>
                 <div className="flex items-center gap-2 mt-1">
@@ -123,6 +127,16 @@ export function FacebookWebhookDiagnostics() {
               <div className="rounded-xl border p-3">
                 <p className="text-xs text-muted-foreground">{t("webhookLastEventStatus")}</p>
                 <p className="text-sm font-medium mt-1">{data.lastWebhookStatus ?? "—"}</p>
+              </div>
+              <div className="rounded-xl border p-3">
+                <p className="text-xs text-muted-foreground">{t("webhookCount24h")}</p>
+                <p className="text-sm font-medium mt-1">{data.webhookCount24h ?? 0}</p>
+              </div>
+              <div className="rounded-xl border p-3">
+                <p className="text-xs text-muted-foreground">{t("webhookLastLeadgenId")}</p>
+                <p className="text-sm font-medium mt-1 font-mono truncate" title={data.lastLeadgenId ?? undefined}>
+                  {data.lastLeadgenId ?? "—"}
+                </p>
               </div>
             </div>
 

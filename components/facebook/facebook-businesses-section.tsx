@@ -14,6 +14,8 @@ export type BusinessItem = {
   verificationStatus: string | null;
   pictureUrl: string | null;
   link: string | null;
+  pagesCount?: number;
+  formsCount?: number;
 };
 
 export function FacebookBusinessesSection({
@@ -95,6 +97,14 @@ export function FacebookBusinessesSection({
                       {business.verificationStatus}
                     </Badge>
                   )}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {t("businessPagesCount", { count: business.pagesCount ?? 0 })}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {t("businessFormsCount", { count: business.formsCount ?? 0 })}
+                    </Badge>
+                  </div>
                   {business.link && (
                     <a
                       href={business.link}

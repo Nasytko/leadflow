@@ -33,6 +33,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   integrationSettings IntegrationSettings?
+  processedLeads          Lead[]                   @relation("ProcessedLeads")
 
   @@map("users")
 }
@@ -182,6 +183,7 @@ model FacebookForm {
   formName      String
   enabled       Boolean   @default(false)
   status        String    @default("active")
+  metaCreatedAt DateTime?
   syncStatus    String    @default("pending")
   lastSyncError String?
   lastSyncAt    DateTime?
@@ -229,14 +231,20 @@ model Lead {
   telegramStatus String @default("not_sent")
   source      String   @default("webhook")
   managerNote String?  @db.Text
+  campaignId   String?
   campaignName String?
+  adsetId      String?
   adsetName   String?
+  adId         String?
   adName      String?
+  processedAt  DateTime?
+  processedById String?
   createdTime DateTime
   importedAt  DateTime @default(now())
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   form         FacebookForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  processedBy  User?         @relation("ProcessedLeads", fields: [processedById], references: [id], onDelete: SetNull)
   deliveryLogs DeliveryLog[]
 
   @@unique([userId, leadgenId])

@@ -1,6 +1,11 @@
 import { decrypt, encrypt, hashToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { getRedirectUri, getWebhookUrl } from "@/lib/env";
+import { showAdvancedMetaSettings } from "@/lib/deployment";
+import {
+  normalizeMetaLoginConfigId,
+  validateMetaLoginConfigIdInput,
+} from "@/lib/meta-login-config";
 import { resetFacebookConnection } from "@/services/facebook.service";
 
 export type MetaCredentials = {
@@ -68,13 +73,18 @@ export async function getIntegrationSettingsPublic(userId: string) {
 
   const envLoginConfigId = getEnvLoginConfigId();
 
+  const loginConfigId =
+    normalizeMetaLoginConfigId(settings?.metaLoginConfigId) ??
+    envLoginConfigId;
+
   return {
     metaAppId: settings?.metaAppId ?? "",
-    metaLoginConfigId: settings?.metaLoginConfigId ?? envLoginConfigId ?? "",
-    hasMetaLoginConfigId: !!(settings?.metaLoginConfigId || envLoginConfigId),
+    metaLoginConfigId: loginConfigId ?? "",
+    hasMetaLoginConfigId: !!loginConfigId,
     hasMetaAppSecret: !!settings?.metaAppSecretEncrypted,
     hasWebhookToken: !!settings?.metaWebhookVerifyTokenEncrypted,
     configured: settings?.configured ?? false,
+    showAdvancedSettings: showAdvancedMetaSettings(),
     redirectUri: getRedirectUri(),
     webhookUrl: getWebhookUrl(),
   };
@@ -86,7 +96,7 @@ function getEnvLoginConfigId(): string | null {
     process.env.FACEBOOK_LOGIN_CONFIG_ID ??
     "";
   if (!id || isPlaceholder(id)) return null;
-  return id.trim();
+  return normalizeMetaLoginConfigId(id);
 }
 
 export async function getLoginConfigId(userId: string): Promise<string | null> {
@@ -94,8 +104,8 @@ export async function getLoginConfigId(userId: string): Promise<string | null> {
     where: { userId },
     select: { metaLoginConfigId: true },
   });
-  const fromDb = settings?.metaLoginConfigId?.trim();
-  if (fromDb && !isPlaceholder(fromDb)) return fromDb;
+  const fromDb = normalizeMetaLoginConfigId(settings?.metaLoginConfigId);
+  if (fromDb) return fromDb;
   return getEnvLoginConfigId();
 }
 
@@ -129,9 +139,14 @@ export async function saveIntegrationSettings(
     updateData.metaWebhookVerifyTokenHash = hashToken(token);
   }
 
+  let nextLoginConfigId: string | null | undefined;
   if (data.metaLoginConfigId !== undefined) {
-    const trimmed = data.metaLoginConfigId.trim();
-    updateData.metaLoginConfigId = trimmed || null;
+    const validated = validateMetaLoginConfigIdInput(data.metaLoginConfigId);
+    if (!validated.ok) {
+      throw new Error(validated.error);
+    }
+    nextLoginConfigId = validated.value;
+    updateData.metaLoginConfigId = validated.value;
   }
 
   const appIdChanged =
@@ -140,8 +155,8 @@ export async function saveIntegrationSettings(
   const secretChanged = !!data.metaAppSecret?.trim();
   const loginConfigChanged =
     data.metaLoginConfigId !== undefined &&
-    (existing?.metaLoginConfigId?.trim() || null) !==
-      (data.metaLoginConfigId.trim() || null);
+    (normalizeMetaLoginConfigId(existing?.metaLoginConfigId) ?? null) !==
+      (nextLoginConfigId ?? null);
 
   if (appIdChanged || secretChanged || loginConfigChanged) {
     await resetFacebookConnection(userId);
@@ -161,7 +176,8 @@ export async function saveIntegrationSettings(
       metaWebhookVerifyTokenHash: data.metaWebhookVerifyToken
         ? hashToken(data.metaWebhookVerifyToken.trim())
         : undefined,
-      metaLoginConfigId: data.metaLoginConfigId?.trim() || null,
+      metaLoginConfigId:
+        data.metaLoginConfigId !== undefined ? (nextLoginConfigId ?? null) : null,
       configured: true,
     },
     update: updateData,

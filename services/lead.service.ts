@@ -15,7 +15,7 @@ import {
   extractLeadFromFacebookData,
 } from "./notification.service";
 import { sendTelegramMessage } from "./telegram.service";
-import { extractAdFields } from "@/lib/lead-mapper";
+import { extractLeadAttribution } from "@/lib/lead-mapper";
 
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
 const SENT_STATUSES = ["success", "sent"];
@@ -119,7 +119,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
   const pageToken = decrypt(page.pageAccessTokenEncrypted);
   const leadData = await getLeadDetails(data.leadgenId, pageToken);
   const { name, phone, email, fields } = extractLeadFromFacebookData(leadData);
-  const adFields = extractAdFields(fields);
+  const adFields = extractLeadAttribution(leadData, fields);
 
   const lead = await prisma.lead.upsert({
     where: {
@@ -421,7 +421,7 @@ export async function importLeadsForUser(
           try {
             const { name, phone, email, fields } =
               extractLeadFromFacebookData(leadData);
-            const adFields = extractAdFields(fields);
+            const adFields = extractLeadAttribution(leadData, fields);
 
             const lead = await prisma.lead.create({
               data: {
@@ -485,27 +485,50 @@ export async function importLeadsForUser(
 export async function updateLeadCrmStatus(
   userId: string,
   leadId: string,
-  crmStatus: "new" | "in_progress" | "processed" | "rejected",
+  crmStatus:
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "converted"
+    | "rejected"
+    | "in_progress"
+    | "processed",
   managerNote?: string
 ) {
   const lead = await prisma.lead.findFirst({ where: { id: leadId, userId } });
   if (!lead) throw new Error("Lead not found");
 
+  const normalizedStatus =
+    crmStatus === "in_progress"
+      ? "contacted"
+      : crmStatus === "processed"
+      ? "converted"
+      : crmStatus;
+
   const legacyStatus =
-    crmStatus === "processed" && lead.telegramStatus === "sent"
+    normalizedStatus === "converted" && lead.telegramStatus === "sent"
       ? "delivered"
-      : crmStatus === "new"
+      : normalizedStatus === "new"
       ? lead.source === "manual_import"
         ? "imported"
         : "new"
       : lead.status;
 
+  const touchesPipeline =
+    normalizedStatus !== "new" &&
+    normalizedStatus !== lead.crmStatus;
+
   return prisma.lead.update({
     where: { id: leadId },
     data: {
-      crmStatus,
+      crmStatus: normalizedStatus,
       status: legacyStatus,
       ...(managerNote !== undefined ? { managerNote } : {}),
+      ...(touchesPipeline
+        ? { processedAt: new Date(), processedById: userId }
+        : normalizedStatus === "new"
+        ? { processedAt: null, processedById: null }
+        : {}),
     },
   });
 }

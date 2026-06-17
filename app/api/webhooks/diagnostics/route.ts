@@ -11,9 +11,16 @@ export async function GET(request: Request) {
 
   const userId = authResult.session.user.id;
   const limit = 20;
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [verificationLogs, webhookEvents, lastSuccessVerification, integration] =
-    await Promise.all([
+  const [
+    verificationLogs,
+    webhookEvents,
+    lastSuccessVerification,
+    integration,
+    webhookCount24h,
+    lastLeadgenEvent,
+  ] = await Promise.all([
       prisma.webhookVerificationLog.findMany({
         where: { OR: [{ userId }, { userId: null }] },
         orderBy: { createdAt: "desc" },
@@ -29,6 +36,14 @@ export async function GET(request: Request) {
         orderBy: { createdAt: "desc" },
       }),
       getIntegrationSettingsPublic(userId),
+      prisma.webhookEvent.count({
+        where: { userId, createdAt: { gte: since24h } },
+      }),
+      prisma.webhookEvent.findFirst({
+        where: { userId, leadgenId: { not: null } },
+        orderBy: { createdAt: "desc" },
+        select: { leadgenId: true, createdAt: true, status: true },
+      }),
     ]);
 
   const lastEvent = webhookEvents[0] ?? null;
@@ -40,6 +55,10 @@ export async function GET(request: Request) {
     lastWebhookAt: lastEvent?.createdAt ?? null,
     lastWebhookStatus: lastEvent?.status ?? null,
     lastWebhookError: lastEvent?.lastError ?? null,
+    webhookCount24h,
+    lastLeadgenId: lastLeadgenEvent?.leadgenId ?? null,
+    lastLeadgenAt: lastLeadgenEvent?.createdAt ?? null,
+    lastLeadgenStatus: lastLeadgenEvent?.status ?? null,
     verificationLogs: verificationLogs.map((l) => ({
       id: l.id,
       mode: l.mode,

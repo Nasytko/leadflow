@@ -62,4 +62,10 @@ export type FacebookLeadData = {
   id: string;
   created_time: string;
   field_data: LeadField[];
+  campaign_id?: string;
+  campaign_name?: string;
+  adset_id?: string;
+  adset_name?: string;
+  ad_id?: string;
+  ad_name?: string;
 };

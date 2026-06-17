@@ -22,6 +22,7 @@ type IntegrationSettings = {
   hasMetaAppSecret: boolean;
   hasWebhookToken: boolean;
   configured: boolean;
+  showAdvancedSettings?: boolean;
   redirectUri: string;
   webhookUrl: string;
 };
@@ -192,10 +193,14 @@ export function MetaSettingsForm({
     (initialMetaAppId && metaAppId !== initialMetaAppId) || metaAppSecret.length > 0;
 
   if (loading) {
+    return <p className="text-sm text-muted-foreground">{tCommon("loading")}</p>;
+  }
+
+  if (settings?.showAdvancedSettings === false) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-        {tCommon("loading")}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+        <p className="text-sm font-medium">{t("platformManagedTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("platformManagedDesc")}</p>
       </div>
     );
   }

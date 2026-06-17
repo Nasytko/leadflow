@@ -9,10 +9,13 @@ import { mapLeadPublic } from "@/lib/lead-mapper";
 
 const patchSchema = z.object({
   action: z.enum([
+    "set_new",
+    "set_contacted",
+    "set_qualified",
+    "set_converted",
+    "set_rejected",
     "set_in_progress",
     "set_processed",
-    "set_rejected",
-    "set_new",
     "resend_telegram",
   ]),
   managerNote: z.string().optional(),
@@ -35,6 +38,7 @@ export async function GET(
           page: { include: { business: true } },
         },
       },
+      processedBy: { select: { id: true, name: true, email: true } },
       deliveryLogs: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -71,9 +75,12 @@ export async function PATCH(
     } else {
       const statusMap = {
         set_new: "new",
+        set_contacted: "contacted",
+        set_qualified: "qualified",
+        set_converted: "converted",
+        set_rejected: "rejected",
         set_in_progress: "in_progress",
         set_processed: "processed",
-        set_rejected: "rejected",
       } as const;
       await updateLeadCrmStatus(
         userId,
@@ -87,6 +94,7 @@ export async function PATCH(
       where: { id: leadId, userId },
       include: {
         form: { include: { page: { include: { business: true } } } },
+        processedBy: { select: { id: true, name: true, email: true } },
         deliveryLogs: { orderBy: { createdAt: "desc" } },
       },
     });

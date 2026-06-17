@@ -43,6 +43,10 @@ type Lead = {
   fieldData?: Record<string, string>;
   rawData?: object;
   managerNote?: string | null;
+  adsetName?: string | null;
+  adName?: string | null;
+  processedAt?: string | null;
+  processedBy?: { id: string; name: string | null; email: string } | null;
 };
 
 type LeadDetail = Lead & {
@@ -114,9 +118,12 @@ export function LeadsContent() {
   function crmLabel(s: string) {
     const map: Record<string, string> = {
       new: t("crmStatusNew"),
-      in_progress: t("crmStatusInProgress"),
-      processed: t("crmStatusProcessed"),
+      contacted: t("crmStatusContacted"),
+      qualified: t("crmStatusQualified"),
+      converted: t("crmStatusConverted"),
       rejected: t("crmStatusRejected"),
+      in_progress: t("crmStatusContacted"),
+      processed: t("crmStatusConverted"),
     };
     return map[s] ?? s;
   }
@@ -142,9 +149,9 @@ export function LeadsContent() {
   }
 
   function statusVariant(s: string): "success" | "destructive" | "warning" | "secondary" {
-    if (s === "delivered" || s === "processed" || s === "sent") return "success";
+    if (s === "delivered" || s === "processed" || s === "converted" || s === "sent") return "success";
     if (s === "delivery_failed" || s === "failed" || s === "rejected") return "destructive";
-    if (s === "new" || s === "in_progress") return "warning";
+    if (s === "new" || s === "in_progress" || s === "contacted" || s === "qualified") return "warning";
     return "secondary";
   }
 
@@ -171,8 +178,9 @@ export function LeadsContent() {
           <SelectContent>
             <SelectItem value="all">{t("filterByStatus")}</SelectItem>
             <SelectItem value="new">{t("crmStatusNew")}</SelectItem>
-            <SelectItem value="in_progress">{t("crmStatusInProgress")}</SelectItem>
-            <SelectItem value="processed">{t("crmStatusProcessed")}</SelectItem>
+            <SelectItem value="contacted">{t("crmStatusContacted")}</SelectItem>
+            <SelectItem value="qualified">{t("crmStatusQualified")}</SelectItem>
+            <SelectItem value="converted">{t("crmStatusConverted")}</SelectItem>
             <SelectItem value="rejected">{t("crmStatusRejected")}</SelectItem>
           </SelectContent>
         </Select>
@@ -262,11 +270,14 @@ export function LeadsContent() {
           {selectedLead && (
             <div className="mt-6 space-y-6">
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_in_progress")}>
-                  {t("actionInProgress")}
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_contacted")}>
+                  {t("actionContacted")}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_processed")}>
-                  {t("actionProcessed")}
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_qualified")}>
+                  {t("actionQualified")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_converted")}>
+                  {t("actionConverted")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_rejected")}>
                   {t("actionReject")}
@@ -284,7 +295,18 @@ export function LeadsContent() {
                   {selectedLead.pageName && <p>{t("page")}: {selectedLead.pageName}</p>}
                   {selectedLead.businessName && <p>{t("business")}: {selectedLead.businessName}</p>}
                   {selectedLead.campaignName && <p>{t("campaign")}: {selectedLead.campaignName}</p>}
+                  {selectedLead.adsetName && <p>{t("adset")}: {selectedLead.adsetName}</p>}
+                  {selectedLead.adName && <p>{t("ad")}: {selectedLead.adName}</p>}
                 </div>
+              )}
+
+              {selectedLead.processedAt && (
+                <p className="text-sm text-muted-foreground">
+                  {t("processedAt")}: {formatDate(selectedLead.processedAt, locale)}
+                  {selectedLead.processedBy?.name || selectedLead.processedBy?.email
+                    ? ` · ${selectedLead.processedBy.name ?? selectedLead.processedBy.email}`
+                    : ""}
+                </p>
               )}
 
               <div>

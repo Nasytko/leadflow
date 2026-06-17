@@ -27,6 +27,9 @@ type Form = {
   lastSyncError: string | null;
   lastSyncAt: string | null;
   createdAt: string;
+  metaCreatedAt: string | null;
+  leadCount: number;
+  lastLeadAt: string | null;
   pageName: string;
 };
 
@@ -230,8 +233,10 @@ export function FormsContent() {
                     <th className="p-4 text-left font-medium">{t("formName")}</th>
                     <th className="p-4 text-left font-medium">{t("page")}</th>
                     <th className="p-4 text-left font-medium">{t("status")}</th>
-                    <th className="p-4 text-left font-medium">{t("syncStatus")}</th>
+                    <th className="p-4 text-left font-medium">{t("leadCount")}</th>
+                    <th className="p-4 text-left font-medium">{t("lastLead")}</th>
                     <th className="p-4 text-left font-medium">{t("createdAt")}</th>
+                    <th className="p-4 text-left font-medium">{t("syncEnabled")}</th>
                     <th className="p-4 text-left font-medium">{tCommon("actions")}</th>
                   </tr>
                 </thead>
@@ -243,26 +248,17 @@ export function FormsContent() {
                       <td className="p-4">
                         <Badge variant="secondary">{form.status}</Badge>
                       </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <Badge
-                            variant={
-                              form.syncStatus === "success"
-                                ? "success"
-                                : form.syncStatus === "failed"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {t(`syncStatus_${form.syncStatus}`)}
-                          </Badge>
-                          {form.lastSyncError && (
-                            <p className="text-xs text-destructive max-w-xs">{form.lastSyncError}</p>
-                          )}
-                        </div>
+                      <td className="p-4">{form.leadCount}</td>
+                      <td className="p-4 text-muted-foreground">
+                        {form.lastLeadAt ? formatDate(form.lastLeadAt, locale) : "—"}
                       </td>
                       <td className="p-4 text-muted-foreground">
-                        {formatDate(form.createdAt, locale)}
+                        {formatDate(form.metaCreatedAt ?? form.createdAt, locale)}
+                      </td>
+                      <td className="p-4">
+                        <Badge variant={form.enabled ? "success" : "secondary"}>
+                          {form.enabled ? tCommon("enabled") : tCommon("disabled")}
+                        </Badge>
                       </td>
                       <td className="p-4">
                         <Switch

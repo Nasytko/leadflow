@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  validateMetaLoginConfigIdInput,
+} from "@/lib/meta-login-config";
+import {
   getIntegrationSettingsPublic,
   saveIntegrationSettings,
   validateMetaCredentials,
@@ -9,11 +12,22 @@ import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-hel
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 
+const loginConfigIdSchema = z
+  .string()
+  .optional()
+  .superRefine((value, ctx) => {
+    if (value === undefined) return;
+    const result = validateMetaLoginConfigIdInput(value);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.error });
+    }
+  });
+
 const schema = z.object({
   metaAppId: z.string().min(1),
   metaAppSecret: z.string().optional(),
   metaWebhookVerifyToken: z.string().optional(),
-  metaLoginConfigId: z.string().optional(),
+  metaLoginConfigId: loginConfigIdSchema,
 });
 
 export async function GET(request: Request) {
@@ -54,6 +68,12 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "META_APP_SECRET_REQUIRED") {
       return apiError("VALIDATION", "App Secret is required");
+    }
+    if (
+      error instanceof Error &&
+      error.message.includes("Facebook Login Configuration ID")
+    ) {
+      return apiError("VALIDATION", error.message);
     }
     const message = error instanceof Error ? error.message : "Save failed";
     return apiError("SAVE_FAILED", message, 500);

@@ -94,6 +94,7 @@ type StatusData = {
   failedFormsCount?: number;
   telegramConnected: boolean;
   webhookVerified?: boolean;
+  showAdvancedMetaSettings?: boolean;
   webhookUrl: string;
   redirectUri: string;
   setupSteps: {
@@ -655,7 +656,7 @@ export function FacebookContent() {
 
       <FacebookWebhookDiagnostics />
 
-      {/* Advanced Meta App settings */}
+      {status.showAdvancedMetaSettings !== false && (
       <Card className="rounded-2xl border-dashed">
         <CardHeader
           className="cursor-pointer"
@@ -677,6 +678,7 @@ export function FacebookContent() {
           </CardContent>
         )}
       </Card>
+      )}
 
       {/* Wiki link */}
       <Card className="rounded-2xl border-primary/15 bg-primary/[0.03]">
