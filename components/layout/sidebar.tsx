@@ -166,18 +166,12 @@ export function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.user?.isAdmin === true;
-  const mobileItems = [
-    allNavItems[0],
-    allNavItems[2],
-    allNavItems[5],
-    allNavItems[6],
-    allNavItems[1],
-  ];
+  const mobileItems = allNavItems.filter((item) => item.key !== "wiki");
   const items = isAdmin ? [...mobileItems, adminNavItem] : mobileItems;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-sidebar-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex justify-around px-1 py-1.5">
+      <div className="flex overflow-x-auto px-1 py-1.5 scrollbar-none">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (

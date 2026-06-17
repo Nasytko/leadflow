@@ -1,7 +1,7 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 
 const profileSchema = z.object({
   name: z.string().optional(),
@@ -28,6 +28,9 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const body = await request.json();
 

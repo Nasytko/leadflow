@@ -1,22 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { verifyEmailByToken } from "@/lib/email-verification";
 import { getRegistrationMode } from "@/lib/registration";
 import { createAuditLog } from "@/lib/audit";
+import {
+  checkAuthRateLimit,
+  rateLimitedResponse,
+} from "@/lib/security-rate-limit";
 
 const schema = z.object({ token: z.string().min(1) });
 
 export async function GET(request: Request) {
   const ip = getClientIp(request);
-  const limit = await rateLimitByIp(ip, 20, 60);
-  if (!limit.success) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-      { status: 429 }
-    );
+  const limit = await checkAuthRateLimit({
+    action: "verify_email",
+    request,
+  });
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit.retryAfterSeconds);
   }
 
   const { searchParams } = new URL(request.url);

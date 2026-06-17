@@ -26,6 +26,7 @@ import {
   Layers,
   BookOpen,
 } from "lucide-react";
+import { apiFetch } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type Page = {
@@ -122,7 +123,7 @@ async function fetchWithTimeout(url: string, options?: RequestInit, ms = 10000) 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await apiFetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(id);
   }

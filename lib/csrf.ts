@@ -1,8 +1,8 @@
+import { timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { generateSecureToken } from "./encryption";
 
-const CSRF_COOKIE = "csrf_token";
-const CSRF_HEADER = "x-csrf-token";
+import { CSRF_COOKIE, CSRF_HEADER } from "./csrf-constants";
 
 export async function generateCsrfToken(): Promise<string> {
   const token = generateSecureToken(32);
@@ -22,7 +22,15 @@ export async function validateCsrfToken(headerToken: string | null): Promise<boo
   const cookieStore = await cookies();
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value;
   if (!cookieToken) return false;
-  return cookieToken === headerToken;
+  if (headerToken.length !== cookieToken.length) return false;
+  try {
+    return timingSafeEqual(
+      Buffer.from(headerToken, "utf8"),
+      Buffer.from(cookieToken, "utf8")
+    );
+  } catch {
+    return false;
+  }
 }
 
-export { CSRF_HEADER };
+export { CSRF_COOKIE, CSRF_HEADER } from "./csrf-constants";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import { testTelegramConnection } from "@/services/telegram.service";
 
 const schema = z.object({
@@ -12,6 +12,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);

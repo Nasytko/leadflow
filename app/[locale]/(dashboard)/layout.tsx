@@ -1,6 +1,7 @@
 import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AppFooter } from "@/components/layout/footer";
+import { CsrfProvider } from "@/components/providers/csrf-provider";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -33,6 +34,7 @@ export default async function DashboardLayout({
   }
 
   return (
+    <CsrfProvider>
     <div className="flex min-h-screen">
       <Sidebar />
       <div className="flex flex-1 flex-col pb-16 lg:pb-0 min-h-screen">
@@ -42,5 +44,6 @@ export default async function DashboardLayout({
       </div>
       <MobileNav />
     </div>
+    </CsrfProvider>
   );
 }

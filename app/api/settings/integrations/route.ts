@@ -8,7 +8,7 @@ import {
   saveIntegrationSettings,
   validateMetaCredentials,
 } from "@/services/integration-settings.service";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 
@@ -44,6 +44,9 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
@@ -83,6 +86,9 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const body = await request.json();
   const parsed = schema.safeParse(body);

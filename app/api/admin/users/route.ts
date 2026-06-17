@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAdmin, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -68,6 +68,12 @@ export async function PATCH(request: Request) {
   const authResult = await requireAdmin();
   if ("error" in authResult) return authResult.error;
 
+  const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
+  if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
+
   const body = await request.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return apiError("VALIDATION", "Invalid input", 400);
@@ -76,12 +82,40 @@ export async function PATCH(request: Request) {
   const userId = searchParams.get("userId");
   if (!userId) return apiError("VALIDATION", "userId required", 400);
 
+  const actorId = authResult.session.user.id;
+  if (
+    userId === actorId &&
+    (parsed.data.action === "block" ||
+      parsed.data.action === "remove_admin")
+  ) {
+    return apiError("FORBIDDEN", "Cannot modify your own admin access or block yourself", 403);
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerifiedAt: true, isAdmin: true },
+  });
+  if (!target) return apiError("NOT_FOUND", "User not found", 404);
+
   const data: Record<string, unknown> = {};
-  if (parsed.data.action === "approve") data.status = "active";
+  if (parsed.data.action === "approve") {
+    if (!target.emailVerifiedAt) {
+      return apiError("EMAIL_NOT_VERIFIED", "User must verify email before approval", 400);
+    }
+    data.status = "active";
+  }
   if (parsed.data.action === "block") data.status = "blocked";
   if (parsed.data.action === "unblock") data.status = "active";
   if (parsed.data.action === "make_admin") data.isAdmin = true;
-  if (parsed.data.action === "remove_admin") data.isAdmin = false;
+  if (parsed.data.action === "remove_admin") {
+    if (target.isAdmin) {
+      const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+      if (adminCount <= 1) {
+        return apiError("FORBIDDEN", "Cannot remove the last admin", 403);
+      }
+    }
+    data.isAdmin = false;
+  }
 
   const updated = await prisma.user.update({
     where: { id: userId },

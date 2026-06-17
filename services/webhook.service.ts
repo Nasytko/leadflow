@@ -180,6 +180,42 @@ export async function handleMetaWebhook(
   }
 }
 
+export async function logWebhookSignatureFailure(params: {
+  sourceIp?: string;
+  userAgent?: string;
+  reason: "missing_signature" | "invalid_signature";
+}) {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.webhookEvent.create({
+    data: {
+      eventType: "leadgen",
+      payload: { error: "signature_invalid", reason: params.reason },
+      status: "signature_invalid",
+      sourceIp: params.sourceIp,
+      userAgent: params.userAgent,
+      lastError:
+        params.reason === "missing_signature"
+          ? "Missing X-Hub-Signature-256 header"
+          : "Invalid X-Hub-Signature-256",
+      lastErrorAt: new Date(),
+    },
+  });
+
+  await writeSystemLog({
+    level: "warn",
+    source: "webhook",
+    action: "signature.invalid",
+    message: params.reason === "missing_signature"
+      ? "Webhook rejected: missing signature"
+      : "Webhook rejected: invalid signature",
+    metadata: {
+      ipAddress: params.sourceIp,
+      reason: params.reason,
+    },
+  });
+}
+
 export async function verifyMetaWebhook(
   mode: string | null,
   token: string | null,

@@ -15,6 +15,7 @@ import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
   const locale = useLocale();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -51,7 +52,11 @@ export default function RegisterPage() {
 
     const data = await res.json();
     if (!res.ok) {
-      toast.error(data.error?.code === "EMAIL_EXISTS" ? t("emailExists") : t("invalidCredentials"));
+      if (res.status === 429 || data.error?.code === "RATE_LIMITED") {
+        toast.error(tErrors("rateLimited"));
+      } else {
+        toast.error(data.error?.code === "EMAIL_EXISTS" ? t("emailExists") : t("invalidCredentials"));
+      }
       setLoading(false);
       return;
     }

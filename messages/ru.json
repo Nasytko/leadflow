@@ -98,6 +98,7 @@
     "resetNewTitle": "Новый пароль",
     "resetNewSubtitle": "Введите новый пароль для аккаунта",
     "loginButton": "Войти",
+    "rateLimitedLogin": "Слишком много попыток входа. Подождите 15 минут.",
     "registerButton": "Зарегистрироваться",
     "invalidCredentials": "Неверный email или пароль",
     "emailExists": "Email уже зарегистрирован",

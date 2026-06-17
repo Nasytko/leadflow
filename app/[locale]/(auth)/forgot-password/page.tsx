@@ -13,6 +13,7 @@ import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
@@ -22,7 +23,7 @@ export default function ForgotPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await fetch("/api/auth/forgot-password", {
+    const res = await fetch("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -30,7 +31,11 @@ export default function ForgotPasswordPage() {
         ...(turnstileSiteKey ? { turnstileToken } : {}),
       }),
     });
-    toast.success(t("resetEmailSent"));
+    if (res.status === 429) {
+      toast.error(tErrors("rateLimited"));
+    } else {
+      toast.success(t("resetEmailSent"));
+    }
     setLoading(false);
   }
 

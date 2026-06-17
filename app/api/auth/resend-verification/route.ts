@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { verifyTurnstileToken, isTurnstileEnabled } from "@/lib/turnstile";
 import {
@@ -9,6 +8,10 @@ import {
   sendVerificationEmail,
 } from "@/lib/email-verification";
 import { createAuditLog } from "@/lib/audit";
+import {
+  checkAuthRateLimit,
+  rateLimitedResponse,
+} from "@/lib/security-rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -17,14 +20,6 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const limit = await rateLimitByIp(ip, 3, 60);
-  if (!limit.success) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-      { status: 429 }
-    );
-  }
-
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -32,6 +27,15 @@ export async function POST(request: Request) {
       { error: { code: "VALIDATION", message: "Invalid input" } },
       { status: 400 }
     );
+  }
+
+  const limit = await checkAuthRateLimit({
+    action: "resend_verification",
+    request,
+    email: parsed.data.email,
+  });
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit.retryAfterSeconds);
   }
 
   if (isTurnstileEnabled()) {

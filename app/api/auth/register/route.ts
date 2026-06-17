@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { createAuditLog } from "@/lib/audit";
 import { verifyTurnstileToken, isTurnstileEnabled } from "@/lib/turnstile";
@@ -11,6 +10,10 @@ import {
   createEmailVerificationToken,
   sendVerificationEmail,
 } from "@/lib/email-verification";
+import {
+  checkAuthRateLimit,
+  rateLimitedResponse,
+} from "@/lib/security-rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -23,16 +26,20 @@ const registerSchema = z.object({
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const limit = await rateLimitByIp(ip, 5, 60);
-  if (!limit.success) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-      { status: 429 }
-    );
-  }
 
   try {
-    const body = await request.json();
+    const body = await request.clone().json();
+    const emailForLimit =
+      typeof body?.email === "string" ? body.email : undefined;
+    const limit = await checkAuthRateLimit({
+      action: "register",
+      request,
+      email: emailForLimit,
+    });
+    if (!limit.allowed) {
+      return rateLimitedResponse(limit.retryAfterSeconds);
+    }
+
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

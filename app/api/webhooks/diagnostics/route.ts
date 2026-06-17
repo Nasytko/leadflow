@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     lastLeadgenEvent,
   ] = await Promise.all([
       prisma.webhookVerificationLog.findMany({
-        where: { OR: [{ userId }, { userId: null }] },
+        where: { userId },
         orderBy: { createdAt: "desc" },
         take: limit,
       }),

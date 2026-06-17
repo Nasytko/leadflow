@@ -275,6 +275,7 @@ model DeliveryLog {
 
   @@index([userId, createdAt])
   @@index([status])
+  @@index([leadId, status])
   @@map("delivery_logs")
 }
 

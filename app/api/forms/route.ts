@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import {
   syncUserForms,
   InvalidFacebookTokenError,
@@ -75,6 +75,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   try {
     const { synced } = await syncUserForms(authResult.session.user.id);

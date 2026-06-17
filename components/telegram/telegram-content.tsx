@@ -18,6 +18,7 @@ import {
 import { Send, BookOpen, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/client-api";
 import { Link } from "@/i18n/navigation";
 import { telegramStatusBadgeVariant } from "@/lib/connection-status";
 
@@ -44,7 +45,7 @@ export function TelegramContent() {
     try {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 10000);
-      const res = await fetch("/api/telegram", { signal: controller.signal });
+      const res = await apiFetch("/api/telegram", { signal: controller.signal });
       clearTimeout(id);
       const data = await res.json();
       if (data.data) {
@@ -66,7 +67,7 @@ export function TelegramContent() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/telegram", {
+      const res = await apiFetch("/api/telegram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ botToken, chatId, notificationLocale }),
@@ -89,7 +90,7 @@ export function TelegramContent() {
   async function handleTest() {
     setTesting(true);
     try {
-      const res = await fetch("/api/telegram/test", { method: "POST" });
+      const res = await apiFetch("/api/telegram/test", { method: "POST" });
       const data = await res.json();
       if (data.data?.sent) {
         toast.success(t("testSuccess"));

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import {
   updateLeadCrmStatus,
   resendLeadToTelegram,
@@ -59,6 +59,9 @@ export async function PATCH(
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const { leadId } = await params;
   const body = await request.json();

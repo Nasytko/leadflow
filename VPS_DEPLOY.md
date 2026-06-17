@@ -222,7 +222,23 @@ nano .env
 META_APP_ID=ваш_app_id
 META_APP_SECRET=ваш_app_secret
 META_WEBHOOK_VERIFY_TOKEN=ваш_токен_webhook
+META_WEBHOOK_SIGNATURE_REQUIRED=true
+META_LOGIN_CONFIG_ID=123456789012345
+DEPLOYMENT_MODE=saas
 ```
+
+> **Важно:** `META_LOGIN_CONFIG_ID` — только **числовой** ID из Meta Login for Business. Не email и не произвольный текст.
+
+### Очистка ошибочного config_id в БД
+
+Если в OAuth URL попал email вместо Configuration ID:
+
+```sql
+UPDATE integration_settings SET "metaLoginConfigId" = NULL WHERE "metaLoginConfigId" LIKE '%@%';
+UPDATE facebook_connections SET "metaLoginConfigIdAtAuth" = NULL WHERE "metaLoginConfigIdAtAuth" LIKE '%@%';
+```
+
+После этого задайте правильный ID в `.env` (`META_LOGIN_CONFIG_ID`) или переподключите Facebook.
 
 Сохранение в nano: `Ctrl+O`, Enter, выход: `Ctrl+X`.
 
@@ -398,6 +414,29 @@ https://fb.nasytko.ru/api/facebook/callback
 | Verify Token | тот же, что в LeadFlow (UI или `META_WEBHOOK_VERIFY_TOKEN` в `.env`) |
 
 Подпишитесь на поле: **`leadgen`**
+
+В production включена проверка подписи webhook (`META_WEBHOOK_SIGNATURE_REQUIRED=true` по умолчанию). Meta подписывает POST body через `X-Hub-Signature-256` с использованием `META_APP_SECRET`.
+
+**Проверка подписи вручную (bash):**
+
+```bash
+BODY='{"object":"page","entry":[]}'
+SECRET='ваш_META_APP_SECRET'
+SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
+curl -X POST "https://fb.nasytko.ru/api/webhooks/meta" \
+  -H "Content-Type: application/json" \
+  -H "X-Hub-Signature-256: sha256=$SIG" \
+  -d "$BODY"
+```
+
+Без заголовка или с неверной подписью в production вернётся **401**.
+
+### 9.2.1 Security: rate limits и CSRF
+
+- **Redis обязателен** в production для rate limit (login, register, forgot-password и др.)
+- Локально при недоступном Redis используется in-memory fallback (только dev)
+- Dashboard API (POST/PATCH/DELETE) требует CSRF: клиент получает токен через `GET /api/csrf`
+- Самопроверка: `npm run security:check`
 
 ### 9.3 Permissions
 

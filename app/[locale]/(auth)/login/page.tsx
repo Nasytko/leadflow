@@ -32,7 +32,11 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      toast.error(t("invalidCredentials"));
+      if (result.status === 429) {
+        toast.error(t("rateLimitedLogin"));
+      } else {
+        toast.error(t("invalidCredentials"));
+      }
       setLoading(false);
       return;
     }

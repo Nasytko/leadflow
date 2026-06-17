@@ -1,4 +1,4 @@
-import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, requireCsrf } from "@/lib/api-helpers";
 import { resetFacebookConnection } from "@/services/facebook.service";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
@@ -9,6 +9,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   await resetFacebookConnection(authResult.session.user.id);
 

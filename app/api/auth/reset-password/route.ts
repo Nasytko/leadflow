@@ -3,9 +3,12 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashToken } from "@/lib/encryption";
-import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { createAuditLog } from "@/lib/audit";
+import {
+  checkAuthRateLimit,
+  rateLimitedResponse,
+} from "@/lib/security-rate-limit";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -14,12 +17,12 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const limit = await rateLimitByIp(ip, 5, 60);
-  if (!limit.success) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-      { status: 429 }
-    );
+  const limit = await checkAuthRateLimit({
+    action: "reset_password",
+    request,
+  });
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit.retryAfterSeconds);
   }
 
   try {

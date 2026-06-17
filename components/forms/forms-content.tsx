@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/client-api";
 import { Link } from "@/i18n/navigation";
 
 type Form = {
@@ -72,7 +73,7 @@ export function FormsContent() {
   async function handleSync() {
     setSyncing(true);
     try {
-      const res = await fetch("/api/forms", { method: "POST" });
+      const res = await apiFetch("/api/forms", { method: "POST" });
       const data = await res.json();
       if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
         toast.error(tFacebook("tokenInvalid"));
@@ -90,7 +91,7 @@ export function FormsContent() {
   }
 
   async function toggleForm(formId: string, enabled: boolean) {
-    const res = await fetch(`/api/forms/${formId}`, {
+    const res = await apiFetch(`/api/forms/${formId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: !enabled }),
@@ -106,7 +107,7 @@ export function FormsContent() {
   async function handleImport() {
     setImporting(true);
     try {
-      const res = await fetch("/api/leads", {
+      const res = await apiFetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sendToTelegram }),

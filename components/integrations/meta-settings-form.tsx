@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldLabel } from "@/components/ui/field-label";
 import { Copy, Shield, CheckCircle2, AlertTriangle, Sparkles, Link2, Facebook, Send } from "lucide-react";
+import { apiFetch } from "@/lib/client-api";
 import { Link } from "@/i18n/navigation";
 import {
   facebookStatusBadgeVariant,
@@ -131,7 +132,7 @@ export function MetaSettingsForm({
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/integrations", {
+      const res = await apiFetch("/api/settings/integrations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -166,7 +167,7 @@ export function MetaSettingsForm({
     }
     setTesting(true);
     try {
-      const res = await fetch("/api/settings/integrations", {
+      const res = await apiFetch("/api/settings/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ metaAppId, metaAppSecret: metaAppSecret || "use-stored" }),

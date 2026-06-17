@@ -24,7 +24,7 @@ import { useLocale } from "next-intl";
 import { Users, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/client-api";
 
 type Lead = {
   id: string;
@@ -100,7 +100,7 @@ export function LeadsContent() {
   }
 
   async function leadAction(leadId: string, action: string) {
-    const res = await fetch(`/api/leads/${leadId}`, {
+    const res = await apiFetch(`/api/leads/${leadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),

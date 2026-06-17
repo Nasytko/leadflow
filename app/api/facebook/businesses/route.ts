@@ -1,4 +1,4 @@
-import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, requireCsrf } from "@/lib/api-helpers";
 import {
   mapFacebookBusinessPublic,
   syncFacebookIdentity,
@@ -51,6 +51,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const userId = authResult.session.user.id;
   const result = await syncFacebookIdentity(userId);

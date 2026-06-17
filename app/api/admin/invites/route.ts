@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
+import { requireAdmin, checkRateLimit, apiSuccess, requireCsrf } from "@/lib/api-helpers";
 import { generateSecureToken, hashToken } from "@/lib/encryption";
 
 export async function POST(request: Request) {
@@ -8,6 +8,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const code = generateSecureToken(8);
   const codeHash = hashToken(code);

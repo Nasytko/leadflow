@@ -107,10 +107,15 @@ docker compose up --build -d
 
 - Facebook/Telegram tokens encrypted at rest (AES-256-GCM)
 - Tokens never exposed to frontend
-- Redis-based rate limiting
-- Webhook verification
+- Redis-based rate limiting (login 5/15min per email+IP, register 3/hour per IP, etc.)
+- Meta webhook `X-Hub-Signature-256` validation (`META_WEBHOOK_SIGNATURE_REQUIRED`, default on in production)
+- Webhook verify-token handshake (GET)
+- CSRF protection on authenticated mutations (`GET /api/csrf` + `x-csrf-token` header)
 - Multi-tenant data isolation
-- CSRF protection on mutations
+
+**Self-check:** `npm run security:check`
+
+**Env:** see `.env.example` for `META_WEBHOOK_SIGNATURE_REQUIRED`, `DEPLOYMENT_MODE`, `REDIS_URL`.
 
 ## License
 

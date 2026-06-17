@@ -19,6 +19,7 @@ import { IntegrationsSettingsCard } from "@/components/integrations/meta-setting
 import { Settings } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/client-api";
 
 export function SettingsContent() {
   const t = useTranslations("settings");
@@ -46,7 +47,7 @@ export function SettingsContent() {
   }, []);
 
   async function saveProfile() {
-    const res = await fetch("/api/settings", {
+    const res = await apiFetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, locale }),
@@ -62,7 +63,7 @@ export function SettingsContent() {
       toast.error(t("confirmNewPassword"));
       return;
     }
-    const res = await fetch("/api/settings", {
+    const res = await apiFetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),

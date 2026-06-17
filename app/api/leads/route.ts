@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import { enqueueImportLeads } from "@/lib/queue";
 import { importLeadsForUser } from "@/services/lead.service";
 import { InvalidFacebookTokenError } from "@/services/facebook.service";
@@ -19,8 +19,8 @@ export async function GET(request: Request) {
   if (rateLimitError) return rateLimitError;
 
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const limit = parseInt(searchParams.get("limit") ?? "20", 10);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
   const search = searchParams.get("search") ?? "";
   const crmStatus = searchParams.get("crmStatus") ?? searchParams.get("status");
   const formId = searchParams.get("formId");
@@ -69,6 +69,9 @@ export async function POST(request: Request) {
 
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   const body = await request.json();
   const parsed = importSchema.safeParse(body);

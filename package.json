@@ -13,6 +13,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "worker": "tsx workers/index.ts",
+    "security:check": "tsx scripts/security-self-check.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

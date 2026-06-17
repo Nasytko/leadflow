@@ -97,6 +97,7 @@
     "resetNewTitle": "New password",
     "resetNewSubtitle": "Enter a new password for your account",
     "loginButton": "Sign in",
+    "rateLimitedLogin": "Too many login attempts. Please wait 15 minutes.",
     "registerButton": "Sign up",
     "invalidCredentials": "Invalid email or password",
     "emailExists": "Email is already registered",

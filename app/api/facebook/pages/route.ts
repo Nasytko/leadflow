@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 import {
   syncUserPages,
   resetFacebookConnection,
@@ -46,6 +46,9 @@ export async function POST(request: Request) {
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
 
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
+
   try {
     const pages = await syncUserPages(authResult.session.user.id);
     return apiSuccess({
@@ -71,6 +74,9 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
+
+  const csrfError = await requireCsrf(request);
+  if (csrfError) return csrfError;
 
   await resetFacebookConnection(authResult.session.user.id);
 

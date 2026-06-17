@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { apiFetch } from "@/lib/client-api";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ export function AdminUsersContent() {
   async function doAction(userId: string, action: string) {
     setRefreshing(true);
     try {
-      const res = await fetch(`/api/admin/users?userId=${encodeURIComponent(userId)}`, {
+      const res = await apiFetch(`/api/admin/users?userId=${encodeURIComponent(userId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
@@ -74,7 +75,7 @@ export function AdminUsersContent() {
   async function createInvite() {
     setRefreshing(true);
     try {
-      const res = await fetch("/api/admin/invites", { method: "POST" });
+      const res = await apiFetch("/api/admin/invites", { method: "POST" });
       const data = await res.json();
       if (data.error) {
         toast.error(data.error.message ?? tCommon("error"));
