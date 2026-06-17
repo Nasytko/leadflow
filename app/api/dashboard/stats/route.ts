@@ -108,9 +108,8 @@ export async function GET() {
   const integrationPublic = await getIntegrationSettingsPublic(userId);
 
   const setupSteps = buildWizardSteps({
-    metaConfigured: !!integrationSettings?.configured,
-    hasLoginConfigId: integrationPublic.hasMetaLoginConfigId,
     hasFacebookProfile: !!facebookConnection?.facebookUserId,
+    businessesCount: await prisma.facebookBusiness.count({ where: { userId } }),
     connectedPagesCount: connectedPages,
     activeFormsCount: activeForms,
     telegramConnected: telegramStatus === "connected",

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LeadFlow",
-  description: "Facebook Lead Ads to Telegram integration",
+  title: "LeadBridge",
+  description: "Facebook Lead Ads to Telegram without code",
 };
 
 export default function RootLayout({

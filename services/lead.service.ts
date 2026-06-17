@@ -15,6 +15,7 @@ import {
   extractLeadFromFacebookData,
 } from "./notification.service";
 import { sendTelegramMessage } from "./telegram.service";
+import { extractAdFields } from "@/lib/lead-mapper";
 
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
 const SENT_STATUSES = ["success", "sent"];
@@ -109,7 +110,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
         status: { in: SENT_STATUSES },
       },
     });
-    if (priorDelivery || existingLead.status === "delivered") {
+    if (priorDelivery || existingLead.telegramStatus === "sent") {
       await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
       return;
     }
@@ -118,6 +119,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
   const pageToken = decrypt(page.pageAccessTokenEncrypted);
   const leadData = await getLeadDetails(data.leadgenId, pageToken);
   const { name, phone, email, fields } = extractLeadFromFacebookData(leadData);
+  const adFields = extractAdFields(fields);
 
   const lead = await prisma.lead.upsert({
     where: {
@@ -137,6 +139,10 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       rawData: leadData as object,
       createdTime: new Date(leadData.created_time),
       status: "new",
+      crmStatus: "new",
+      telegramStatus: "pending",
+      source: "webhook",
+      ...adFields,
     },
     update: {
       formId: enabledForm.id,
@@ -145,6 +151,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       email,
       fieldData: fields,
       rawData: leadData as object,
+      ...adFields,
     },
     include: { form: true },
   });
@@ -243,7 +250,7 @@ async function deliverToTelegram(
     if (existingSent) {
       await prisma.lead.update({
         where: { id: leadId },
-        data: { status: "delivered" },
+        data: { status: "delivered", telegramStatus: "sent" },
       });
       return;
     }
@@ -278,7 +285,7 @@ async function deliverToTelegram(
     });
     await prisma.lead.update({
       where: { id: leadId },
-      data: { status: "delivered" },
+      data: { status: "delivered", telegramStatus: "sent" },
     });
     return;
   }
@@ -336,7 +343,7 @@ async function deliverToTelegram(
     });
     await prisma.lead.update({
       where: { id: leadId },
-      data: { status: "delivery_failed" },
+      data: { status: "delivery_failed", telegramStatus: "failed" },
     });
     await writeSystemLog({
       userId,
@@ -349,10 +356,23 @@ async function deliverToTelegram(
   }
 }
 
+export type ImportLeadsResult = {
+  imported: number;
+  skippedDuplicates: number;
+  failed: number;
+  perFormStats: Array<{
+    formId: string;
+    formName: string;
+    imported: number;
+    skipped: number;
+    failed: number;
+  }>;
+};
+
 export async function importLeadsForUser(
   userId: string,
   sendToTelegram: boolean
-) {
+): Promise<ImportLeadsResult> {
   const forms = await prisma.facebookForm.findMany({
     where: {
       enabled: true,
@@ -362,10 +382,13 @@ export async function importLeadsForUser(
   });
 
   if (forms.length === 0) {
-    return { imported: 0 };
+    return { imported: 0, skippedDuplicates: 0, failed: 0, perFormStats: [] };
   }
 
   let imported = 0;
+  let skippedDuplicates = 0;
+  let failed = 0;
+  const perFormStats: ImportLeadsResult["perFormStats"] = [];
 
   const { getFormLeads, handleFacebookGraphError, isInvalidOAuthTokenError } =
     await import("./facebook.service");
@@ -373,6 +396,9 @@ export async function importLeadsForUser(
   for (const form of forms) {
     const pageToken = decrypt(form.page.pageAccessTokenEncrypted);
     let after: string | undefined;
+    let formImported = 0;
+    let formSkipped = 0;
+    let formFailed = 0;
 
     try {
       do {
@@ -386,42 +412,65 @@ export async function importLeadsForUser(
             },
           });
 
-          if (existing) continue;
+          if (existing) {
+            skippedDuplicates++;
+            formSkipped++;
+            continue;
+          }
 
-          const { name, phone, email, fields } =
-            extractLeadFromFacebookData(leadData);
+          try {
+            const { name, phone, email, fields } =
+              extractLeadFromFacebookData(leadData);
+            const adFields = extractAdFields(fields);
 
-          const lead = await prisma.lead.create({
-            data: {
-              userId,
-              formId: form.id,
-              leadgenId: leadData.id,
-              name,
-              phone,
-              email,
-              fieldData: fields,
-              rawData: leadData as object,
-              createdTime: new Date(leadData.created_time),
-              status: "imported",
-            },
-          });
-
-          imported++;
-
-          if (sendToTelegram) {
-            await deliverToTelegram(userId, lead.id, {
-              formName: form.formName,
-              name: name ?? "",
-              phone: phone ?? "",
-              email: email ?? "",
-              createdTime: leadData.created_time,
-              fields,
+            const lead = await prisma.lead.create({
+              data: {
+                userId,
+                formId: form.id,
+                leadgenId: leadData.id,
+                name,
+                phone,
+                email,
+                fieldData: fields,
+                rawData: leadData as object,
+                createdTime: new Date(leadData.created_time),
+                status: "imported",
+                crmStatus: "new",
+                telegramStatus: sendToTelegram ? "pending" : "not_sent",
+                source: "manual_import",
+                ...adFields,
+              },
             });
+
+            imported++;
+            formImported++;
+
+            if (sendToTelegram) {
+              await deliverToTelegram(userId, lead.id, {
+                formName: form.formName,
+                name: name ?? "",
+                phone: phone ?? "",
+                email: email ?? "",
+                createdTime: leadData.created_time,
+                fields,
+              });
+            }
+          } catch {
+            failed++;
+            formFailed++;
           }
         }
 
         after = response.paging?.cursors?.after;
       } while (after);
+
+      perFormStats.push({
+        formId: form.formId,
+        formName: form.formName,
+        imported: formImported,
+        skipped: formSkipped,
+        failed: formFailed,
+      });
     } catch (error) {
       if (isInvalidOAuthTokenError(error)) {
         await handleFacebookGraphError(userId, error);
@@ -430,7 +479,53 @@ export async function importLeadsForUser(
     }
   }
 
-  return { imported };
+  return { imported, skippedDuplicates, failed, perFormStats };
+}
+
+export async function updateLeadCrmStatus(
+  userId: string,
+  leadId: string,
+  crmStatus: "new" | "in_progress" | "processed" | "rejected",
+  managerNote?: string
+) {
+  const lead = await prisma.lead.findFirst({ where: { id: leadId, userId } });
+  if (!lead) throw new Error("Lead not found");
+
+  const legacyStatus =
+    crmStatus === "processed" && lead.telegramStatus === "sent"
+      ? "delivered"
+      : crmStatus === "new"
+      ? lead.source === "manual_import"
+        ? "imported"
+        : "new"
+      : lead.status;
+
+  return prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      crmStatus,
+      status: legacyStatus,
+      ...(managerNote !== undefined ? { managerNote } : {}),
+    },
+  });
+}
+
+export async function resendLeadToTelegram(userId: string, leadId: string) {
+  const lead = await prisma.lead.findFirst({
+    where: { id: leadId, userId },
+    include: { form: true },
+  });
+  if (!lead) throw new Error("Lead not found");
+
+  const fields = (lead.fieldData as Record<string, string>) ?? {};
+  await deliverToTelegram(userId, lead.id, {
+    formName: lead.form?.formName ?? "—",
+    name: lead.name ?? "",
+    phone: lead.phone ?? "",
+    email: lead.email ?? "",
+    createdTime: lead.createdTime.toISOString(),
+    fields,
+  });
 }
 
 export async function saveLeadFromData(

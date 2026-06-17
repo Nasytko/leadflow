@@ -36,11 +36,11 @@ export type DashboardStats = {
   failedDeliveriesToday: number;
   deliverySuccessRate: number | null;
   setupSteps: {
-    metaApp: boolean;
-    businessLoginConfig: boolean;
     facebookAccount: boolean;
+    businessPortfolio: boolean;
     pagesSelected: boolean;
     formsEnabled: boolean;
+    webhookVerified: boolean;
     telegram: boolean;
     testLead: boolean;
   };

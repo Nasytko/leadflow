@@ -41,6 +41,7 @@ export function FormsContent() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [formFilter, setFormFilter] = useState<"all" | "enabled" | "active" | "archived" | "errors">("all");
   const [sendToTelegram, setSendToTelegram] = useState(false);
 
   async function loadForms() {
@@ -133,6 +134,13 @@ export function FormsContent() {
 
   const enabledCount = forms.filter((f) => f.enabled).length;
   const failedSyncCount = forms.filter((f) => f.syncStatus === "failed").length;
+  const filteredForms = forms.filter((f) => {
+    if (formFilter === "enabled") return f.enabled;
+    if (formFilter === "active") return f.status?.toUpperCase() === "ACTIVE";
+    if (formFilter === "archived") return f.status?.toUpperCase() === "ARCHIVED";
+    if (formFilter === "errors") return f.syncStatus === "failed";
+    return true;
+  });
   const facebookBroken =
     facebookStatus === "invalid" ||
     facebookStatus === "expired" ||
@@ -192,7 +200,21 @@ export function FormsContent() {
       </Card>
 
       <Card>
-        <CardContent className="p-0">
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap gap-2">
+            {(["all", "enabled", "active", "archived", "errors"] as const).map((key) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={formFilter === key ? "default" : "outline"}
+                onClick={() => setFormFilter(key)}
+              >
+                {t(`filter${key.charAt(0).toUpperCase()}${key.slice(1)}` as "filterAll")}
+              </Button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0 pt-0">
           {forms.length === 0 ? (
             <EmptyState icon={FileText} title={t("noForms")} description={t("noFormsDesc")}>
               <Button onClick={handleSync} disabled={syncing || facebookBroken}>
@@ -214,7 +236,7 @@ export function FormsContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {forms.map((form) => (
+                  {filteredForms.map((form) => (
                     <tr key={form.id} className="border-b last:border-0">
                       <td className="p-4 font-medium">{form.formName}</td>
                       <td className="p-4 text-muted-foreground">{form.pageName}</td>

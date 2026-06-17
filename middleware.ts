@@ -7,6 +7,7 @@ const intlMiddleware = createMiddleware(routing);
 
 const protectedPaths = [
   "/dashboard",
+  "/admin",
   "/facebook",
   "/forms",
   "/telegram",

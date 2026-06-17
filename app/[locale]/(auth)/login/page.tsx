@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap } from "lucide-react";
+import { AppFooter } from "@/components/layout/footer";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -41,7 +42,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -89,6 +91,8 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <AppFooter compact />
     </div>
   );
 }

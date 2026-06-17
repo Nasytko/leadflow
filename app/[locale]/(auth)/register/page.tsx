@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap } from "lucide-react";
+import { AppFooter } from "@/components/layout/footer";
+import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -19,6 +21,10 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileSiteKey =
+    (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() || "";
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,7 +39,14 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name, locale }),
+      body: JSON.stringify({
+        email,
+        password,
+        name,
+        locale,
+        ...(inviteCode ? { inviteCode } : {}),
+        ...(turnstileSiteKey ? { turnstileToken } : {}),
+      }),
     });
 
     const data = await res.json();
@@ -43,12 +56,13 @@ export default function RegisterPage() {
       return;
     }
 
-    toast.success(t("register"));
-    router.push("/login");
+    toast.success(t("verificationEmailSent"));
+    router.push("/verify-email");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -75,6 +89,13 @@ export default function RegisterPage() {
               <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
               <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="inviteCode">{t("inviteCode")}</Label>
+              <Input id="inviteCode" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder={t("inviteCodePlaceholder")} />
+            </div>
+            {turnstileSiteKey && (
+              <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {t("registerButton")}
             </Button>
@@ -87,6 +108,8 @@ export default function RegisterPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <AppFooter compact />
     </div>
   );
 }

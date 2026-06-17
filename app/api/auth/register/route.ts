@@ -5,17 +5,25 @@ import { prisma } from "@/lib/prisma";
 import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { createAuditLog } from "@/lib/audit";
+import { verifyTurnstileToken, isTurnstileEnabled } from "@/lib/turnstile";
+import { getRegistrationMode, consumeInviteCode } from "@/lib/registration";
+import {
+  createEmailVerificationToken,
+  sendVerificationEmail,
+} from "@/lib/email-verification";
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1).optional(),
   locale: z.enum(["ru", "en"]).optional(),
+  turnstileToken: z.string().optional(),
+  inviteCode: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  const limit = await rateLimitByIp(ip, 10, 60);
+  const limit = await rateLimitByIp(ip, 5, 60);
   if (!limit.success) {
     return NextResponse.json(
       { error: { code: "RATE_LIMITED", message: "Too many requests" } },
@@ -33,7 +41,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password, name, locale } = parsed.data;
+    const { email, password, name, locale, turnstileToken, inviteCode } =
+      parsed.data;
+
+    if (isTurnstileEnabled()) {
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { error: { code: "TURNSTILE_REQUIRED", message: "Captcha required" } },
+          { status: 400 }
+        );
+      }
+      const verify = await verifyTurnstileToken({ token: turnstileToken, ip });
+      if (!verify.ok) {
+        return NextResponse.json(
+          { error: { code: "TURNSTILE_INVALID", message: "Captcha failed" } },
+          { status: 400 }
+        );
+      }
+    }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -43,6 +68,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const mode = getRegistrationMode();
+    if (mode === "invite_only") {
+      if (!inviteCode?.trim()) {
+        return NextResponse.json(
+          { error: { code: "INVITE_REQUIRED", message: "Invite code required" } },
+          { status: 400 }
+        );
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
       data: {
@@ -50,7 +85,23 @@ export async function POST(request: Request) {
         passwordHash,
         name,
         locale: locale ?? "ru",
+        status: "pending_email_verification",
       },
+    });
+
+    if (mode === "invite_only") {
+      await consumeInviteCode(inviteCode!, user.id);
+    }
+
+    const { verifyUrl } = await createEmailVerificationToken({
+      userId: user.id,
+      email: user.email,
+      locale: (user.locale as "ru" | "en") ?? "ru",
+    });
+    await sendVerificationEmail({
+      to: user.email,
+      locale: (user.locale as "ru" | "en") ?? "ru",
+      verifyUrl,
     });
 
     await createAuditLog({
@@ -60,7 +111,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      data: { id: user.id, email: user.email },
+      data: {
+        id: user.id,
+        email: user.email,
+        verificationRequired: true,
+        registrationMode: mode,
+      },
     });
   } catch {
     return NextResponse.json(

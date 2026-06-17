@@ -13,6 +13,10 @@ model User {
   passwordHash String
   name         String?
   locale       String   @default("ru")
+  status       String   @default("pending_email_verification")
+  isAdmin      Boolean  @default(false)
+  emailVerifiedAt DateTime?
+  lastLoginAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -27,9 +31,37 @@ model User {
   systemLogs         SystemLog[]
   webhookVerificationLogs WebhookVerificationLog[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   integrationSettings IntegrationSettings?
 
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model InviteCode {
+  id           String   @id @default(cuid())
+  codeHash     String   @unique
+  createdById  String?
+  usedById     String?
+  usedAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([usedById])
+  @@map("invite_codes")
 }
 
 model IntegrationSettings {
@@ -193,6 +225,13 @@ model Lead {
   fieldData   Json     @default("{}")
   rawData     Json     @default("{}")
   status      String   @default("new")
+  crmStatus   String   @default("new")
+  telegramStatus String @default("not_sent")
+  source      String   @default("webhook")
+  managerNote String?  @db.Text
+  campaignName String?
+  adsetName   String?
+  adName      String?
   createdTime DateTime
   importedAt  DateTime @default(now())
 
@@ -203,6 +242,8 @@ model Lead {
   @@unique([userId, leadgenId])
   @@index([userId, createdTime])
   @@index([userId, status])
+  @@index([userId, crmStatus])
+  @@index([userId, telegramStatus])
   @@map("leads")
 }
 

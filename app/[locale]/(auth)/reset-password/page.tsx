@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppFooter } from "@/components/layout/footer";
 
 export default function ResetPasswordPage() {
   const t = useTranslations("auth");
@@ -40,7 +41,8 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t("resetNewTitle")}</CardTitle>
@@ -63,6 +65,8 @@ export default function ResetPasswordPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <AppFooter compact />
     </div>
   );
 }

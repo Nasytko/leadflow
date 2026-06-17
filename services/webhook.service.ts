@@ -127,11 +127,41 @@ export async function handleMetaWebhook(
           where: { id: webhookEvent.id },
           data: {
             status: "ignored",
-            lastError: "Page not connected in LeadFlow",
+            lastError: "Page not connected in LeadBridge",
             lastErrorAt: new Date(),
           },
         });
         continue;
+      }
+
+      const existingLead = await prisma.lead.findUnique({
+        where: {
+          userId_leadgenId: {
+            userId: page.userId,
+            leadgenId: leadgen_id,
+          },
+        },
+      });
+
+      if (existingLead) {
+        const priorDelivery = await prisma.deliveryLog.findFirst({
+          where: {
+            leadId: existingLead.id,
+            status: { in: ["sent", "success"] },
+          },
+        });
+        if (priorDelivery || existingLead.telegramStatus === "sent") {
+          await prisma.webhookEvent.update({
+            where: { id: webhookEvent.id },
+            data: {
+              status: "ignored",
+              userId: page.userId,
+              processedAt: new Date(),
+              lastError: "Duplicate leadgen_id already delivered",
+            },
+          });
+          continue;
+        }
       }
 
       await prisma.webhookEvent.update({

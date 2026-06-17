@@ -22,6 +22,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { useLocale } from "next-intl";
 import { Users, Search } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -31,10 +32,17 @@ type Lead = {
   phone: string | null;
   email: string | null;
   status: string;
+  crmStatus?: string;
+  telegramStatus?: string;
+  source?: string;
   createdTime: string;
-  formName?: string;
+  formName?: string | null;
+  pageName?: string | null;
+  businessName?: string | null;
+  campaignName?: string | null;
   fieldData?: Record<string, string>;
   rawData?: object;
+  managerNote?: string | null;
 };
 
 type LeadDetail = Lead & {
@@ -66,7 +74,7 @@ export function LeadsContent() {
       page: String(page),
       limit: String(limit),
       ...(search && { search }),
-      ...(status && { status }),
+      ...(status && { crmStatus: status }),
     });
     const res = await fetch(`/api/leads?${params}`);
     const data = await res.json();
@@ -87,6 +95,42 @@ export function LeadsContent() {
     if (data.data?.lead) setSelectedLead(data.data.lead);
   }
 
+  async function leadAction(leadId: string, action: string) {
+    const res = await fetch(`/api/leads/${leadId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.data?.lead) setSelectedLead(data.data.lead);
+      loadLeads();
+      toast.success(tCommon("success"));
+    } else {
+      toast.error(tCommon("error"));
+    }
+  }
+
+  function crmLabel(s: string) {
+    const map: Record<string, string> = {
+      new: t("crmStatusNew"),
+      in_progress: t("crmStatusInProgress"),
+      processed: t("crmStatusProcessed"),
+      rejected: t("crmStatusRejected"),
+    };
+    return map[s] ?? s;
+  }
+
+  function telegramLabel(s: string) {
+    const map: Record<string, string> = {
+      sent: t("telegramSent"),
+      failed: t("telegramFailed"),
+      not_sent: t("telegramNotSent"),
+      pending: t("telegramNotSent"),
+    };
+    return map[s] ?? s;
+  }
+
   function statusLabel(s: string) {
     const map: Record<string, string> = {
       new: t("statusNew"),
@@ -98,9 +142,9 @@ export function LeadsContent() {
   }
 
   function statusVariant(s: string): "success" | "destructive" | "warning" | "secondary" {
-    if (s === "delivered") return "success";
-    if (s === "delivery_failed") return "destructive";
-    if (s === "new") return "warning";
+    if (s === "delivered" || s === "processed" || s === "sent") return "success";
+    if (s === "delivery_failed" || s === "failed" || s === "rejected") return "destructive";
+    if (s === "new" || s === "in_progress") return "warning";
     return "secondary";
   }
 
@@ -126,10 +170,10 @@ export function LeadsContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filterByStatus")}</SelectItem>
-            <SelectItem value="new">{t("statusNew")}</SelectItem>
-            <SelectItem value="delivered">{t("statusDelivered")}</SelectItem>
-            <SelectItem value="delivery_failed">{t("statusFailed")}</SelectItem>
-            <SelectItem value="imported">{t("statusImported")}</SelectItem>
+            <SelectItem value="new">{t("crmStatusNew")}</SelectItem>
+            <SelectItem value="in_progress">{t("crmStatusInProgress")}</SelectItem>
+            <SelectItem value="processed">{t("crmStatusProcessed")}</SelectItem>
+            <SelectItem value="rejected">{t("crmStatusRejected")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -150,6 +194,7 @@ export function LeadsContent() {
                     <th className="p-4 text-left">{t("phone")}</th>
                     <th className="p-4 text-left">{t("email")}</th>
                     <th className="p-4 text-left">{t("date")}</th>
+                    <th className="p-4 text-left">{t("source")}</th>
                     <th className="p-4 text-left">{t("status")}</th>
                   </tr>
                 </thead>
@@ -168,9 +213,21 @@ export function LeadsContent() {
                         {formatDate(lead.createdTime, locale)}
                       </td>
                       <td className="p-4">
-                        <Badge variant={statusVariant(lead.status)}>
-                          {statusLabel(lead.status)}
+                        <Badge variant="secondary" className="text-[10px]">
+                          {lead.source === "manual_import" ? t("sourceImport") : t("sourceWebhook")}
                         </Badge>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={statusVariant(lead.crmStatus ?? lead.status)}>
+                            {crmLabel(lead.crmStatus ?? lead.status)}
+                          </Badge>
+                          {lead.telegramStatus && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {telegramLabel(lead.telegramStatus)}
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -204,6 +261,32 @@ export function LeadsContent() {
           </SheetHeader>
           {selectedLead && (
             <div className="mt-6 space-y-6">
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_in_progress")}>
+                  {t("actionInProgress")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_processed")}>
+                  {t("actionProcessed")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_rejected")}>
+                  {t("actionReject")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => leadAction(selectedLead.id, "set_new")}>
+                  {t("actionBackToNew")}
+                </Button>
+                <Button size="sm" onClick={() => leadAction(selectedLead.id, "resend_telegram")}>
+                  {t("actionResendTelegram")}
+                </Button>
+              </div>
+
+              {(selectedLead.pageName || selectedLead.businessName) && (
+                <div className="text-sm space-y-1">
+                  {selectedLead.pageName && <p>{t("page")}: {selectedLead.pageName}</p>}
+                  {selectedLead.businessName && <p>{t("business")}: {selectedLead.businessName}</p>}
+                  {selectedLead.campaignName && <p>{t("campaign")}: {selectedLead.campaignName}</p>}
+                </div>
+              )}
+
               <div>
                 <h3 className="font-medium mb-2">{t("allFields")}</h3>
                 <div className="space-y-1 text-sm">
@@ -216,12 +299,12 @@ export function LeadsContent() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="font-medium mb-2">{t("rawJson")}</h3>
-                <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
+              <details className="text-sm">
+                <summary className="font-medium cursor-pointer mb-2">{t("rawJson")}</summary>
+                <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto mt-2">
                   {JSON.stringify(selectedLead.rawData, null, 2)}
                 </pre>
-              </div>
+              </details>
 
               <div>
                 <h3 className="font-medium mb-2">{t("deliveryHistory")}</h3>

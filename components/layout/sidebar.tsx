@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Facebook,
@@ -11,6 +12,7 @@ import {
   Users,
   ScrollText,
   Settings,
+  Shield,
   BookOpen,
   Zap,
 } from "lucide-react";
@@ -47,6 +49,7 @@ const navGroups = [
 type NavItem = (typeof navGroups)[number]["items"][number];
 
 const allNavItems: NavItem[] = navGroups.flatMap((g) => [...g.items]);
+const adminNavItem = { href: "/admin/users", icon: Shield, key: "admin" } as const;
 
 function NavLink({
   href,
@@ -80,7 +83,10 @@ function NavLink({
 
 export function Sidebar() {
   const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.isAdmin === true;
 
   return (
     <aside className="hidden lg:flex w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
@@ -89,8 +95,8 @@ export function Sidebar() {
           <Zap className="h-4 w-4" />
         </div>
         <div>
-          <span className="font-bold text-base tracking-tight">LeadFlow</span>
-          <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Lead Ads → Telegram</p>
+          <span className="font-bold text-base tracking-tight">{tCommon("appName")}</span>
+          <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{tCommon("tagline")}</p>
         </div>
       </div>
 
@@ -117,6 +123,26 @@ export function Sidebar() {
             </div>
           </div>
         ))}
+
+        {isAdmin && (
+          <div>
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+              {t("groupAdmin")}
+            </p>
+            <div className="space-y-0.5">
+              <NavLink
+                key={adminNavItem.href}
+                href={adminNavItem.href}
+                icon={adminNavItem.icon}
+                label={t(adminNavItem.key)}
+                isActive={
+                  pathname === adminNavItem.href ||
+                  pathname.startsWith(`${adminNavItem.href}/`)
+                }
+              />
+            </div>
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-sidebar-border p-4">
@@ -138,6 +164,8 @@ export function Sidebar() {
 export function MobileNav() {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.isAdmin === true;
   const mobileItems = [
     allNavItems[0],
     allNavItems[2],
@@ -145,11 +173,12 @@ export function MobileNav() {
     allNavItems[6],
     allNavItems[1],
   ];
+  const items = isAdmin ? [...mobileItems, adminNavItem] : mobileItems;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-sidebar-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
       <div className="flex justify-around px-1 py-1.5">
-        {mobileItems.map((item) => {
+        {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <NavLink

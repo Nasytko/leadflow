@@ -29,11 +29,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!valid) return null;
 
+        // Blocked users cannot sign in
+        if (user.status === "blocked") return null;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           locale: user.locale,
+          isAdmin: user.isAdmin,
         };
       },
     }),
@@ -50,6 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.locale = (user as { locale?: string }).locale ?? "ru";
+        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
       }
       return token;
     },
@@ -57,6 +67,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.locale = (token.locale as string) ?? "ru";
+        session.user.isAdmin = (token.isAdmin as boolean) ?? false;
       }
       return session;
     },

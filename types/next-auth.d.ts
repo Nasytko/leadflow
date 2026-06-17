@@ -8,11 +8,13 @@ declare module "next-auth" {
       email: string;
       name?: string | null;
       locale: string;
+      isAdmin: boolean;
     };
   }
 
   interface User {
     locale?: string;
+    isAdmin?: boolean;
   }
 }
 
@@ -20,5 +22,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     locale?: string;
+    isAdmin?: boolean;
   }
 }

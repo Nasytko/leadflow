@@ -8,11 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppFooter } from "@/components/layout/footer";
+import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileSiteKey =
+    (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() || "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,14 +25,18 @@ export default function ForgotPasswordPage() {
     await fetch("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({
+        email,
+        ...(turnstileSiteKey ? { turnstileToken } : {}),
+      }),
     });
     toast.success(t("resetEmailSent"));
     setLoading(false);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t("resetTitle")}</CardTitle>
@@ -42,6 +51,9 @@ export default function ForgotPasswordPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {t("sendResetLink")}
             </Button>
+            {turnstileSiteKey && (
+              <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
+            )}
           </form>
           <p className="mt-4 text-center text-sm">
             <Link href="/login" className="text-muted-foreground hover:text-foreground">
@@ -50,6 +62,8 @@ export default function ForgotPasswordPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <AppFooter compact />
     </div>
   );
 }

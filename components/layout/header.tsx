@@ -23,12 +23,13 @@ const pageTitles: Record<string, string> = {
 
 export function Header() {
   const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
   const pageKey = pageTitles[pathname];
-  const pageTitle = pageKey ? t(pageKey) : "LeadFlow";
+  const pageTitle = pageKey ? t(pageKey) : tCommon("appName");
 
   async function handleLogout() {
     await signOut({ redirect: false });
@@ -49,7 +50,7 @@ export function Header() {
       <div className="flex items-center gap-2 min-w-0">
         <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">
-            LeadFlow
+            {tCommon("appName")}
           </Link>
           {pageKey && (
             <>

@@ -5,9 +5,11 @@ import { generateSecureToken, hashToken } from "@/lib/encryption";
 import { rateLimitByIp } from "@/lib/rate-limit";
 import { getAppUrl } from "@/lib/env";
 import { getClientIp } from "@/lib/utils";
+import { verifyTurnstileToken, isTurnstileEnabled } from "@/lib/turnstile";
 
 const schema = z.object({
   email: z.string().email(),
+  turnstileToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,6 +30,25 @@ export async function POST(request: Request) {
         { error: { code: "VALIDATION", message: "Invalid email" } },
         { status: 400 }
       );
+    }
+
+    if (isTurnstileEnabled()) {
+      if (!parsed.data.turnstileToken) {
+        return NextResponse.json(
+          { error: { code: "TURNSTILE_REQUIRED", message: "Captcha required" } },
+          { status: 400 }
+        );
+      }
+      const verify = await verifyTurnstileToken({
+        token: parsed.data.turnstileToken,
+        ip,
+      });
+      if (!verify.ok) {
+        return NextResponse.json(
+          { error: { code: "TURNSTILE_INVALID", message: "Captcha failed" } },
+          { status: 400 }
+        );
+      }
     }
 
     const user = await prisma.user.findUnique({

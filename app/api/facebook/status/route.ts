@@ -80,9 +80,8 @@ export async function GET(request: Request) {
       };
 
   const wizardSteps = buildWizardSteps({
-    metaConfigured,
-    hasLoginConfigId,
     hasFacebookProfile: !!facebook.facebookUserId,
+    businessesCount: businesses.length,
     connectedPagesCount: connectedPages.length,
     activeFormsCount: forms,
     telegramConnected: telegram?.status === "connected",

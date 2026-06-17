@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, checkRateLimit, apiSuccess, apiError } from "@/lib/api-helpers";
+import { enqueueImportLeads } from "@/lib/queue";
 import { importLeadsForUser } from "@/services/lead.service";
 import { InvalidFacebookTokenError } from "@/services/facebook.service";
+import { mapLeadPublic } from "@/lib/lead-mapper";
 
 const importSchema = z.object({
   sendToTelegram: z.boolean().default(false),
+  async: z.boolean().default(true),
 });
 
 export async function GET(request: Request) {
@@ -19,14 +22,14 @@ export async function GET(request: Request) {
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const limit = parseInt(searchParams.get("limit") ?? "20", 10);
   const search = searchParams.get("search") ?? "";
-  const status = searchParams.get("status");
+  const crmStatus = searchParams.get("crmStatus") ?? searchParams.get("status");
   const formId = searchParams.get("formId");
 
   const where: Record<string, unknown> = {
     userId: authResult.session.user.id,
   };
 
-  if (status) where.status = status;
+  if (crmStatus) where.crmStatus = crmStatus;
   if (formId) where.formId = formId;
   if (search) {
     where.OR = [
@@ -39,7 +42,11 @@ export async function GET(request: Request) {
   const [items, total] = await Promise.all([
     prisma.lead.findMany({
       where,
-      include: { form: { select: { formName: true } } },
+      include: {
+        form: {
+          include: { page: { include: { business: true } } },
+        },
+      },
       orderBy: { createdTime: "desc" },
       skip: (page - 1) * limit,
       take: limit,
@@ -48,18 +55,7 @@ export async function GET(request: Request) {
   ]);
 
   return apiSuccess({
-    items: items.map((l) => ({
-      id: l.id,
-      leadgenId: l.leadgenId,
-      name: l.name,
-      phone: l.phone,
-      email: l.email,
-      status: l.status,
-      createdTime: l.createdTime,
-      formName: l.form?.formName,
-      fieldData: l.fieldData,
-      rawData: l.rawData,
-    })),
+    items: items.map(mapLeadPublic),
     total,
     page,
     limit,
@@ -76,12 +72,14 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const parsed = importSchema.safeParse(body);
+  const sendToTelegram = parsed.success ? parsed.data.sendToTelegram : false;
+  const useAsync = parsed.success ? parsed.data.async : true;
 
   const fbConn = await prisma.facebookConnection.findUnique({
     where: { userId: authResult.session.user.id },
   });
 
-  if (!fbConn || fbConn.status !== "connected") {
+  if (!fbConn || (fbConn.status !== "connected" && fbConn.status !== "pending_pages")) {
     return apiError(
       "FACEBOOK_NOT_CONNECTED",
       fbConn?.lastError ?? "Facebook is not connected or token is invalid",
@@ -90,9 +88,17 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (useAsync) {
+      await enqueueImportLeads({
+        userId: authResult.session.user.id,
+        sendToTelegram,
+      });
+      return apiSuccess({ queued: true, message: "Import started in background" });
+    }
+
     const result = await importLeadsForUser(
       authResult.session.user.id,
-      parsed.success ? parsed.data.sendToTelegram : false
+      sendToTelegram
     );
     return apiSuccess(result);
   } catch (error) {

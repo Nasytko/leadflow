@@ -5,34 +5,34 @@ import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type WizardStepKey =
-  | "metaApp"
-  | "businessLoginConfig"
   | "facebookAccount"
+  | "businessPortfolio"
   | "pagesSelected"
   | "formsEnabled"
+  | "webhookVerified"
   | "telegram"
   | "testLead";
 
 export type WizardStepsState = Record<WizardStepKey, boolean>;
 
 const STEP_KEYS: WizardStepKey[] = [
-  "metaApp",
-  "businessLoginConfig",
   "facebookAccount",
+  "businessPortfolio",
   "pagesSelected",
   "formsEnabled",
+  "webhookVerified",
   "telegram",
   "testLead",
 ];
 
 const STEP_I18N: Record<WizardStepKey, string> = {
-  metaApp: "wizardStep1",
-  businessLoginConfig: "wizardStep2",
-  facebookAccount: "wizardStep3",
-  pagesSelected: "wizardStep4",
-  formsEnabled: "wizardStep5",
-  telegram: "wizardStep6",
-  testLead: "wizardStep7",
+  facebookAccount: "onboardingStep1",
+  businessPortfolio: "onboardingStep2",
+  pagesSelected: "onboardingStep3",
+  formsEnabled: "onboardingStep4",
+  webhookVerified: "onboardingStep5",
+  telegram: "onboardingStep6",
+  testLead: "onboardingStep7",
 };
 
 function WizardStep({
@@ -47,7 +47,7 @@ function WizardStep({
   step: number;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-[52px]">
+    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-[48px]">
       <div
         className={cn(
           "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xs font-bold transition-all",

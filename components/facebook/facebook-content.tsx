@@ -97,11 +97,11 @@ type StatusData = {
   webhookUrl: string;
   redirectUri: string;
   setupSteps: {
-    metaApp: boolean;
-    businessLoginConfig: boolean;
     facebookAccount: boolean;
+    businessPortfolio: boolean;
     pagesSelected: boolean;
     formsEnabled: boolean;
+    webhookVerified: boolean;
     telegram: boolean;
     testLead: boolean;
   };
@@ -178,6 +178,7 @@ export function FacebookContent() {
   const [checking, setChecking] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [debugData, setDebugData] = useState<DebugData | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -420,8 +421,8 @@ export function FacebookContent() {
             <Facebook className="h-7 w-7 text-white" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("title")}</h1>
-            <p className="text-muted-foreground mt-1 max-w-xl">{t("subtitle")}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("onboardingTitle")}</h1>
+            <p className="text-muted-foreground mt-1 max-w-xl">{t("onboardingSubtitle")}</p>
           </div>
         </div>
         <div className="relative mt-8 pt-6 border-t border-border/50">
@@ -463,25 +464,7 @@ export function FacebookContent() {
         />
       </div>
 
-      {/* Meta App Settings — always visible */}
-      <Card className="rounded-2xl border-[#1877F2]/20 overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#1877F2]/5 to-transparent border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1877F2]/15">
-              <Zap className="h-5 w-5 text-[#1877F2]" />
-            </div>
-            <div>
-              <CardTitle>{t("metaSetupTitle")}</CardTitle>
-              <CardDescription>{t("metaSetupDesc")}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <MetaSettingsForm compact onSaved={loadData} />
-        </CardContent>
-      </Card>
-
-      {/* Connect Facebook */}
+      {/* Connect Facebook — primary flow */}
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -671,6 +654,29 @@ export function FacebookContent() {
       )}
 
       <FacebookWebhookDiagnostics />
+
+      {/* Advanced Meta App settings */}
+      <Card className="rounded-2xl border-dashed">
+        <CardHeader
+          className="cursor-pointer"
+          onClick={() => setAdvancedOpen((v) => !v)}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">{t("advancedSettingsTitle")}</CardTitle>
+              <CardDescription>{t("advancedSettingsDesc")}</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" type="button">
+              {advancedOpen ? t("advancedCollapse") : t("advancedExpand")}
+            </Button>
+          </div>
+        </CardHeader>
+        {advancedOpen && (
+          <CardContent className="pt-0">
+            <MetaSettingsForm compact onSaved={loadData} />
+          </CardContent>
+        )}
+      </Card>
 
       {/* Wiki link */}
       <Card className="rounded-2xl border-primary/15 bg-primary/[0.03]">

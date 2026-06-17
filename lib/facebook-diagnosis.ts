@@ -135,19 +135,18 @@ export function getMissingScopes(grantedScopes: string[]): string[] {
 }
 
 export type WizardSteps = {
-  metaApp: boolean;
-  businessLoginConfig: boolean;
   facebookAccount: boolean;
+  businessPortfolio: boolean;
   pagesSelected: boolean;
   formsEnabled: boolean;
+  webhookVerified: boolean;
   telegram: boolean;
   testLead: boolean;
 };
 
 export function buildWizardSteps(input: {
-  metaConfigured: boolean;
-  hasLoginConfigId: boolean;
   hasFacebookProfile: boolean;
+  businessesCount: number;
   connectedPagesCount: number;
   activeFormsCount: number;
   telegramConnected: boolean;
@@ -155,11 +154,11 @@ export function buildWizardSteps(input: {
   leadsCount?: number;
 }): WizardSteps {
   return {
-    metaApp: input.metaConfigured,
-    businessLoginConfig: input.hasLoginConfigId,
     facebookAccount: input.hasFacebookProfile,
+    businessPortfolio: input.businessesCount > 0,
     pagesSelected: input.connectedPagesCount > 0,
     formsEnabled: input.activeFormsCount > 0,
+    webhookVerified: input.webhookVerified,
     telegram: input.telegramConnected,
     testLead:
       (input.leadsCount ?? 0) > 0 ||
