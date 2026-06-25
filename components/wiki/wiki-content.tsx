@@ -68,6 +68,7 @@ const WIKI_SECTIONS: WikiSection[] = [
       "sectionMetaItem4",
       "sectionMetaItem5",
       "sectionMetaItem6",
+      "sectionMetaItem7",
     ],
     tipKey: "sectionMetaTip",
     link: { href: "/facebook", labelKey: "goToFacebook" },

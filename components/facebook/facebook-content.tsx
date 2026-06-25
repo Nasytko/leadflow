@@ -209,9 +209,20 @@ export function FacebookContent() {
     const oauthNoPages = searchParams.get("success") === "connected_no_pages";
     const err = searchParams.get("error");
     if (err === "oauth_denied") toast.error(t("oauthDenied"));
-    if (err === "oauth_failed" || err === "invalid_state") {
+    if (err === "invalid_state") toast.error(t("oauthErrors.invalid_state"));
+    if (err && err !== "oauth_denied" && err !== "invalid_state") {
       const reason = searchParams.get("reason");
-      toast.error(reason ?? t("oauthFailed"));
+      const oauthKeyMap: Record<string, string> = {
+        invalid_config_id: "oauthErrors.invalid_config_id",
+        redirect_uri_mismatch: "oauthErrors.redirect_uri_mismatch",
+        invalid_client_secret: "oauthErrors.invalid_client_secret",
+        missing_code: "oauthErrors.missing_code",
+        missing_permissions: "oauthErrors.missing_permissions",
+        token_exchange_failed: "oauthErrors.token_exchange_failed",
+        oauth_failed: "oauthFailed",
+      };
+      const i18nKey = oauthKeyMap[err];
+      toast.error(i18nKey ? t(i18nKey as "oauthFailed") : reason ?? t("oauthFailed"));
     }
     if (oauthFullSuccess || oauthNoPages) {
       loadData().then((data) => {

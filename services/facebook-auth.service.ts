@@ -3,9 +3,13 @@ import {
   getRedirectUri,
   getLoginConfigId,
 } from "./integration-settings.service";
+import {
+  META_GRAPH_API_BASE,
+  META_OAUTH_DIALOG_BASE,
+} from "@/lib/facebook-graph-config";
+import { writeSystemLog } from "@/lib/system-log";
 
-const GRAPH_API_VERSION = "v21.0";
-const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+const GRAPH_API_BASE = META_GRAPH_API_BASE;
 
 /** Scopes for Lead Ads + Business Manager page access */
 export const FB_OAUTH_SCOPES = [
@@ -58,7 +62,31 @@ export async function getFacebookAuthUrl(
     params.set("scope", FB_SCOPES);
   }
 
-  return `https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth?${params}`;
+  return `${META_OAUTH_DIALOG_BASE}?${params}`;
+}
+
+/** Log OAuth URL shape without secrets (for support/debug). */
+export async function logOAuthUrlPreview(userId: string, state: string): Promise<void> {
+  const creds = await getMetaCredentials(userId);
+  if (!creds) return;
+  const redirectUri = getRedirectUri();
+  const configId = await getLoginConfigId(userId);
+
+  await writeSystemLog({
+    userId,
+    level: "info",
+    source: "facebook",
+    action: "oauth.url_preview",
+    message: "Facebook OAuth URL prepared",
+    metadata: {
+      clientId: creds.appId,
+      redirectUri,
+      hasConfigId: !!configId,
+      configIdLength: configId?.length ?? 0,
+      scopes: FB_SCOPES,
+      stateLength: state.length,
+    },
+  });
 }
 
 export async function exchangeCodeForToken(

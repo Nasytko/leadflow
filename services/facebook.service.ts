@@ -38,7 +38,9 @@ import {
 export type { FacebookDiagnosis, FacebookUiStatus };
 export { computeFacebookDiagnosis, mapDiagnosisToUiStatus, getMissingScopes };
 
-const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
+import { META_GRAPH_API_BASE } from "@/lib/facebook-graph-config";
+
+const GRAPH_API_BASE = META_GRAPH_API_BASE;
 
 const INVALID_TOKEN_MESSAGE =
   "Facebook token is invalid. Please reconnect Facebook.";
@@ -126,17 +128,53 @@ export async function getFacebookProfile(
 }
 
 export async function getUserBusinesses(accessToken: string) {
-  return graphFetch<{ data: GraphBusiness[] }>(
+  return graphFetch<{ data: GraphBusiness[]; paging?: { cursors?: { after?: string } } }>(
     "/me/businesses?fields=id,name,verification_status,profile_picture_uri,link&limit=100",
     accessToken
   );
 }
 
+export async function getAllUserBusinesses(accessToken: string): Promise<GraphBusiness[]> {
+  const all: GraphBusiness[] = [];
+  let after: string | undefined;
+  do {
+    let path =
+      "/me/businesses?fields=id,name,verification_status,profile_picture_uri,link&limit=100";
+    if (after) path += `&after=${after}`;
+    const response = await graphFetch<{
+      data: GraphBusiness[];
+      paging?: { cursors?: { after?: string } };
+    }>(path, accessToken);
+    all.push(...(response.data ?? []));
+    after = response.paging?.cursors?.after;
+  } while (after);
+  return all;
+}
+
 export async function getUserPageAccounts(accessToken: string) {
-  return graphFetch<{ data: GraphPageAccount[] }>(
+  return graphFetch<{ data: GraphPageAccount[]; paging?: { cursors?: { after?: string } } }>(
     "/me/accounts?fields=id,name,picture{url},category,link,tasks,access_token&limit=100",
     accessToken
   );
+}
+
+export async function getAllUserPageAccounts(
+  accessToken: string
+): Promise<GraphPageAccount[]> {
+  const all: GraphPageAccount[] = [];
+  let after: string | undefined;
+  do {
+    let path =
+      "/me/accounts?fields=id,name,picture{url},category,link,tasks,access_token&limit=100";
+    if (after) path += `&after=${after}`;
+    const response = await graphFetch<{
+      data: GraphPageAccount[];
+      paging?: { cursors?: { after?: string } };
+    }>(path, accessToken);
+    all.push(...(response.data ?? []));
+    after = response.paging?.cursors?.after;
+  } while (after);
+  return all;
 }
 
 /** @deprecated use getUserPageAccounts */
@@ -154,9 +192,9 @@ export async function getPageDetails(pageId: string, accessToken: string) {
 export async function fetchPagesAccess(
   accessToken: string
 ): Promise<FacebookPagesAccessResult> {
-  const { data: pages } = await getUserPageAccounts(accessToken);
+  const pages = await getAllUserPageAccounts(accessToken);
   return {
-    pages: (pages ?? []).map((p) => ({
+    pages: pages.map((p) => ({
       id: p.id,
       name: p.name,
       access_token: p.access_token,
@@ -165,8 +203,8 @@ export async function fetchPagesAccess(
       link: p.link,
       tasks: p.tasks,
     })),
-    pagesCount: pages?.length ?? 0,
-    hasPageAccess: (pages?.length ?? 0) > 0,
+    pagesCount: pages.length,
+    hasPageAccess: pages.length > 0,
   };
 }
 
@@ -230,7 +268,7 @@ export async function getFormLeads(
   pageAccessToken: string,
   after?: string
 ) {
-  let path = `/${formId}/leads?fields=id,created_time,field_data&limit=100`;
+  let path = `/${formId}/leads?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name&limit=100`;
   if (after) path += `&after=${after}`;
   return graphFetch<{
     data: FacebookLeadData[];
@@ -422,11 +460,9 @@ export async function saveFacebookConnection(
 }
 
 async function getCurrentMetaAppId(userId: string): Promise<string | null> {
-  const settings = await prisma.integrationSettings.findUnique({
-    where: { userId },
-    select: { metaAppId: true },
-  });
-  return settings?.metaAppId ?? null;
+  const { getMetaCredentials } = await import("./integration-settings.service");
+  const creds = await getMetaCredentials(userId);
+  return creds?.appId ?? null;
 }
 
 async function assertTokenCredentialsMatch(
@@ -580,14 +616,11 @@ export async function syncFacebookIdentity(
   }
 
   const now = new Date();
-  const [profile, businessesRes, accountsRes] = await Promise.all([
+  const [profile, businesses, accounts] = await Promise.all([
     getFacebookProfile(token),
-    getUserBusinesses(token).catch(() => ({ data: [] as GraphBusiness[] })),
-    getUserPageAccounts(token).catch(() => ({ data: [] as GraphPageAccount[] })),
+    getAllUserBusinesses(token).catch(() => [] as GraphBusiness[]),
+    getAllUserPageAccounts(token).catch(() => [] as GraphPageAccount[]),
   ]);
-
-  const businesses = businessesRes.data ?? [];
-  const accounts = accountsRes.data ?? [];
   const businessIdMap = new Map<string, string>();
 
   for (const business of businesses) {
@@ -873,6 +906,7 @@ export async function syncUserForms(userId: string) {
     const pageToken = decrypt(page.pageAccessTokenEncrypted);
     try {
       const forms = await getAllLeadgenForms(page.pageId, pageToken);
+      const syncedMetaIds = forms.map((f) => f.id);
 
       for (const form of forms) {
         await prisma.facebookForm.upsert({
@@ -900,6 +934,19 @@ export async function syncUserForms(userId: string) {
           },
         });
         synced++;
+      }
+
+      if (syncedMetaIds.length > 0) {
+        await prisma.facebookForm.updateMany({
+          where: {
+            pageId: page.id,
+            formId: { notIn: syncedMetaIds },
+          },
+          data: {
+            status: "ARCHIVED",
+            lastSyncAt: new Date(),
+          },
+        });
       }
     } catch (error) {
       hadError = true;

@@ -16,6 +16,7 @@ import {
 import { getMetaCredentials, getLoginConfigId } from "@/services/integration-settings.service";
 import { getAppUrl } from "@/lib/env";
 import { createAuditLog } from "@/lib/audit";
+import { classifyFacebookOAuthError } from "@/lib/facebook-oauth-errors";
 import { getClientIp } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -28,8 +29,9 @@ export async function GET(request: Request) {
   const locale = "ru";
 
   if (error || !code || !state) {
+    const errCode = error === "access_denied" ? "oauth_denied" : "missing_code";
     return NextResponse.redirect(
-      new URL(`/${locale}/facebook?error=oauth_denied`, baseUrl)
+      new URL(`/${locale}/facebook?error=${errCode}`, baseUrl)
     );
   }
 
@@ -105,7 +107,8 @@ export async function GET(request: Request) {
       new URL(`/${locale}/facebook?${query}`, baseUrl)
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "OAuth failed";
+    const raw = err instanceof Error ? err.message : "OAuth failed";
+    const classified = classifyFacebookOAuthError(raw);
     try {
       await markFacebookConnectionInvalid(userId, err);
     } catch {
@@ -113,7 +116,7 @@ export async function GET(request: Request) {
     }
     return NextResponse.redirect(
       new URL(
-        `/${locale}/facebook?error=oauth_failed&reason=${encodeURIComponent(message)}`,
+        `/${locale}/facebook?error=${classified.code}&reason=${encodeURIComponent(classified.message)}`,
         baseUrl
       )
     );

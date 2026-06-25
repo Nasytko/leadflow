@@ -22,6 +22,49 @@ const SENT_STATUSES = ["success", "sent"];
 
 type DeliveryOutcome = "delivered" | "retrying" | "failed" | "skipped";
 
+function toTelegramPayload(
+  lead: {
+    leadgenId: string;
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+    createdTime: Date | string;
+    source: string;
+    campaignName?: string | null;
+    adsetName?: string | null;
+    adName?: string | null;
+    form?: {
+      formName: string;
+      page?: {
+        pageName: string;
+        business?: { name: string } | null;
+      } | null;
+    } | null;
+  },
+  fields: Record<string, string>,
+  createdTimeOverride?: string
+) {
+  return {
+    formName: lead.form?.formName ?? "—",
+    name: lead.name ?? "",
+    phone: lead.phone ?? "",
+    email: lead.email ?? "",
+    createdTime:
+      createdTimeOverride ??
+      (lead.createdTime instanceof Date
+        ? lead.createdTime.toISOString()
+        : String(lead.createdTime)),
+    fields,
+    pageName: lead.form?.page?.pageName ?? null,
+    businessName: lead.form?.page?.business?.name ?? null,
+    campaignName: lead.campaignName ?? null,
+    adsetName: lead.adsetName ?? null,
+    adName: lead.adName ?? null,
+    source: lead.source,
+    leadgenId: lead.leadgenId,
+  };
+}
+
 async function finalizeWebhookEvent(
   webhookEventId: string | undefined,
   userId: string,
@@ -56,7 +99,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
           leadgenId: data.leadgenId,
         },
       },
-      include: { form: true },
+      include: { form: { include: { page: { include: { business: true } } } } },
     });
     if (!lead) {
       throw new Error(`Lead not found for retry: ${data.leadgenId}`);
@@ -65,14 +108,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
     await deliverToTelegram(
       page.userId,
       lead.id,
-      {
-        formName: lead.form?.formName ?? "—",
-        name: lead.name ?? "",
-        phone: lead.phone ?? "",
-        email: lead.email ?? "",
-        createdTime: lead.createdTime.toISOString(),
-        fields,
-      },
+      toTelegramPayload(lead, fields),
       data.retryDeliveryLogId
     );
     return;
@@ -155,18 +191,15 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       rawData: leadData as object,
       ...adFields,
     },
-    include: { form: true },
+    include: { form: { include: { page: { include: { business: true } } } } },
   });
 
   try {
-    const outcome = await deliverToTelegram(page.userId, lead.id, {
-      formName: lead.form?.formName ?? enabledForm.formName,
-      name: name ?? "",
-      phone: phone ?? "",
-      email: email ?? "",
-      createdTime: leadData.created_time,
-      fields,
-    });
+    const outcome = await deliverToTelegram(
+      page.userId,
+      lead.id,
+      toTelegramPayload(lead, fields, leadData.created_time)
+    );
 
     if (outcome === "delivered" || outcome === "skipped") {
       await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
@@ -210,6 +243,13 @@ async function deliverToTelegram(
     email: string;
     createdTime: string;
     fields: Record<string, string>;
+    pageName?: string | null;
+    businessName?: string | null;
+    campaignName?: string | null;
+    adsetName?: string | null;
+    adName?: string | null;
+    source?: string;
+    leadgenId?: string;
   },
   existingDeliveryLogId?: string
 ): Promise<DeliveryOutcome> {
@@ -249,6 +289,13 @@ async function deliverToTelegram(
     email: leadInfo.email,
     createdTime: formatLeadCreatedTime(leadInfo.createdTime, locale),
     allFields: leadInfo.fields,
+    pageName: leadInfo.pageName,
+    businessName: leadInfo.businessName,
+    campaignName: leadInfo.campaignName,
+    adsetName: leadInfo.adsetName,
+    adName: leadInfo.adName,
+    source: leadInfo.source,
+    leadgenId: leadInfo.leadgenId,
   });
 
   let deliveryLog = existingDeliveryLogId
@@ -462,14 +509,24 @@ export async function importLeadsForUser(
             formImported++;
 
             if (sendToTelegram) {
-              await deliverToTelegram(userId, lead.id, {
-                formName: form.formName,
-                name: name ?? "",
-                phone: phone ?? "",
-                email: email ?? "",
-                createdTime: leadData.created_time,
-                fields,
-              });
+              await deliverToTelegram(
+                userId,
+                lead.id,
+                toTelegramPayload(
+                  {
+                    ...lead,
+                    form: {
+                      formName: form.formName,
+                      page: {
+                        pageName: form.page.pageName,
+                        business: null,
+                      },
+                    },
+                  },
+                  fields,
+                  leadData.created_time
+                )
+              );
             }
           } catch {
             failed++;
@@ -552,19 +609,14 @@ export async function updateLeadCrmStatus(
 export async function resendLeadToTelegram(userId: string, leadId: string) {
   const lead = await prisma.lead.findFirst({
     where: { id: leadId, userId },
-    include: { form: true },
+    include: {
+      form: { include: { page: { include: { business: true } } } },
+    },
   });
   if (!lead) throw new Error("Lead not found");
 
   const fields = (lead.fieldData as Record<string, string>) ?? {};
-  await deliverToTelegram(userId, lead.id, {
-    formName: lead.form?.formName ?? "—",
-    name: lead.name ?? "",
-    phone: lead.phone ?? "",
-    email: lead.email ?? "",
-    createdTime: lead.createdTime.toISOString(),
-    fields,
-  });
+  await deliverToTelegram(userId, lead.id, toTelegramPayload(lead, fields));
 }
 
 export async function saveLeadFromData(

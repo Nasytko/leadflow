@@ -134,6 +134,44 @@ export function getMissingScopes(grantedScopes: string[]): string[] {
   return FB_OAUTH_SCOPES.filter((s) => !granted.has(s.toLowerCase()));
 }
 
+/** User-facing diagnosis message for Facebook UI. */
+export function getDiagnosisUserMessage(input: {
+  diagnosis: FacebookDiagnosis;
+  grantedScopes: string[];
+  pagesCount: number;
+}): string {
+  const scopeSet = new Set(input.grantedScopes.map((s) => s.toLowerCase()));
+
+  if (!scopeSet.has("pages_show_list")) {
+    return "diagnosisMsg_missing_pages_show_list";
+  }
+  if (!scopeSet.has("leads_retrieval")) {
+    return "diagnosisMsg_missing_leads_retrieval";
+  }
+  if (
+    input.pagesCount === 0 &&
+    (input.diagnosis === "no_pages_available" ||
+      input.diagnosis === "connected_profile_only" ||
+      input.diagnosis === "missing_business_assets")
+  ) {
+    return "diagnosisMsg_pages_empty_with_scopes";
+  }
+  if (input.diagnosis === "missing_business_assets") {
+    return "diagnosisMsg_missing_business_assets";
+  }
+  if (input.diagnosis === "token_invalid") {
+    return "diagnosisMsg_token_invalid";
+  }
+  return `diagnosis_${input.diagnosis}`;
+}
+
+export function pageHasLimitedAccess(tasks: string[] | undefined): boolean {
+  if (!tasks || tasks.length === 0) return true;
+  const normalized = tasks.map((t) => t.toUpperCase());
+  const useful = ["MANAGE", "ADVERTISE", "CREATE_CONTENT", "MODERATE"];
+  return !useful.some((t) => normalized.includes(t));
+}
+
 export type WizardSteps = {
   facebookAccount: boolean;
   businessPortfolio: boolean;

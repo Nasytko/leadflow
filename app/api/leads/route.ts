@@ -28,6 +28,7 @@ export async function GET(request: Request) {
   const pageId = searchParams.get("pageId");
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
+  const telegramStatus = searchParams.get("telegramStatus");
 
   const where: Record<string, unknown> = {
     userId: authResult.session.user.id,
@@ -36,6 +37,7 @@ export async function GET(request: Request) {
   if (crmStatus) where.crmStatus = crmStatus;
   if (formId) where.formId = formId;
   if (source) where.source = source;
+  if (telegramStatus) where.telegramStatus = telegramStatus;
   if (pageId) where.form = { pageId };
   if (dateFrom || dateTo) {
     const createdTime: Record<string, Date> = {};

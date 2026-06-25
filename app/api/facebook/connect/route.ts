@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateSecureToken } from "@/lib/encryption";
-import { getFacebookAuthUrl } from "@/services/facebook-auth.service";
+import { getFacebookAuthUrl, logOAuthUrlPreview } from "@/services/facebook-auth.service";
 import { isMetaConfiguredForUser } from "@/services/integration-settings.service";
 import { requireAuth, checkRateLimit, apiError } from "@/lib/api-helpers";
 import { saveOAuthState } from "@/lib/oauth-state";
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
   try {
     const state = generateSecureToken(16);
     await saveOAuthState(`fb_oauth_state:${state}`, authResult.session.user.id);
+    await logOAuthUrlPreview(authResult.session.user.id, state);
     const url = await getFacebookAuthUrl(authResult.session.user.id, state);
     return NextResponse.json({ data: { url } });
   } catch (error) {

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, ExternalLink, Layers, RefreshCw } from "lucide-react";
+import { pageHasLimitedAccess } from "@/lib/facebook-diagnosis";
 import { cn } from "@/lib/utils";
 
 export type PageItem = {
@@ -118,6 +119,11 @@ export function FacebookPagesSection({
                             </Badge>
                           ))}
                         </div>
+                      )}
+                      {pageHasLimitedAccess(page.tasks) && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                          {t("pageLimitedAccessWarning")}
+                        </p>
                       )}
                       {page.link && (
                         <a

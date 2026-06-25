@@ -118,7 +118,14 @@ export function FormsContent() {
       } else if (data.error) {
         toast.error(data.error.message ?? t("importFailed"));
       } else {
-        toast.success(t("importSuccess", { count: data.data?.imported ?? 0 }));
+        const d = data.data;
+        toast.success(
+          t("importReport", {
+            imported: d?.imported ?? 0,
+            skipped: d?.skippedDuplicates ?? 0,
+            failed: d?.failed ?? 0,
+          })
+        );
       }
     } catch {
       toast.error(t("importFailed"));
@@ -188,6 +195,8 @@ export function FormsContent() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">{t("importLeadsDescription")}</p>
+          <p className="text-xs text-muted-foreground">{t("marketingImportHint")}</p>
+          <p className="text-xs text-muted-foreground">{t("marketingEnableFormsHint")}</p>
           <div className="flex items-center gap-2">
             <Checkbox
               id="send-telegram"
