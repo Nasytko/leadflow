@@ -20,10 +20,12 @@ import { extractLeadAttribution } from "@/lib/lead-mapper";
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
 const SENT_STATUSES = ["success", "sent"];
 
+type DeliveryOutcome = "delivered" | "retrying" | "failed" | "skipped";
+
 async function finalizeWebhookEvent(
   webhookEventId: string | undefined,
   userId: string,
-  status: "processed" | "ignored" | "failed",
+  status: "processed" | "processing" | "ignored" | "failed",
   lastError?: string
 ) {
   if (!webhookEventId) return;
@@ -157,7 +159,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
   });
 
   try {
-    await deliverToTelegram(page.userId, lead.id, {
+    const outcome = await deliverToTelegram(page.userId, lead.id, {
       formName: lead.form?.formName ?? enabledForm.formName,
       name: name ?? "",
       phone: phone ?? "",
@@ -165,7 +167,19 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       createdTime: leadData.created_time,
       fields,
     });
-    await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
+
+    if (outcome === "delivered" || outcome === "skipped") {
+      await finalizeWebhookEvent(data.webhookEventId, page.userId, "processed");
+    } else if (outcome === "retrying") {
+      await finalizeWebhookEvent(data.webhookEventId, page.userId, "processing");
+    } else {
+      await finalizeWebhookEvent(
+        data.webhookEventId,
+        page.userId,
+        "failed",
+        "Telegram delivery failed"
+      );
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Delivery failed";
     await finalizeWebhookEvent(
@@ -198,7 +212,7 @@ async function deliverToTelegram(
     fields: Record<string, string>;
   },
   existingDeliveryLogId?: string
-) {
+): Promise<DeliveryOutcome> {
   const telegram = await prisma.telegramConnection.findUnique({
     where: { userId },
   });
@@ -222,7 +236,7 @@ async function deliverToTelegram(
         lastErrorAt: new Date(),
       },
     });
-    return;
+    return "failed";
   }
 
   const botToken = decrypt(telegram.botTokenEncrypted);
@@ -252,7 +266,7 @@ async function deliverToTelegram(
         where: { id: leadId },
         data: { status: "delivered", telegramStatus: "sent" },
       });
-      return;
+      return "skipped";
     }
 
     deliveryLog = await prisma.deliveryLog.create({
@@ -287,7 +301,7 @@ async function deliverToTelegram(
       where: { id: leadId },
       data: { status: "delivered", telegramStatus: "sent" },
     });
-    return;
+    return "delivered";
   }
 
   const retryCount = deliveryLog.retryCount;
@@ -329,6 +343,7 @@ async function deliverToTelegram(
         delay
       );
     }
+    return "retrying";
   } else {
     await prisma.deliveryLog.update({
       where: { id: deliveryLog.id },
@@ -354,6 +369,7 @@ async function deliverToTelegram(
       metadata: { leadId, errorCode: result.errorCode },
     });
   }
+  return "failed";
 }
 
 export type ImportLeadsResult = {

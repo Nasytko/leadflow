@@ -1,12 +1,36 @@
-FROM node:20-alpine
-RUN apk add --no-cache libc6-compat openssl
+FROM node:20-alpine AS base
+
+RUN apk add --no-cache \
+    libc6-compat \
+    openssl \
+    python3 \
+    make \
+    g++
+
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
-RUN npm ci
+FROM base AS deps
 
-COPY . .
-RUN npx prisma generate
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+
+RUN npm ci --ignore-scripts \
+    && npx prisma generate
+
+FROM base AS runner
+
+ENV NODE_ENV=production
+
+RUN apk add --no-cache procps
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+COPY workers ./workers
+COPY services ./services
+COPY lib ./lib
+COPY scripts ./scripts
+COPY types ./types
+COPY tsconfig.json ./
 
 CMD ["npm", "run", "worker"]

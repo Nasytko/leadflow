@@ -36,6 +36,14 @@ import {
 import type { DashboardStats } from "@/types";
 
 type StatsResponse = DashboardStats & {
+  healthCards?: Array<{
+    id: string;
+    status: "ok" | "warning" | "error" | "unknown";
+    lastCheckedAt: string | null;
+    lastError: string | null;
+    detail?: string | null;
+    href?: string;
+  }>;
   recentLeads: Array<{
     id: string;
     name: string | null;
@@ -118,6 +126,55 @@ export function DashboardContent() {
           </Link>
         </Button>
       </PageHeader>
+
+      {stats?.healthCards && stats.healthCards.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              {t("healthTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {stats.healthCards.map((card) => {
+                const label = t(`health_${card.id}` as "health_facebook");
+                const variant =
+                  card.status === "ok"
+                    ? "success"
+                    : card.status === "warning"
+                    ? "warning"
+                    : card.status === "error"
+                    ? "destructive"
+                    : "secondary";
+                const inner = (
+                  <div className="rounded-xl border p-3 space-y-1 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium">{label}</p>
+                      <Badge variant={variant} className="text-[10px]">
+                        {t(`healthStatus_${card.status}`)}
+                      </Badge>
+                    </div>
+                    {card.detail && (
+                      <p className="text-[10px] text-muted-foreground truncate">{card.detail}</p>
+                    )}
+                    {card.lastError && (
+                      <p className="text-[10px] text-destructive line-clamp-2">{card.lastError}</p>
+                    )}
+                  </div>
+                );
+                return card.href ? (
+                  <Link key={card.id} href={card.href}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={card.id}>{inner}</div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Setup progress */}
       {stats && setupPercent < 100 && (

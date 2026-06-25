@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+import { enqueueLeadProcessing } from "@/lib/queue";
 import { verifyWebhookTokenGlobal, findUserByWebhookVerifyToken } from "./integration-settings.service";
 import { maskSecret, writeSystemLog } from "@/lib/system-log";
 
@@ -59,6 +61,7 @@ export async function logWebhookVerification(params: {
   }
 }
 
+/** Fast path: persist event and enqueue async processing (return 200 quickly). */
 export async function handleMetaWebhook(
   payload: {
     object: string;
@@ -68,49 +71,14 @@ export async function handleMetaWebhook(
 ) {
   if (payload.object !== "page") return;
 
-  const { prisma } = await import("@/lib/prisma");
-  const { enqueueLeadProcessing } = await import("@/lib/queue");
-  const { findPageByFacebookId } = await import("./facebook.service");
-
   for (const entry of payload.entry) {
     for (const change of entry.changes) {
       if (change.field !== "leadgen") continue;
 
       const { leadgen_id, page_id, form_id } = change.value;
 
-      let page = null;
-      try {
-        page = await findPageByFacebookId(page_id);
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Page lookup failed";
-        await prisma.webhookEvent.create({
-          data: {
-            eventType: "leadgen",
-            payload: change.value as object,
-            status: "failed",
-            pageId: page_id,
-            formId: form_id,
-            leadgenId: leadgen_id,
-            lastError: message,
-            lastErrorAt: new Date(),
-            sourceIp: context?.sourceIp,
-            userAgent: context?.userAgent,
-          },
-        });
-        await writeSystemLog({
-          level: "error",
-          source: "webhook",
-          action: "page.lookup_failed",
-          message,
-          metadata: { pageId: page_id, leadgenId: leadgen_id },
-        });
-        continue;
-      }
-
       const webhookEvent = await prisma.webhookEvent.create({
         data: {
-          userId: page?.userId,
           eventType: "leadgen",
           payload: change.value as object,
           status: "received",
@@ -122,60 +90,30 @@ export async function handleMetaWebhook(
         },
       });
 
-      if (!page) {
+      try {
+        await enqueueLeadProcessing({
+          leadgenId: leadgen_id,
+          pageId: page_id,
+          formId: form_id,
+          webhookEventId: webhookEvent.id,
+        });
+        await prisma.webhookEvent.update({
+          where: { id: webhookEvent.id },
+          data: { status: "queued" },
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to enqueue lead job";
         await prisma.webhookEvent.update({
           where: { id: webhookEvent.id },
           data: {
-            status: "ignored",
-            lastError: "Page not connected in LeadBridge",
+            status: "failed",
+            lastError: message,
             lastErrorAt: new Date(),
           },
         });
-        continue;
+        throw error;
       }
-
-      const existingLead = await prisma.lead.findUnique({
-        where: {
-          userId_leadgenId: {
-            userId: page.userId,
-            leadgenId: leadgen_id,
-          },
-        },
-      });
-
-      if (existingLead) {
-        const priorDelivery = await prisma.deliveryLog.findFirst({
-          where: {
-            leadId: existingLead.id,
-            status: { in: ["sent", "success"] },
-          },
-        });
-        if (priorDelivery || existingLead.telegramStatus === "sent") {
-          await prisma.webhookEvent.update({
-            where: { id: webhookEvent.id },
-            data: {
-              status: "ignored",
-              userId: page.userId,
-              processedAt: new Date(),
-              lastError: "Duplicate leadgen_id already delivered",
-            },
-          });
-          continue;
-        }
-      }
-
-      await prisma.webhookEvent.update({
-        where: { id: webhookEvent.id },
-        data: { status: "queued" },
-      });
-
-      await enqueueLeadProcessing({
-        leadgenId: leadgen_id,
-        pageId: page_id,
-        formId: form_id,
-        webhookEventId: webhookEvent.id,
-        userId: page.userId,
-      });
     }
   }
 }

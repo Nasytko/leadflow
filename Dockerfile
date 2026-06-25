@@ -1,25 +1,38 @@
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+
+RUN apk add --no-cache \
+    libc6-compat \
+    openssl \
+    python3 \
+    make \
+    g++
+
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json package-lock.json* ./
+
+COPY package.json package-lock.json ./
 COPY prisma ./prisma/
-RUN npm ci
+
+RUN npm ci --ignore-scripts \
+    && npx prisma generate
 
 FROM base AS builder
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM base AS runner
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN apk add --no-cache wget \
+    && addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -27,13 +40,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/workers ./workers
-COPY --from=builder /app/services ./services
-COPY --from=builder /app/lib ./lib
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
 
 CMD ["node", "server.js"]

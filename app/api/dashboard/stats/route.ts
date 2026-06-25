@@ -2,10 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, apiSuccess } from "@/lib/api-helpers";
 import { getIntegrationSettingsPublic } from "@/services/integration-settings.service";
 import { buildWizardSteps } from "@/lib/facebook-diagnosis";
+import { buildDashboardHealthCards } from "@/lib/dashboard-health";
+import { checkRateLimit } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
+
+  const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
+  if (rateLimitError) return rateLimitError;
 
   const userId = authResult.session.user.id;
   const now = new Date();
@@ -119,6 +124,51 @@ export async function GET() {
 
   const setupCompleted = Object.values(setupSteps).filter(Boolean).length;
 
+  const [businessesCount, queuedWebhooks, lastLead, lastTelegramDelivery] =
+    await Promise.all([
+      prisma.facebookBusiness.count({ where: { userId } }),
+      prisma.webhookEvent.count({
+        where: {
+          userId,
+          status: { in: ["queued", "processing", "received"] },
+        },
+      }),
+      prisma.lead.findFirst({
+        where: { userId },
+        orderBy: { createdTime: "desc" },
+        select: { createdTime: true },
+      }),
+      prisma.deliveryLog.findFirst({
+        where: { userId, type: "telegram" },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true, status: true },
+      }),
+    ]);
+
+  const healthCards = buildDashboardHealthCards({
+    facebookStatus,
+    facebookLastError: facebookConnection?.lastError ?? null,
+    facebookUserName: facebookConnection?.facebookUserName ?? null,
+    businessesCount,
+    connectedPages,
+    totalPages,
+    activeForms,
+    totalForms,
+    failedFormsSync,
+    webhookVerified: !!lastSuccessVerification,
+    lastWebhookAt: lastWebhookEvent?.createdAt ?? null,
+    lastWebhookStatus: lastWebhookEvent?.status ?? null,
+    lastWebhookError: lastWebhookEvent?.lastError ?? null,
+    telegramStatus,
+    telegramLastError: telegramConnection?.lastError ?? null,
+    failedDeliveriesToday,
+    lastLeadAt: lastLead?.createdTime ?? null,
+    lastTelegramDeliveryAt: lastTelegramDelivery?.createdAt ?? null,
+    lastTelegramDeliveryStatus: lastTelegramDelivery?.status ?? null,
+    metaConfigured: !!integrationSettings?.configured,
+    queuedWebhooks,
+  });
+
   return apiSuccess({
     facebookConnected: facebookStatus === "connected",
     facebookStatus,
@@ -148,6 +198,7 @@ export async function GET() {
     lastWebhookStatus: lastWebhookEvent?.status ?? null,
     lastWebhookError: lastWebhookEvent?.lastError ?? null,
     failedWebhookEvents,
+    healthCards,
     recentLeads,
     recentLogs,
   });

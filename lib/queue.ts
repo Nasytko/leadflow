@@ -28,7 +28,8 @@ export async function getLeadQueue(): Promise<Queue> {
       defaultJobOptions: {
         removeOnComplete: 100,
         removeOnFail: 500,
-        attempts: 1,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5000 },
       },
     });
   }
@@ -52,12 +53,15 @@ export async function enqueueLeadRetry(
   delayMs: number
 ) {
   const queue = await getLeadQueue();
-  return queue.add("retry-telegram", data, { delay: delayMs });
+  const jobId = data.retryDeliveryLogId
+    ? `retry:${data.retryDeliveryLogId}`
+    : `retry:${data.pageId}:${data.leadgenId}:${delayMs}`;
+  return queue.add("retry-telegram", data, { delay: delayMs, jobId });
 }
 
 export async function enqueueImportLeads(data: ImportLeadsJobData) {
   const queue = await getLeadQueue();
-  return queue.add("import-leads", data);
+  return queue.add("import-leads", data, { jobId: `import:${data.userId}` });
 }
 
 export function createLeadWorker(

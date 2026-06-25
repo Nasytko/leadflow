@@ -12,6 +12,7 @@ import { MetaSettingsForm } from "@/components/integrations/meta-settings-form";
 import { FacebookStatusCard } from "@/components/facebook/facebook-status-card";
 import { FacebookSetupWizard } from "@/components/facebook/facebook-setup-wizard";
 import { FacebookWebhookDiagnostics } from "@/components/facebook/facebook-webhook-diagnostics";
+import { FacebookTestLeadCard } from "@/components/facebook/facebook-test-lead-card";
 import { FacebookBusinessesSection } from "@/components/facebook/facebook-businesses-section";
 import { FacebookPagesSection } from "@/components/facebook/facebook-pages-section";
 import {
@@ -655,6 +656,7 @@ export function FacebookContent() {
         </div>
       )}
 
+      <FacebookTestLeadCard />
       <FacebookWebhookDiagnostics />
 
       {status.showAdvancedMetaSettings !== false && (

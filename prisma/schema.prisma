@@ -160,6 +160,7 @@ model FacebookPage {
   connected                 Boolean   @default(false)
   syncStatus                String    @default("pending")
   webhookStatus             String    @default("pending")
+  webhookSubscribedAt       DateTime?
   lastSyncedAt              DateTime?
   lastError                 String?
   lastErrorAt               DateTime?

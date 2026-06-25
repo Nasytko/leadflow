@@ -603,6 +603,81 @@ FACEBOOK_REDIRECT_URI=https://fb.nasytko.ru/api/facebook/callback
 
 ---
 
+## Troubleshooting (production)
+
+### `npm ci` fails in Docker build
+
+1. Ensure `package-lock.json` is committed and matches `package.json`:
+   ```bash
+   rm -rf node_modules package-lock.json
+   npm install
+   npm ci
+   ```
+2. Dockerfiles use `npm ci --ignore-scripts` then `npx prisma generate` (Alpine-safe).
+3. Native modules need build tools — Dockerfiles install `python3`, `make`, `g++`.
+4. Do not use `package-lock.json*` optional copy — lockfile must exist in build context.
+
+### `config_id` invalid in OAuth URL
+
+- `config_id` must be a numeric Meta Login Configuration ID (5–20 digits).
+- Email or free text is rejected — check `META_LOGIN_CONFIG_ID` env and per-user settings.
+- OAuth works without `config_id` when using standard Facebook Login scopes.
+
+### Token exchange failed
+
+- `redirect_uri` in authorize URL and token exchange must match exactly.
+- Set `NEXTAUTH_URL` and `FACEBOOK_REDIRECT_URI` to the same domain as Meta App settings.
+
+### `pages=[]` after OAuth
+
+- Facebook connected but page access not granted — check Business Login Configuration.
+- User must select company/pages during OAuth.
+- Verify scopes via debug_token: `pages_show_list`, `leads_retrieval`, `business_management`.
+
+### `forms=[]`
+
+- Sync forms after connecting pages: Forms → Sync.
+- Create Instant Form in Meta Ads Manager if none exist.
+
+### Webhook not verified
+
+- GET `/api/webhooks/meta` must return challenge with correct `META_WEBHOOK_VERIFY_TOKEN`.
+- Product: **Page**, field: `leadgen`.
+
+### Webhook signature invalid (401)
+
+- Set `META_WEBHOOK_SIGNATURE_REQUIRED=true` in production.
+- `META_APP_SECRET` must match the Meta App that sends webhooks.
+
+### Leads not arriving
+
+- Page must be connected in LeadBridge (webhook subscribed).
+- Form must be **enabled** in LeadBridge.
+- Check worker logs: `docker compose logs worker -f`
+- Create test lead via [Meta Lead Ads Testing Tool](https://developers.facebook.com/tools/lead-ads-testing/).
+
+### Telegram not sending
+
+- Bot token + chat ID validated on save.
+- Check delivery logs in app and `docker compose logs worker`.
+
+### Database backups
+
+```bash
+docker compose exec postgres pg_dump -U leadflow leadflow > backup_$(date +%F).sql
+# restore:
+cat backup.sql | docker compose exec -T postgres psql -U leadflow leadflow
+```
+
+Schedule daily `pg_dump` via cron on the VPS.
+
+### Health checks
+
+- Web: `GET /api/health` (database + redis)
+- Docker Compose includes healthchecks for `web` and `worker`
+
+---
+
 ## Безопасность (кратко)
 
 - Не публикуйте файл `.env`

@@ -182,7 +182,37 @@ export async function getLeadgenForms(pageId: string, pageAccessToken: string) {
       status: string;
       created_time: string;
     }>;
-  }>(`/${pageId}/leadgen_forms?fields=id,name,status,created_time`, pageAccessToken);
+    paging?: { cursors?: { after?: string } };
+  }>(`/${pageId}/leadgen_forms?fields=id,name,status,created_time&limit=100`, pageAccessToken);
+}
+
+type LeadgenFormRow = {
+  id: string;
+  name: string;
+  status: string;
+  created_time: string;
+};
+
+/** Fetch all leadgen forms with Graph API pagination. */
+export async function getAllLeadgenForms(
+  pageId: string,
+  pageAccessToken: string
+): Promise<LeadgenFormRow[]> {
+  const all: LeadgenFormRow[] = [];
+  let after: string | undefined;
+
+  do {
+    let path = `/${pageId}/leadgen_forms?fields=id,name,status,created_time&limit=100`;
+    if (after) path += `&after=${after}`;
+    const response = await graphFetch<{
+      data: LeadgenFormRow[];
+      paging?: { cursors?: { after?: string } };
+    }>(path, pageAccessToken);
+    all.push(...(response.data ?? []));
+    after = response.paging?.cursors?.after;
+  } while (after);
+
+  return all;
 }
 
 export async function getLeadDetails(
@@ -216,6 +246,17 @@ export async function subscribePageToWebhooks(
     `/${pageId}/subscribed_apps?subscribed_fields=leadgen`,
     pageAccessToken,
     { method: "POST" }
+  );
+}
+
+export async function unsubscribePageFromWebhooks(
+  pageId: string,
+  pageAccessToken: string
+) {
+  return graphFetch<{ success: boolean }>(
+    `/${pageId}/subscribed_apps`,
+    pageAccessToken,
+    { method: "DELETE" }
   );
 }
 
@@ -831,7 +872,7 @@ export async function syncUserForms(userId: string) {
   for (const page of pages) {
     const pageToken = decrypt(page.pageAccessTokenEncrypted);
     try {
-      const { data: forms } = await getLeadgenForms(page.pageId, pageToken);
+      const forms = await getAllLeadgenForms(page.pageId, pageToken);
 
       for (const form of forms) {
         await prisma.facebookForm.upsert({
@@ -971,6 +1012,7 @@ export async function connectPage(userId: string, pageDbId: string) {
       data: {
         connected: true,
         webhookStatus: "success",
+        webhookSubscribedAt: new Date(),
         lastError: null,
         lastErrorAt: null,
       },
@@ -993,9 +1035,38 @@ export async function connectPage(userId: string, pageDbId: string) {
 }
 
 export async function disconnectPage(userId: string, pageDbId: string) {
-  return prisma.facebookPage.updateMany({
+  const page = await prisma.facebookPage.findFirst({
     where: { id: pageDbId, userId },
-    data: { connected: false, webhookStatus: "pending" },
+  });
+  if (!page) throw new Error("Page not found");
+
+  if (page.connected) {
+    try {
+      const pageToken = decrypt(page.pageAccessTokenEncrypted);
+      await unsubscribePageFromWebhooks(page.pageId, pageToken);
+    } catch (error) {
+      const { message } = graphErrorDetails(error);
+      const { writeSystemLog } = await import("@/lib/system-log");
+      await writeSystemLog({
+        userId,
+        level: "warn",
+        source: "facebook",
+        action: "webhook.unsubscribe_failed",
+        message,
+        metadata: { pageId: page.pageId },
+      });
+    }
+  }
+
+  return prisma.facebookPage.update({
+    where: { id: pageDbId },
+    data: {
+      connected: false,
+      webhookStatus: "pending",
+      webhookSubscribedAt: null,
+      lastError: null,
+      lastErrorAt: null,
+    },
   });
 }
 

@@ -2,9 +2,23 @@ import { decrypt, encrypt } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
+const TELEGRAM_TIMEOUT_MS = 30_000;
+
+async function telegramFetch(
+  url: string,
+  init?: RequestInit
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function getTelegramBotInfo(botToken: string) {
-  const res = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+  const res = await telegramFetch(`https://api.telegram.org/bot${botToken}/getMe`);
   const data = await res.json();
   if (!data.ok) {
     return {
@@ -25,7 +39,7 @@ export async function sendTelegramMessage(
   chatId: string,
   text: string
 ): Promise<{ ok: boolean; messageId?: number; error?: string; errorCode?: string }> {
-  const res = await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
+  const res = await telegramFetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -53,7 +67,7 @@ export async function validateTelegramConnection(
   const result = await sendTelegramMessage(
     botToken,
     chatId,
-    "✅ LeadFlow connection test"
+    "✅ LeadBridge connection test"
   );
   return {
     valid: result.ok,
@@ -158,7 +172,7 @@ export async function testTelegramConnection(userId: string, message?: string) {
     return { ok: false as const, error: botInfo.error, errorCode: botInfo.errorCode };
   }
 
-  const testMessage = message ?? "✅ LeadFlow — test message";
+  const testMessage = message ?? "✅ LeadBridge — test message";
   const result = await sendTelegramMessage(conn.botToken, conn.chatId, testMessage);
 
   if (result.ok) {

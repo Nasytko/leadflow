@@ -24,6 +24,10 @@ export async function GET(request: Request) {
   const search = searchParams.get("search") ?? "";
   const crmStatus = searchParams.get("crmStatus") ?? searchParams.get("status");
   const formId = searchParams.get("formId");
+  const source = searchParams.get("source");
+  const pageId = searchParams.get("pageId");
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
 
   const where: Record<string, unknown> = {
     userId: authResult.session.user.id,
@@ -31,6 +35,14 @@ export async function GET(request: Request) {
 
   if (crmStatus) where.crmStatus = crmStatus;
   if (formId) where.formId = formId;
+  if (source) where.source = source;
+  if (pageId) where.form = { pageId };
+  if (dateFrom || dateTo) {
+    const createdTime: Record<string, Date> = {};
+    if (dateFrom) createdTime.gte = new Date(dateFrom);
+    if (dateTo) createdTime.lte = new Date(dateTo);
+    where.createdTime = createdTime;
+  }
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
