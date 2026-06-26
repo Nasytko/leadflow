@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile.worker
     environment:
       DATABASE_URL: postgresql://leadflow:leadflow@postgres:5432/leadflow?schema=public
-    command: npx prisma migrate deploy
+    command: ["npm", "run", "db:migrate:deploy"]
     depends_on:
       postgres:
         condition: service_healthy

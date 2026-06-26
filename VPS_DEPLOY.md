@@ -603,6 +603,59 @@ FACEBOOK_REDIRECT_URI=https://fb.nasytko.ru/api/facebook/callback
 
 ---
 
+## Безопасный деплой (checklist)
+
+### Перед деплоем (локально)
+
+```bash
+git status
+git log --oneline -3
+```
+
+Убедитесь, что в `package.json` **строго**:
+```json
+"prisma": "6.9.0",
+"@prisma/client": "6.9.0"
+```
+
+Не используйте `^` для Prisma — иначе npm может поставить Prisma 7.x и миграции упадут с `P1012`.
+
+### На проде
+
+```bash
+cd /opt/leadflow
+git pull origin main
+docker compose -f docker-compose.production.yml down
+docker compose -f docker-compose.production.yml build --no-cache
+docker compose -f docker-compose.production.yml up -d
+docker compose -f docker-compose.production.yml exec web npm run db:migrate:deploy
+docker compose -f docker-compose.production.yml ps
+```
+
+> Сервис `migrate` при `up -d` уже запускает `npm run db:migrate:deploy` из локального `node_modules`. Команда через `web` — для ручного повторного прогона после обновления.
+
+### Проверка версии Prisma в контейнере
+
+```bash
+docker compose -f docker-compose.production.yml exec web npx --no-install prisma -v
+```
+
+**Ожидаемо:** `prisma                  : 6.9.0`
+
+Если видите `7.x` — это ошибка: проверьте `package-lock.json`, пересоберите образ с `--no-cache`, не используйте голый `npx prisma` без `--no-install`.
+
+### Prisma P1012 (`url` is no longer supported)
+
+Причина: в контейнере установлена Prisma CLI 7.x вместо 6.9.0.
+
+Исправление:
+1. Зафиксировать версии в `package.json` (без `^`)
+2. `rm -rf node_modules package-lock.json && npm install`
+3. Закоммитить `package-lock.json`
+4. `docker compose build --no-cache`
+
+---
+
 ## Troubleshooting (production)
 
 ### `npm ci` fails in Docker build
@@ -613,7 +666,7 @@ FACEBOOK_REDIRECT_URI=https://fb.nasytko.ru/api/facebook/callback
    npm install
    npm ci
    ```
-2. Dockerfiles use `npm ci --ignore-scripts` then `npx prisma generate` (Alpine-safe).
+2. Dockerfiles use `npm ci --ignore-scripts` then `npm run db:generate` (local Prisma 6.9.0 from lockfile).
 3. Native modules need build tools — Dockerfiles install `python3`, `make`, `g++`.
 4. Do not use `package-lock.json*` optional copy — lockfile must exist in build context.
 

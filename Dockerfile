@@ -15,7 +15,7 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
 RUN npm ci --ignore-scripts \
-    && npx prisma generate
+    && npm run db:generate
 
 FROM base AS builder
 
