@@ -314,7 +314,7 @@ function graphErrorDetails(error: unknown): {
   return { message: "Unknown error" };
 }
 
-async function setFacebookConnectionError(
+export async function setFacebookConnectionError(
   userId: string,
   status: "invalid" | "expired" | "error",
   message: string,
@@ -490,7 +490,11 @@ async function assertTokenCredentialsMatch(
   const authConfigId = conn.metaLoginConfigIdAtAuth?.trim() || null;
   const normalizedCurrent = currentConfigId?.trim() || null;
 
-  if (authConfigId !== normalizedCurrent) {
+  if (
+    authConfigId &&
+    normalizedCurrent &&
+    authConfigId !== normalizedCurrent
+  ) {
     await markFacebookConnectionInvalid(
       userId,
       new Error(
@@ -898,6 +902,21 @@ export async function syncUserForms(userId: string) {
     where: { userId, connected: true },
   });
 
+  return syncFormsForPages(userId, pages);
+}
+
+/** Sync leadgen forms for all discovered pages (OAuth post-connect). */
+export async function syncFormsForAllDiscoveredPages(userId: string) {
+  const pages = await prisma.facebookPage.findMany({ where: { userId } });
+  if (pages.length === 0) return { synced: 0 };
+
+  return syncFormsForPages(userId, pages);
+}
+
+async function syncFormsForPages(
+  userId: string,
+  pages: Array<{ id: string; pageId: string; pageAccessTokenEncrypted: string }>
+) {
   let synced = 0;
   let hadError = false;
   let lastError: string | undefined;
@@ -976,7 +995,7 @@ export async function syncUserForms(userId: string) {
 }
 
 function isFacebookConnectionUsable(status: string): boolean {
-  return status === "connected";
+  return status === "connected" || status === "pending_pages";
 }
 
 export async function debugFacebookPermissions(userId: string) {
@@ -1179,7 +1198,7 @@ export function mapFacebookConnectionPublic(conn: {
   lastErrorCode: string | null;
   lastErrorAt: Date | null;
   tokenExpiresAt: Date | null;
-}, options?: { hasLoginConfigId?: boolean }) {
+}, options?: { hasLoginConfigId?: boolean; pagesCount?: number }) {
   const grantedScopes = Array.isArray(conn.grantedScopes)
     ? (conn.grantedScopes as string[])
     : [];
@@ -1187,7 +1206,7 @@ export function mapFacebookConnectionPublic(conn: {
     ? (conn.granularScopes as GranularScope[])
     : [];
 
-  const pagesCount = conn.pagesCountAtAuth ?? 0;
+  const pagesCount = options?.pagesCount ?? conn.pagesCountAtAuth ?? 0;
   const hasToken =
     conn.status !== "disconnected" &&
     conn.status !== "invalid" &&
@@ -1204,6 +1223,8 @@ export function mapFacebookConnectionPublic(conn: {
   });
 
   const uiStatus = mapDiagnosisToUiStatus(diagnosis, conn.status);
+  const profileConnected = hasToken && !!conn.facebookUserId;
+  const fullyConnected = uiStatus === "fully_connected";
 
   return {
     status: conn.status,
@@ -1226,7 +1247,8 @@ export function mapFacebookConnectionPublic(conn: {
     lastErrorCode: conn.lastErrorCode,
     lastErrorAt: conn.lastErrorAt,
     tokenExpiresAt: conn.tokenExpiresAt,
-    connected: uiStatus === "fully_connected",
+    connected: profileConnected,
+    fullyConnected,
     tokenInvalid: conn.status === "invalid" || conn.status === "expired",
   };
 }

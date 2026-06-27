@@ -53,8 +53,15 @@ export async function GET(request: Request) {
 
   const hasLoginConfigId = integrationSettings.hasMetaLoginConfigId;
   const connectedPages = pages.filter((p) => p.connected);
+  const effectivePagesCount = Math.max(
+    connection?.pagesCountAtAuth ?? 0,
+    pages.length
+  );
   const facebook = connection
-    ? mapFacebookConnectionPublic(connection, { hasLoginConfigId })
+    ? mapFacebookConnectionPublic(connection, {
+        hasLoginConfigId,
+        pagesCount: effectivePagesCount,
+      })
     : {
         status: "disconnected",
         uiStatus: "disconnected" as const,
@@ -74,6 +81,7 @@ export async function GET(request: Request) {
         lastErrorAt: null,
         tokenExpiresAt: null,
         connected: false,
+        fullyConnected: false,
         tokenInvalid: false,
         pagesCountAtAuth: 0,
         pagesAccessMissing: false,
@@ -93,6 +101,7 @@ export async function GET(request: Request) {
     metaConfigured,
     hasLoginConfigId,
     connected: facebook.connected,
+    fullyConnected: facebook.fullyConnected,
     integrationStatus: facebook.uiStatus,
     diagnosis: facebook.diagnosis,
     connectionStatus: facebook.status,

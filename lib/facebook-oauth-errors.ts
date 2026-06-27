@@ -42,9 +42,19 @@ export function classifyFacebookOAuthError(message: string): {
         "Required Facebook permissions were not granted. Reconnect and approve all Lead Ads permissions.",
     };
   }
+  if (
+    lower.includes("token exchange") ||
+    lower.includes("access_token") ||
+    lower.includes("oauth/access_token")
+  ) {
+    return {
+      code: "token_exchange_failed",
+      message: message.slice(0, 500),
+    };
+  }
 
   return {
-    code: "token_exchange_failed",
-    message,
+    code: "oauth_failed",
+    message: message.slice(0, 500),
   };
 }

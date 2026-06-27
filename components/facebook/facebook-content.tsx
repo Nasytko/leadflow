@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { apiFetch } from "@/lib/client-api";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 type Page = {
   id: string;
@@ -74,6 +74,7 @@ type FacebookInfo = {
   lastError?: string | null;
   lastErrorCode?: string | null;
   connected?: boolean;
+  fullyConnected?: boolean;
   tokenInvalid?: boolean;
   pagesAccessMissing?: boolean;
 };
@@ -82,6 +83,7 @@ type StatusData = {
   metaConfigured: boolean;
   hasLoginConfigId?: boolean;
   connected: boolean;
+  fullyConnected?: boolean;
   integrationStatus?: string;
   diagnosis?: string;
   connectionStatus: string;
@@ -108,6 +110,26 @@ type StatusData = {
     telegram: boolean;
     testLead: boolean;
   };
+};
+
+type OAuthDebugData = {
+  appId?: string | null;
+  redirectUri?: string;
+  hasAppSecret?: boolean;
+  deploymentMode?: string;
+  loginConfigIdUsed?: string | null;
+  isLoginConfigIdValid?: boolean;
+  scopes?: string | null;
+  oauthUrlPreview?: string | null;
+  dbConnectionExists?: boolean;
+  connectionStatus?: string;
+  lastCallbackAttempt?: string | null;
+  lastOAuthError?: string | null;
+  lastOAuthErrorCode?: string | null;
+  lastSyncError?: string | null;
+  lastSuccessfulConnection?: string | null;
+  pagesReturnedCount?: number;
+  businessesReturnedCount?: number;
 };
 
 type DebugData = {
@@ -170,6 +192,7 @@ export function FacebookContent() {
   const t = useTranslations("facebook");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,6 +204,8 @@ export function FacebookContent() {
   const [checking, setChecking] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [debugData, setDebugData] = useState<DebugData | null>(null);
+  const [oauthDebugging, setOauthDebugging] = useState(false);
+  const [oauthDebugData, setOauthDebugData] = useState<OAuthDebugData | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -207,7 +232,12 @@ export function FacebookContent() {
   useEffect(() => {
     const oauthFullSuccess = searchParams.get("success") === "connected";
     const oauthNoPages = searchParams.get("success") === "connected_no_pages";
+    const facebookConnected = searchParams.get("facebook_connected") === "1";
+    const formsSyncFailed = searchParams.get("forms_sync") === "failed";
     const err = searchParams.get("error");
+    const hasOAuthParams =
+      oauthFullSuccess || oauthNoPages || facebookConnected || !!err;
+
     if (err === "oauth_denied") toast.error(t("oauthDenied"));
     if (err === "invalid_state") toast.error(t("oauthErrors.invalid_state"));
     if (err && err !== "oauth_denied" && err !== "invalid_state") {
@@ -219,27 +249,44 @@ export function FacebookContent() {
         missing_code: "oauthErrors.missing_code",
         missing_permissions: "oauthErrors.missing_permissions",
         token_exchange_failed: "oauthErrors.token_exchange_failed",
+        sync_failed: "oauthErrors.sync_failed",
         oauth_failed: "oauthFailed",
       };
       const i18nKey = oauthKeyMap[err];
       toast.error(i18nKey ? t(i18nKey as "oauthFailed") : reason ?? t("oauthFailed"));
     }
-    if (oauthFullSuccess || oauthNoPages) {
-      loadData().then((data) => {
-        if (oauthNoPages || data?.integrationStatus === "pages_missing" || data?.integrationStatus === "permissions_missing") {
+
+    if (oauthFullSuccess || oauthNoPages || facebookConnected) {
+      void Promise.all([
+        fetchWithTimeout("/api/facebook/status").then((r) => r.json()),
+        fetchWithTimeout("/api/facebook/businesses").catch(() => null),
+        fetchWithTimeout("/api/facebook/pages").catch(() => null),
+        fetchWithTimeout("/api/forms").catch(() => null),
+      ]).then(() => loadData()).then((data) => {
+        if (formsSyncFailed) {
+          toast.warning(t("formsSyncAfterOAuthFailed"));
+        } else if (
+          oauthNoPages ||
+          data?.integrationStatus === "pages_missing" ||
+          data?.integrationStatus === "permissions_missing"
+        ) {
           toast.warning(t("pagesAccessMissing"));
         } else if (data?.connected) {
           toast.success(t("connectedSuccess"));
         } else if (data?.facebook?.lastError) {
           toast.error(data.facebook.lastError);
-        } else if (oauthFullSuccess) {
+        } else {
           toast.success(t("connectedSuccess"));
         }
       });
     } else if (err) {
-      loadData();
+      void loadData();
     }
-  }, [searchParams, t, loadData]);
+
+    if (hasOAuthParams) {
+      router.replace("/facebook", { scroll: false });
+    }
+  }, [searchParams, t, loadData, router]);
 
   async function handleConnect() {
     if (!status?.metaConfigured) {
@@ -280,6 +327,24 @@ export function FacebookContent() {
       toast.error(t("checkConnectionFailed"));
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function handleOAuthDiagnostics() {
+    setOauthDebugging(true);
+    try {
+      const res = await fetchWithTimeout("/api/facebook/oauth-debug");
+      const data = await res.json();
+      if (data.data) {
+        setOauthDebugData(data.data);
+        toast.message(t("oauthDiagnosticsTitle"));
+      } else {
+        toast.error(data.error?.message ?? tCommon("error"));
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setOauthDebugging(false);
     }
   }
 
@@ -420,8 +485,7 @@ export function FacebookContent() {
     status.facebook?.pagesAccessMissing;
 
   const hasFacebookSession =
-    status.integrationStatus !== "disconnected" &&
-    !!status.facebook?.facebookUserId;
+    status.connected || !!status.facebook?.facebookUserId;
 
   const wizardSteps = status.setupSteps;
 
@@ -455,10 +519,11 @@ export function FacebookContent() {
         <StatCard
           label={t("statFacebook")}
           value={
-            status.integrationStatus
-              ? t(`uiStatus_${status.integrationStatus}` as "uiStatus_disconnected")
-              : status.connected
+            status.connected
               ? t("fbConnected")
+              : status.integrationStatus &&
+                status.integrationStatus !== "disconnected"
+              ? t(`uiStatus_${status.integrationStatus}` as "uiStatus_disconnected")
               : t("fbNotConnected")
           }
           done={status.connected}
@@ -494,6 +559,70 @@ export function FacebookContent() {
               locale={locale}
               hasLoginConfigId={status.hasLoginConfigId}
             />
+          )}
+
+          {status.showAdvancedMetaSettings !== false && oauthDebugData && (
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm font-mono">
+              <p className="font-medium font-sans">{t("oauthDiagnosticsTitle")}</p>
+              <p className="text-xs text-muted-foreground break-all">
+                {t("oauthDiagnosticsRedirectUri")}: {oauthDebugData.redirectUri}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("oauthDiagnosticsAppId")}: {oauthDebugData.appId ?? "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("oauthDiagnosticsConfigId")}:{" "}
+                {oauthDebugData.loginConfigIdUsed ?? t("oauthDiagnosticsConfigIdNone")}
+                {oauthDebugData.loginConfigIdUsed
+                  ? ` (${oauthDebugData.isLoginConfigIdValid ? "valid" : "invalid"})`
+                  : ""}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("oauthDiagnosticsHasSecret")}:{" "}
+                {oauthDebugData.hasAppSecret ? tCommon("yes") : tCommon("no")}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("oauthDiagnosticsDbConnection")}:{" "}
+                {oauthDebugData.dbConnectionExists ? tCommon("yes") : tCommon("no")}
+                {oauthDebugData.connectionStatus
+                  ? ` (${oauthDebugData.connectionStatus})`
+                  : ""}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("oauthDiagnosticsPagesCount", {
+                  count: oauthDebugData.pagesReturnedCount ?? 0,
+                })}
+                {" · "}
+                {t("oauthDiagnosticsBusinessesCount", {
+                  count: oauthDebugData.businessesReturnedCount ?? 0,
+                })}
+              </p>
+              {oauthDebugData.lastCallbackAttempt && (
+                <p className="text-xs text-muted-foreground">
+                  {t("oauthDiagnosticsLastCallback")}:{" "}
+                  {formatDate(oauthDebugData.lastCallbackAttempt, locale)}
+                </p>
+              )}
+              {oauthDebugData.lastSuccessfulConnection && (
+                <p className="text-xs text-muted-foreground">
+                  {t("oauthDiagnosticsLastSuccess")}:{" "}
+                  {formatDate(oauthDebugData.lastSuccessfulConnection, locale)}
+                </p>
+              )}
+              {oauthDebugData.lastOAuthError && (
+                <p className="text-xs text-destructive break-all">
+                  {t("oauthDiagnosticsLastError")}: {oauthDebugData.lastOAuthError}
+                  {oauthDebugData.lastOAuthErrorCode
+                    ? ` (${oauthDebugData.lastOAuthErrorCode})`
+                    : ""}
+                </p>
+              )}
+              {oauthDebugData.lastSyncError && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 break-all">
+                  {t("oauthDiagnosticsLastSyncError")}: {oauthDebugData.lastSyncError}
+                </p>
+              )}
+            </div>
           )}
 
           {debugData && (
@@ -547,6 +676,17 @@ export function FacebookContent() {
                     ? t("reconnectButton")
                     : t("connectButton")}
                 </Button>
+                {status.showAdvancedMetaSettings !== false && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleOAuthDiagnostics()}
+                    disabled={oauthDebugging}
+                    size="lg"
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-2", oauthDebugging && "animate-spin")} />
+                    {t("oauthDiagnosticsButton")}
+                  </Button>
+                )}
                 {hasFacebookSession && (
                   <>
                     <Button
@@ -594,6 +734,17 @@ export function FacebookContent() {
                   <RefreshCw className={cn("h-4 w-4 mr-2", debugging && "animate-spin")} />
                   {t("debugPermissions")}
                 </Button>
+                {status.showAdvancedMetaSettings !== false && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleOAuthDiagnostics()}
+                    disabled={oauthDebugging}
+                    size="lg"
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-2", oauthDebugging && "animate-spin")} />
+                    {t("oauthDiagnosticsButton")}
+                  </Button>
+                )}
                 <Button variant="destructive" onClick={handleDisconnect} size="lg">
                   {t("disconnectButton")}
                 </Button>
@@ -637,7 +788,7 @@ export function FacebookContent() {
       )}
 
       {/* Pages */}
-      {(status.connected || status.totalPagesCount > 0 || hasFacebookSession) && (
+      {(hasFacebookSession || status.totalPagesCount > 0) && (
         <FacebookPagesSection
           pages={status.pages}
           connectedPagesCount={status.connectedPagesCount}
@@ -649,7 +800,7 @@ export function FacebookContent() {
       )}
 
       {/* Next steps */}
-      {status.connected && (
+      {(status.fullyConnected || status.connected) && (
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" asChild className="rounded-xl">
             <Link href="/forms">

@@ -7,6 +7,7 @@ import {
   validateMetaLoginConfigIdInput,
 } from "@/lib/meta-login-config";
 import { resetFacebookConnection } from "@/services/facebook.service";
+import { writeSystemLog } from "@/lib/system-log";
 
 export type MetaCredentials = {
   appId: string;
@@ -104,9 +105,33 @@ export async function getLoginConfigId(userId: string): Promise<string | null> {
     where: { userId },
     select: { metaLoginConfigId: true },
   });
+
+  const rawDb = settings?.metaLoginConfigId?.trim() ?? "";
+  if (rawDb && !normalizeMetaLoginConfigId(rawDb)) {
+    await writeSystemLog({
+      userId,
+      level: "warn",
+      source: "facebook",
+      action: "oauth.invalid_config_id_ignored",
+      message:
+        "Invalid Facebook Login Configuration ID in settings ignored (must be numeric 5–20 digits, not email)",
+      metadata: { hasValue: true, length: rawDb.length },
+    });
+  }
+
+  if (!showAdvancedMetaSettings()) {
+    return getEnvLoginConfigId();
+  }
+
   const fromDb = normalizeMetaLoginConfigId(settings?.metaLoginConfigId);
   if (fromDb) return fromDb;
   return getEnvLoginConfigId();
+}
+
+export function getDeploymentMode(): string {
+  const mode = process.env.DEPLOYMENT_MODE?.toLowerCase();
+  if (mode === "saas" || mode === "self_hosted") return mode;
+  return showAdvancedMetaSettings() ? "self_hosted" : "saas";
 }
 
 export async function saveIntegrationSettings(

@@ -5,6 +5,12 @@ import { isMetaConfiguredForUser } from "@/services/integration-settings.service
 import { requireAuth, checkRateLimit, apiError } from "@/lib/api-helpers";
 import { saveOAuthState } from "@/lib/oauth-state";
 
+function localeFromRequest(request: Request): string {
+  const referer = request.headers.get("referer");
+  const match = referer?.match(/\/(ru|en)\//);
+  return match?.[1] ?? "ru";
+}
+
 export async function GET(request: Request) {
   const authResult = await requireAuth();
   if ("error" in authResult) return authResult.error;
@@ -26,7 +32,11 @@ export async function GET(request: Request) {
 
   try {
     const state = generateSecureToken(16);
-    await saveOAuthState(`fb_oauth_state:${state}`, authResult.session.user.id);
+    const locale = localeFromRequest(request);
+    await saveOAuthState(`fb_oauth_state:${state}`, {
+      userId: authResult.session.user.id,
+      locale,
+    });
     await logOAuthUrlPreview(authResult.session.user.id, state);
     const url = await getFacebookAuthUrl(authResult.session.user.id, state);
     return NextResponse.json({ data: { url } });

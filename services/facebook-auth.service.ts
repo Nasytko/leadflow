@@ -8,6 +8,7 @@ import {
   META_OAUTH_DIALOG_BASE,
 } from "@/lib/facebook-graph-config";
 import { writeSystemLog } from "@/lib/system-log";
+import { isValidMetaLoginConfigId } from "@/lib/meta-login-config";
 
 const GRAPH_API_BASE = META_GRAPH_API_BASE;
 
@@ -63,6 +64,46 @@ export async function getFacebookAuthUrl(
   }
 
   return `${META_OAUTH_DIALOG_BASE}?${params}`;
+}
+
+export type OAuthUrlPreview = {
+  appId: string;
+  redirectUri: string;
+  scopes: string;
+  loginConfigIdUsed: string | null;
+  isLoginConfigIdValid: boolean;
+  oauthUrlPreview: string;
+};
+
+/** Build OAuth URL preview without state or secrets (for diagnostics). */
+export async function buildOAuthUrlPreview(
+  userId: string
+): Promise<OAuthUrlPreview | null> {
+  const creds = await getMetaCredentials(userId);
+  if (!creds) return null;
+
+  const redirectUri = getRedirectUri();
+  const configId = await getLoginConfigId(userId);
+  const isLoginConfigIdValid = configId ? isValidMetaLoginConfigId(configId) : false;
+
+  const params = new URLSearchParams({
+    client_id: creds.appId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: FB_SCOPES,
+  });
+  if (configId && isLoginConfigIdValid) {
+    params.set("config_id", configId);
+  }
+
+  return {
+    appId: creds.appId,
+    redirectUri,
+    scopes: FB_SCOPES,
+    loginConfigIdUsed: configId,
+    isLoginConfigIdValid,
+    oauthUrlPreview: `${META_OAUTH_DIALOG_BASE}?${params}`,
+  };
 }
 
 /** Log OAuth URL shape without secrets (for support/debug). */
