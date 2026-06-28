@@ -7,6 +7,7 @@ import {
 import { buildOAuthUrlPreview } from "@/services/facebook-auth.service";
 import { requireAuth, checkRateLimit, apiSuccess } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { getLastOAuthError } from "@/lib/facebook-oauth-status";
 import { getRedirectUri } from "@/lib/env";
 
 export async function GET(request: Request) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const preview = await buildOAuthUrlPreview(userId);
   const loginConfigId = await getLoginConfigId(userId);
 
-  const [connection, pagesCount, businessesCount, lastCallbackLog, lastOAuthErrorLog, lastSyncErrorLog] =
+  const [connection, pagesCount, businessesCount, lastCallbackLog, lastOAuthError, lastSyncErrorLog] =
     await Promise.all([
       prisma.facebookConnection.findUnique({ where: { userId } }),
       prisma.facebookPage.count({ where: { userId } }),
@@ -34,14 +35,7 @@ export async function GET(request: Request) {
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.systemLog.findFirst({
-        where: {
-          userId,
-          source: "facebook",
-          action: "facebook.oauth.callback.failed",
-        },
-        orderBy: { createdAt: "desc" },
-      }),
+      getLastOAuthError(userId),
       prisma.systemLog.findFirst({
         where: {
           userId,
@@ -67,11 +61,8 @@ export async function GET(request: Request) {
     connectionStatus: connection?.status ?? "disconnected",
     lastSuccessfulConnection: connection?.connectedAt?.toISOString() ?? null,
     lastCallbackAttempt: lastCallbackLog?.createdAt.toISOString() ?? null,
-    lastOAuthError: lastOAuthErrorLog?.message ?? connection?.lastError ?? null,
-    lastOAuthErrorCode:
-      (lastOAuthErrorLog?.metadata as { errorCode?: string } | null)?.errorCode ??
-      connection?.lastErrorCode ??
-      null,
+    lastOAuthError: lastOAuthError?.safeMessage ?? connection?.lastError ?? null,
+    lastOAuthErrorCode: lastOAuthError?.reason ?? connection?.lastErrorCode ?? null,
     lastSyncError:
       lastSyncErrorLog?.action === "facebook.oauth.sync_finished"
         ? lastSyncErrorLog.message

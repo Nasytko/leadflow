@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetaSettingsForm } from "@/components/integrations/meta-settings-form";
+import { FacebookOAuthErrorAlert } from "@/components/facebook/facebook-oauth-error-alert";
+import type { LastOAuthErrorData } from "@/components/facebook/facebook-oauth-error-alert";
 import { FacebookStatusCard } from "@/components/facebook/facebook-status-card";
 import { FacebookSetupWizard } from "@/components/facebook/facebook-setup-wizard";
 import { FacebookWebhookDiagnostics } from "@/components/facebook/facebook-webhook-diagnostics";
 import { FacebookTestLeadCard } from "@/components/facebook/facebook-test-lead-card";
 import { FacebookBusinessesSection } from "@/components/facebook/facebook-businesses-section";
+import { MetaAdAccountsSection, type MetaAdAccountItem } from "@/components/meta/meta-ad-accounts-section";
 import { FacebookPagesSection } from "@/components/facebook/facebook-pages-section";
 import {
   Facebook,
@@ -92,6 +95,7 @@ type StatusData = {
   pages: Page[];
   businesses: Business[];
   businessesCount: number;
+  adAccountsCount?: number;
   connectedPagesCount: number;
   totalPagesCount: number;
   activeFormsCount: number;
@@ -104,12 +108,15 @@ type StatusData = {
   setupSteps: {
     facebookAccount: boolean;
     businessPortfolio: boolean;
+    adAccountSelected: boolean;
     pagesSelected: boolean;
     formsEnabled: boolean;
     webhookVerified: boolean;
     telegram: boolean;
     testLead: boolean;
+    adAuditOpened: boolean;
   };
+  lastOAuthError?: LastOAuthErrorData | null;
 };
 
 type OAuthDebugData = {
@@ -199,6 +206,9 @@ export function FacebookContent() {
   const [error, setError] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncingBusinesses, setSyncingBusinesses] = useState(false);
+  const [syncingAdAccounts, setSyncingAdAccounts] = useState(false);
+  const [syncingCampaignsId, setSyncingCampaignsId] = useState<string | null>(null);
+  const [adAccounts, setAdAccounts] = useState<MetaAdAccountItem[]>([]);
   const [connecting, setConnecting] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -206,6 +216,7 @@ export function FacebookContent() {
   const [debugData, setDebugData] = useState<DebugData | null>(null);
   const [oauthDebugging, setOauthDebugging] = useState(false);
   const [oauthDebugData, setOauthDebugData] = useState<OAuthDebugData | null>(null);
+  const [showOauthDiagnosticsPanel, setShowOauthDiagnosticsPanel] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -215,6 +226,16 @@ export function FacebookContent() {
       const data = await res.json();
       if (data.data) {
         setStatus(data.data);
+        if (data.data.connected || data.data.facebook?.facebookUserId) {
+          fetchWithTimeout("/api/meta/ad-accounts")
+            .then((r) => r.json())
+            .then((adRes) => {
+              if (adRes.data?.accounts) {
+                setAdAccounts(adRes.data.accounts as MetaAdAccountItem[]);
+              }
+            })
+            .catch(() => undefined);
+        }
         return data.data as StatusData;
       }
       setError(true);
@@ -245,7 +266,8 @@ export function FacebookContent() {
       const oauthKeyMap: Record<string, string> = {
         invalid_config_id: "oauthErrors.invalid_config_id",
         redirect_uri_mismatch: "oauthErrors.redirect_uri_mismatch",
-        invalid_client_secret: "oauthErrors.invalid_client_secret",
+        invalid_app_secret: "oauthErrors.invalid_app_secret",
+        invalid_client_secret: "oauthErrors.invalid_app_secret",
         missing_code: "oauthErrors.missing_code",
         missing_permissions: "oauthErrors.missing_permissions",
         token_exchange_failed: "oauthErrors.token_exchange_failed",
@@ -332,12 +354,12 @@ export function FacebookContent() {
 
   async function handleOAuthDiagnostics() {
     setOauthDebugging(true);
+    setShowOauthDiagnosticsPanel(true);
     try {
       const res = await fetchWithTimeout("/api/facebook/oauth-debug");
       const data = await res.json();
       if (data.data) {
         setOauthDebugData(data.data);
-        toast.message(t("oauthDiagnosticsTitle"));
       } else {
         toast.error(data.error?.message ?? tCommon("error"));
       }
@@ -388,6 +410,45 @@ export function FacebookContent() {
 
   async function handleDisconnect() {
     await handleResetFacebook(t("disconnectedSuccess"));
+  }
+
+  async function handleSyncAdAccounts() {
+    setSyncingAdAccounts(true);
+    try {
+      const res = await fetchWithTimeout("/api/meta/ad-accounts", { method: "POST" });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error.message);
+      } else {
+        toast.success(tCommon("success"));
+        setAdAccounts((data.data?.accounts ?? []) as MetaAdAccountItem[]);
+        loadData();
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setSyncingAdAccounts(false);
+    }
+  }
+
+  async function handleSyncCampaigns(adAccountDbId: string) {
+    setSyncingCampaignsId(adAccountDbId);
+    try {
+      const res = await fetchWithTimeout(
+        `/api/meta/ad-accounts/${adAccountDbId}/sync-campaigns`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error.message);
+      } else {
+        toast.success(tCommon("success"));
+      }
+    } catch {
+      toast.error(tCommon("error"));
+    } finally {
+      setSyncingCampaignsId(null);
+    }
   }
 
   async function handleSyncBusinesses() {
@@ -561,7 +622,15 @@ export function FacebookContent() {
             />
           )}
 
-          {status.showAdvancedMetaSettings !== false && oauthDebugData && (
+          {status.lastOAuthError && (
+            <FacebookOAuthErrorAlert
+              error={status.lastOAuthError}
+              onOpenDiagnostics={() => void handleOAuthDiagnostics()}
+              diagnosticsLoading={oauthDebugging}
+            />
+          )}
+
+          {showOauthDiagnosticsPanel && oauthDebugData && (
             <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm font-mono">
               <p className="font-medium font-sans">{t("oauthDiagnosticsTitle")}</p>
               <p className="text-xs text-muted-foreground break-all">
@@ -784,6 +853,16 @@ export function FacebookContent() {
           pagesCount={status.totalPagesCount}
           syncing={syncingBusinesses}
           onSync={() => void handleSyncBusinesses()}
+        />
+      )}
+
+      {hasFacebookSession && (
+        <MetaAdAccountsSection
+          accounts={adAccounts}
+          syncing={syncingAdAccounts}
+          syncingCampaignsId={syncingCampaignsId}
+          onSync={() => void handleSyncAdAccounts()}
+          onSyncCampaigns={(id) => void handleSyncCampaigns(id)}
         />
       )}
 

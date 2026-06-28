@@ -175,25 +175,30 @@ export function pageHasLimitedAccess(tasks: string[] | undefined): boolean {
 export type WizardSteps = {
   facebookAccount: boolean;
   businessPortfolio: boolean;
+  adAccountSelected: boolean;
   pagesSelected: boolean;
   formsEnabled: boolean;
   webhookVerified: boolean;
   telegram: boolean;
   testLead: boolean;
+  adAuditOpened: boolean;
 };
 
 export function buildWizardSteps(input: {
   hasFacebookProfile: boolean;
   businessesCount: number;
+  adAccountsCount: number;
   connectedPagesCount: number;
   activeFormsCount: number;
   telegramConnected: boolean;
   webhookVerified: boolean;
   leadsCount?: number;
+  hasAuditRun?: boolean;
 }): WizardSteps {
   return {
     facebookAccount: input.hasFacebookProfile,
     businessPortfolio: input.businessesCount > 0,
+    adAccountSelected: input.adAccountsCount > 0,
     pagesSelected: input.connectedPagesCount > 0,
     formsEnabled: input.activeFormsCount > 0,
     webhookVerified: input.webhookVerified,
@@ -201,5 +206,6 @@ export function buildWizardSteps(input: {
     testLead:
       (input.leadsCount ?? 0) > 0 ||
       (input.webhookVerified && input.activeFormsCount > 0),
+    adAuditOpened: !!input.hasAuditRun,
   };
 }

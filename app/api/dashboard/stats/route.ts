@@ -115,11 +115,14 @@ export async function GET(request: Request) {
   const setupSteps = buildWizardSteps({
     hasFacebookProfile: !!facebookConnection?.facebookUserId,
     businessesCount: await prisma.facebookBusiness.count({ where: { userId } }),
+    adAccountsCount: await prisma.metaAdAccount.count({ where: { userId } }),
     connectedPagesCount: connectedPages,
     activeFormsCount: activeForms,
     telegramConnected: telegramStatus === "connected",
     webhookVerified: !!lastSuccessVerification,
     leadsCount: totalLeads,
+    hasAuditRun:
+      (await prisma.metaInsightSnapshot.count({ where: { userId } })) > 0,
   });
 
   const setupCompleted = Object.values(setupSteps).filter(Boolean).length;

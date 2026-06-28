@@ -7,32 +7,38 @@ import { cn } from "@/lib/utils";
 export type WizardStepKey =
   | "facebookAccount"
   | "businessPortfolio"
+  | "adAccountSelected"
   | "pagesSelected"
   | "formsEnabled"
   | "webhookVerified"
   | "telegram"
-  | "testLead";
+  | "testLead"
+  | "adAuditOpened";
 
 export type WizardStepsState = Record<WizardStepKey, boolean>;
 
 const STEP_KEYS: WizardStepKey[] = [
   "facebookAccount",
   "businessPortfolio",
+  "adAccountSelected",
   "pagesSelected",
   "formsEnabled",
   "webhookVerified",
   "telegram",
   "testLead",
+  "adAuditOpened",
 ];
 
 const STEP_I18N: Record<WizardStepKey, string> = {
   facebookAccount: "onboardingStep1",
   businessPortfolio: "onboardingStep2",
+  adAccountSelected: "onboardingStepAdAccount",
   pagesSelected: "onboardingStep3",
   formsEnabled: "onboardingStep4",
   webhookVerified: "onboardingStep5",
   telegram: "onboardingStep6",
   testLead: "onboardingStep7",
+  adAuditOpened: "onboardingStepAdAudit",
 };
 
 function WizardStep({

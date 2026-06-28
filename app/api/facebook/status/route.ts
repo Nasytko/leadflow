@@ -10,6 +10,7 @@ import {
 import { mapFacebookConnectionPublic, mapFacebookPagePublic, mapFacebookBusinessPublic } from "@/services/facebook.service";
 import { mapTelegramConnectionPublic } from "@/services/telegram.service";
 import { buildWizardSteps } from "@/lib/facebook-diagnosis";
+import { getLastOAuthError } from "@/lib/facebook-oauth-status";
 
 export async function GET(request: Request) {
   const authResult = await requireAuth();
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const userId = authResult.session.user.id;
   const metaConfigured = await isMetaConfiguredForUser(userId);
 
-  const [connection, pages, businesses, forms, telegram, failedForms, integrationSettings, leadsCount, lastSuccessVerification] =
+  const [connection, pages, businesses, forms, telegram, failedForms, integrationSettings, leadsCount, lastSuccessVerification, lastOAuthError, adAccountsCount, auditSnapshotsCount] =
     await Promise.all([
     prisma.facebookConnection.findUnique({ where: { userId } }),
     prisma.facebookPage.findMany({
@@ -49,6 +50,9 @@ export async function GET(request: Request) {
       where: { userId, success: true },
       orderBy: { createdAt: "desc" },
     }),
+    getLastOAuthError(userId),
+    prisma.metaAdAccount.count({ where: { userId } }),
+    prisma.metaInsightSnapshot.count({ where: { userId } }),
   ]);
 
   const hasLoginConfigId = integrationSettings.hasMetaLoginConfigId;
@@ -90,11 +94,13 @@ export async function GET(request: Request) {
   const wizardSteps = buildWizardSteps({
     hasFacebookProfile: !!facebook.facebookUserId,
     businessesCount: businesses.length,
+    adAccountsCount,
     connectedPagesCount: connectedPages.length,
     activeFormsCount: forms,
     telegramConnected: telegram?.status === "connected",
     webhookVerified: !!lastSuccessVerification,
     leadsCount,
+    hasAuditRun: auditSnapshotsCount > 0,
   });
 
   return apiSuccess({
@@ -129,6 +135,7 @@ export async function GET(request: Request) {
       });
     }),
     businessesCount: businesses.length,
+    adAccountsCount,
     connectedPagesCount: connectedPages.length,
     totalPagesCount: pages.length,
     activeFormsCount: forms,
@@ -140,5 +147,6 @@ export async function GET(request: Request) {
     webhookVerified: !!lastSuccessVerification,
     showAdvancedMetaSettings: integrationSettings.showAdvancedSettings,
     setupSteps: wizardSteps,
+    lastOAuthError,
   });
 }

@@ -13,6 +13,8 @@ import {
   ScrollText,
   Settings,
   Shield,
+  BarChart3,
+  Megaphone,
   BookOpen,
   Zap,
 } from "lucide-react";
@@ -29,6 +31,7 @@ const navGroups = [
     labelKey: "groupIntegrations",
     items: [
       { href: "/facebook", icon: Facebook, key: "facebook" },
+      { href: "/ad-audit", icon: BarChart3, key: "adAudit" },
       { href: "/forms", icon: FileText, key: "forms" },
       { href: "/telegram", icon: Send, key: "telegram" },
     ],

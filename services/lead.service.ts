@@ -16,6 +16,7 @@ import {
 } from "./notification.service";
 import { sendTelegramMessage } from "./telegram.service";
 import { extractLeadAttribution } from "@/lib/lead-mapper";
+import { resolveLeadAttributionLinks } from "@/services/meta-ads.service";
 
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
 const SENT_STATUSES = ["success", "sent"];
@@ -158,6 +159,13 @@ export async function processLeadJob(data: LeadProcessingJobData) {
   const leadData = await getLeadDetails(data.leadgenId, pageToken);
   const { name, phone, email, fields } = extractLeadFromFacebookData(leadData);
   const adFields = extractLeadAttribution(leadData, fields);
+  const attributionLinks = await resolveLeadAttributionLinks(page.userId, {
+    campaignId: adFields.campaignId,
+    adsetId: adFields.adsetId,
+    adId: adFields.adId,
+    pageDbId: page.id,
+    businessDbId: page.businessId,
+  });
 
   const lead = await prisma.lead.upsert({
     where: {
@@ -181,6 +189,7 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       telegramStatus: "pending",
       source: "webhook",
       ...adFields,
+      ...attributionLinks,
     },
     update: {
       formId: enabledForm.id,
@@ -190,9 +199,17 @@ export async function processLeadJob(data: LeadProcessingJobData) {
       fieldData: fields,
       rawData: leadData as object,
       ...adFields,
+      ...attributionLinks,
     },
     include: { form: { include: { page: { include: { business: true } } } } },
   });
+
+  if (!existingLead) {
+    await prisma.facebookForm.update({
+      where: { id: enabledForm.id },
+      data: { leadCount: { increment: 1 }, lastLeadAt: new Date() },
+    });
+  }
 
   try {
     const outcome = await deliverToTelegram(
@@ -485,6 +502,13 @@ export async function importLeadsForUser(
             const { name, phone, email, fields } =
               extractLeadFromFacebookData(leadData);
             const adFields = extractLeadAttribution(leadData, fields);
+            const attributionLinks = await resolveLeadAttributionLinks(userId, {
+              campaignId: adFields.campaignId,
+              adsetId: adFields.adsetId,
+              adId: adFields.adId,
+              pageDbId: form.page.id,
+              businessDbId: form.page.businessId,
+            });
 
             const lead = await prisma.lead.create({
               data: {
@@ -502,7 +526,13 @@ export async function importLeadsForUser(
                 telegramStatus: sendToTelegram ? "pending" : "not_sent",
                 source: "manual_import",
                 ...adFields,
+                ...attributionLinks,
               },
+            });
+
+            await prisma.facebookForm.update({
+              where: { id: form.id },
+              data: { leadCount: { increment: 1 }, lastLeadAt: new Date() },
             });
 
             imported++;

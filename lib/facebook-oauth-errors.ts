@@ -25,7 +25,7 @@ export function classifyFacebookOAuthError(message: string): {
     lower.includes("error validating client secret")
   ) {
     return {
-      code: "invalid_client_secret",
+      code: "invalid_app_secret",
       message: "Invalid Meta App Secret. Check META_APP_SECRET in environment or settings.",
     };
   }

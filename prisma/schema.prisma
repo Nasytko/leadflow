@@ -24,6 +24,11 @@ model User {
   telegramConnection TelegramConnection?
   facebookBusinesses   FacebookBusiness[]
   facebookPages      FacebookPage[]
+  metaAdAccounts     MetaAdAccount[]
+  metaCampaigns      MetaCampaign[]
+  metaAdSets         MetaAdSet[]
+  metaAds            MetaAd[]
+  metaInsightSnapshots MetaInsightSnapshot[]
   leads              Lead[]
   deliveryLogs       DeliveryLog[]
   webhookEvents      WebhookEvent[]
@@ -121,6 +126,7 @@ model FacebookConnection {
   updatedAt              DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccounts MetaAdAccount[]
 
   @@map("facebook_connections")
 }
@@ -138,6 +144,8 @@ model FacebookBusiness {
 
   user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   pages FacebookPage[]
+  adAccounts MetaAdAccount[]
+  leads    Lead[]
 
   @@unique([userId, businessId])
   @@index([userId])
@@ -170,6 +178,7 @@ model FacebookPage {
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   business FacebookBusiness? @relation(fields: [businessId], references: [id], onDelete: SetNull)
   forms    FacebookForm[]
+  leads    Lead[]
 
   @@unique([userId, pageId])
   @@index([pageId])
@@ -188,6 +197,8 @@ model FacebookForm {
   syncStatus    String    @default("pending")
   lastSyncError String?
   lastSyncAt    DateTime?
+  leadCount     Int       @default(0)
+  lastLeadAt    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -196,6 +207,155 @@ model FacebookForm {
 
   @@unique([pageId, formId])
   @@map("facebook_forms")
+}
+
+/// Meta Ad Account — per-user advertising account from /me/adaccounts
+model MetaAdAccount {
+  id              String    @id @default(cuid())
+  userId          String
+  connectionId    String
+  businessDbId    String?
+  metaAdAccountId String
+  name            String
+  accountStatus   Int?
+  currency        String?
+  timezoneName    String?
+  businessName    String?
+  amountSpent     String?
+  balance         String?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection FacebookConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  business   FacebookBusiness?  @relation(fields: [businessDbId], references: [id], onDelete: SetNull)
+  campaigns  MetaCampaign[]
+  adSets     MetaAdSet[]
+  ads        MetaAd[]
+  insights   MetaInsightSnapshot[]
+  leads      Lead[]
+
+  @@unique([userId, metaAdAccountId])
+  @@index([userId])
+  @@index([connectionId])
+  @@map("meta_ad_accounts")
+}
+
+model MetaCampaign {
+  id              String    @id @default(cuid())
+  userId          String
+  adAccountDbId   String
+  metaCampaignId  String
+  name            String
+  objective       String?
+  status          String?
+  effectiveStatus String?
+  createdTime     DateTime?
+  updatedTime     DateTime?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount MetaAdAccount   @relation(fields: [adAccountDbId], references: [id], onDelete: Cascade)
+  adSets    MetaAdSet[]
+  ads       MetaAd[]
+  insights  MetaInsightSnapshot[]
+  leads     Lead[]
+
+  @@unique([adAccountDbId, metaCampaignId])
+  @@index([userId])
+  @@map("meta_campaigns")
+}
+
+model MetaAdSet {
+  id               String    @id @default(cuid())
+  userId           String
+  adAccountDbId    String
+  campaignDbId     String?
+  metaAdSetId      String
+  name             String
+  status           String?
+  effectiveStatus  String?
+  optimizationGoal String?
+  billingEvent     String?
+  createdTime      DateTime?
+  updatedTime      DateTime?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount MetaAdAccount @relation(fields: [adAccountDbId], references: [id], onDelete: Cascade)
+  campaign  MetaCampaign? @relation(fields: [campaignDbId], references: [id], onDelete: SetNull)
+  ads       MetaAd[]
+  insights  MetaInsightSnapshot[]
+  leads     Lead[]
+
+  @@unique([adAccountDbId, metaAdSetId])
+  @@index([userId])
+  @@map("meta_ad_sets")
+}
+
+model MetaAd {
+  id              String    @id @default(cuid())
+  userId          String
+  adAccountDbId   String
+  campaignDbId    String?
+  adSetDbId       String?
+  metaAdId        String
+  name            String
+  status          String?
+  effectiveStatus String?
+  creativeId      String?
+  createdTime     DateTime?
+  updatedTime     DateTime?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount MetaAdAccount @relation(fields: [adAccountDbId], references: [id], onDelete: Cascade)
+  campaign  MetaCampaign? @relation(fields: [campaignDbId], references: [id], onDelete: SetNull)
+  adSet     MetaAdSet?    @relation(fields: [adSetDbId], references: [id], onDelete: SetNull)
+  insights  MetaInsightSnapshot[]
+  leads     Lead[]
+
+  @@unique([adAccountDbId, metaAdId])
+  @@index([userId])
+  @@map("meta_ads")
+}
+
+model MetaInsightSnapshot {
+  id            String   @id @default(cuid())
+  userId        String
+  adAccountDbId String
+  campaignDbId  String?
+  adSetDbId     String?
+  adDbId        String?
+  dateStart     DateTime
+  dateStop      DateTime
+  spend         Float    @default(0)
+  impressions   Int      @default(0)
+  reach         Int      @default(0)
+  clicks        Int      @default(0)
+  cpm           Float?
+  cpc           Float?
+  ctr           Float?
+  leads         Int      @default(0)
+  cpl           Float?
+  createdAt     DateTime @default(now())
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adAccount MetaAdAccount @relation(fields: [adAccountDbId], references: [id], onDelete: Cascade)
+  campaign  MetaCampaign? @relation(fields: [campaignDbId], references: [id], onDelete: SetNull)
+  adSet     MetaAdSet?    @relation(fields: [adSetDbId], references: [id], onDelete: SetNull)
+  ad        MetaAd?       @relation(fields: [adDbId], references: [id], onDelete: SetNull)
+
+  @@index([userId, adAccountDbId, dateStart])
+  @@index([campaignDbId])
+  @@map("meta_insight_snapshots")
 }
 
 model TelegramConnection {
@@ -238,6 +398,12 @@ model Lead {
   adsetName   String?
   adId         String?
   adName      String?
+  adAccountDbId String?
+  campaignDbId  String?
+  adSetDbId     String?
+  adDbId        String?
+  pageDbId      String?
+  businessDbId  String?
   processedAt  DateTime?
   processedById String?
   createdTime DateTime
@@ -245,6 +411,12 @@ model Lead {
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   form         FacebookForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+  adAccount    MetaAdAccount? @relation(fields: [adAccountDbId], references: [id], onDelete: SetNull)
+  campaign     MetaCampaign? @relation(fields: [campaignDbId], references: [id], onDelete: SetNull)
+  adSet        MetaAdSet? @relation(fields: [adSetDbId], references: [id], onDelete: SetNull)
+  ad           MetaAd? @relation(fields: [adDbId], references: [id], onDelete: SetNull)
+  page         FacebookPage? @relation(fields: [pageDbId], references: [id], onDelete: SetNull)
+  business     FacebookBusiness? @relation(fields: [businessDbId], references: [id], onDelete: SetNull)
   processedBy  User?         @relation("ProcessedLeads", fields: [processedById], references: [id], onDelete: SetNull)
   deliveryLogs DeliveryLog[]
 

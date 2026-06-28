@@ -17,6 +17,7 @@ import {
   syncFormsForAllDiscoveredPages,
   getFacebookProfile,
 } from "@/services/facebook.service";
+import { syncUserAdAccounts } from "@/services/meta-ads.service";
 import {
   getMetaCredentials,
   getLoginConfigId,
@@ -201,6 +202,14 @@ export async function GET(request: Request) {
       accessToken: longToken.access_token,
     });
 
+    let adAccountsSynced = 0;
+    try {
+      const adSync = await syncUserAdAccounts(userId);
+      adAccountsSynced = adSync.synced;
+    } catch {
+      // ad account sync is best-effort when ads_read not granted
+    }
+
     let formsSynced = 0;
     let formsSyncError: string | undefined;
     try {
@@ -215,6 +224,7 @@ export async function GET(request: Request) {
       businessesCount: identity.businessesCount,
       pagesCount: identity.pagesCount,
       formsSynced,
+      adAccountsSynced,
       formsSyncError: formsSyncError ?? null,
       level: formsSyncError ? "warn" : "info",
     });
@@ -261,6 +271,7 @@ export async function GET(request: Request) {
       classified.message,
       {
         errorCode: classified.code,
+        reason: classified.code,
         safeMessage: classified.message,
         metaErrorType: meta.metaErrorType,
         metaErrorCode: meta.metaErrorCode,
