@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client-api";
 import { Link } from "@/i18n/navigation";
+import { safeToastId } from "@/lib/safe-toast-id";
 
 type Form = {
   id: string;
@@ -107,28 +108,71 @@ export function FormsContent({ embedded = false }: { embedded?: boolean }) {
   async function handleImport() {
     setImporting(true);
     try {
-      const res = await apiFetch("/api/leads", {
+      const res = await apiFetch("/api/meta/leads/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sendToTelegram }),
+        body: JSON.stringify({
+          sendImportedToTelegram: sendToTelegram,
+          async: false,
+        }),
       });
       const data = await res.json();
-      if (data.error?.code === "INVALID_FACEBOOK_TOKEN") {
-        toast.error(tFacebook("tokenInvalid"));
-      } else if (data.error) {
-        toast.error(data.error.message ?? t("importFailed"));
+      const payload = data.data;
+
+      if (!payload) {
+        toast.error(t("importFailed"), { id: safeToastId("import_error") });
+        return;
+      }
+
+      if (payload.success === false) {
+        toast.error(payload.message ?? t("importFailed"), {
+          id: safeToastId(`import_error_${payload.code ?? "unknown"}`),
+        });
+        return;
+      }
+
+      if (payload.queued) {
+        toast.success(payload.message ?? t("importQueued"), {
+          id: safeToastId("import_queued"),
+        });
+        return;
+      }
+
+      const imported = payload.imported ?? 0;
+      const duplicates = payload.duplicates ?? 0;
+      const failed = payload.failed ?? 0;
+      const telegramFailed = payload.telegramFailed ?? 0;
+
+      if (imported === 0 && duplicates === 0 && failed === 0) {
+        toast.info(payload.message ?? t("importNoLeads"), {
+          id: safeToastId("import_no_leads"),
+        });
+      } else if (imported === 0 && duplicates > 0) {
+        toast.info(
+          t("importDuplicatesOnly", { duplicates }),
+          { id: safeToastId("import_duplicates") }
+        );
       } else {
-        const d = data.data;
         toast.success(
-          t("importReport", {
-            imported: d?.imported ?? 0,
-            skipped: d?.skippedDuplicates ?? 0,
-            failed: d?.failed ?? 0,
-          })
+          payload.message ??
+            t("importReport", {
+              imported,
+              skipped: duplicates,
+              failed,
+            }),
+          { id: safeToastId("import_success") }
         );
       }
+
+      if (sendToTelegram && telegramFailed > 0 && imported > 0) {
+        toast.warning(t("importTelegramPartial", { telegramFailed }), {
+          id: safeToastId("import_telegram_partial"),
+        });
+      }
+
+      await loadForms();
     } catch {
-      toast.error(t("importFailed"));
+      toast.error(t("importFailed"), { id: safeToastId("import_error") });
     } finally {
       setImporting(false);
     }
@@ -217,8 +261,8 @@ export function FormsContent({ embedded = false }: { embedded?: boolean }) {
             <Label htmlFor="send-telegram">{t("sendToTelegram")}</Label>
           </div>
           <Button onClick={handleImport} disabled={importing || facebookBroken}>
-            <Download className="h-4 w-4 mr-2" />
-            {t("importLeads")}
+            <Download className={`h-4 w-4 mr-2 ${importing ? "animate-pulse" : ""}`} />
+            {importing ? t("importInProgress") : t("importLeads")}
           </Button>
         </CardContent>
       </Card>

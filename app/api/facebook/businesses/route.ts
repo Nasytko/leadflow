@@ -1,8 +1,10 @@
-import { requireAuth, checkRateLimit, apiSuccess, requireCsrf } from "@/lib/api-helpers";
+import { requireAuth, checkRateLimit, apiSuccess, requireCsrf, apiError } from "@/lib/api-helpers";
 import {
   mapFacebookBusinessPublic,
   syncFacebookIdentity,
 } from "@/services/facebook.service";
+import { MetaGraphError } from "@/lib/meta-graph-fetch";
+import { leadImportUserMessage } from "@/lib/lead-import-errors";
 import { prisma } from "@/lib/prisma";
 
 async function getBusinessesWithCounts(userId: string) {
@@ -56,12 +58,25 @@ export async function POST(request: Request) {
   if (csrfError) return csrfError;
 
   const userId = authResult.session.user.id;
-  const result = await syncFacebookIdentity(userId);
-  const businesses = await getBusinessesWithCounts(userId);
 
-  return apiSuccess({
-    businesses,
-    businessesCount: result.businessesCount,
-    pagesCount: result.pagesCount,
-  });
+  try {
+    const result = await syncFacebookIdentity(userId);
+    const businesses = await getBusinessesWithCounts(userId);
+
+    return apiSuccess({
+      businesses,
+      businessesCount: result.businessesCount,
+      pagesCount: result.pagesCount,
+    });
+  } catch (error) {
+    if (error instanceof MetaGraphError) {
+      return apiError(
+        error.metaCode,
+        leadImportUserMessage(error.metaCode, error.message),
+        error.timeout || error.networkError ? 503 : 400
+      );
+    }
+    const message = error instanceof Error ? error.message : "Sync failed";
+    return apiError("SYNC_FAILED", message, 500);
+  }
 }

@@ -1,5 +1,6 @@
 import { Queue, Worker, type JobsOptions } from "bullmq";
 import { getRedisConnectionOptions } from "./redis";
+import { safeQueueJobId } from "@/lib/safe-toast-id";
 
 export const QUEUE_NAMES = {
   LEAD_PROCESSING: "lead-processing",
@@ -41,7 +42,7 @@ export async function enqueueLeadProcessing(
   options?: JobsOptions
 ) {
   const queue = await getLeadQueue();
-  const jobId = `lead:${data.pageId}:${data.leadgenId}`;
+  const jobId = safeQueueJobId(`lead_${data.pageId}_${data.leadgenId}`);
   return queue.add("process-lead", data, {
     ...options,
     jobId,
@@ -54,14 +55,16 @@ export async function enqueueLeadRetry(
 ) {
   const queue = await getLeadQueue();
   const jobId = data.retryDeliveryLogId
-    ? `retry:${data.retryDeliveryLogId}`
-    : `retry:${data.pageId}:${data.leadgenId}:${delayMs}`;
+    ? safeQueueJobId(`retry_${data.retryDeliveryLogId}`)
+    : safeQueueJobId(`retry_${data.pageId}_${data.leadgenId}_${delayMs}`);
   return queue.add("retry-telegram", data, { delay: delayMs, jobId });
 }
 
 export async function enqueueImportLeads(data: ImportLeadsJobData) {
   const queue = await getLeadQueue();
-  return queue.add("import-leads", data, { jobId: `import:${data.userId}` });
+  return queue.add("import-leads", data, {
+    jobId: safeQueueJobId(`import_${data.userId}`),
+  });
 }
 
 export function createLeadWorker(

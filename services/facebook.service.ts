@@ -6,6 +6,7 @@ import {
   isInvalidOAuthTokenError,
   parseGraphApiError,
 } from "@/lib/facebook-errors";
+import { MetaGraphError, metaGraphFetch } from "@/lib/meta-graph-fetch";
 import type { FacebookLeadData } from "@/types";
 
 import {
@@ -99,14 +100,34 @@ export type FacebookProfile = {
 async function graphFetch<T>(
   path: string,
   accessToken: string,
-  options?: RequestInit
+  options?: RequestInit & { stage?: string }
 ): Promise<T> {
   const separator = path.includes("?") ? "&" : "?";
   const url = `${GRAPH_API_BASE}${path}${separator}access_token=${accessToken}`;
-  const res = await fetch(url, options);
+  const res = await metaGraphFetch(url, {
+    ...options,
+    stage: options?.stage ?? "graph",
+  });
   if (!res.ok) {
     const errText = await res.text();
-    throw parseGraphApiError(errText);
+    const parsed = parseGraphApiError(errText);
+    if (parsed.code === 4 || parsed.code === 17 || parsed.code === 32) {
+      throw new MetaGraphError(parsed.message, "META_RATE_LIMIT", {
+        code: parsed.code,
+        raw: parsed.raw,
+        rateLimited: true,
+        stage: options?.stage,
+      });
+    }
+    if (parsed.code === 10 || parsed.code === 200) {
+      throw new MetaGraphError(parsed.message, "META_PERMISSION", {
+        code: parsed.code,
+        raw: parsed.raw,
+        permissionDenied: true,
+        stage: options?.stage,
+      });
+    }
+    throw parsed;
   }
   return res.json();
 }
@@ -266,14 +287,15 @@ export async function getLeadDetails(
 export async function getFormLeads(
   formId: string,
   pageAccessToken: string,
-  after?: string
+  after?: string,
+  options?: { stage?: string }
 ) {
   let path = `/${formId}/leads?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name&limit=100`;
   if (after) path += `&after=${after}`;
   return graphFetch<{
     data: FacebookLeadData[];
     paging?: { cursors?: { after?: string }; next?: string };
-  }>(path, pageAccessToken);
+  }>(path, pageAccessToken, { stage: options?.stage ?? "fetch_leads" });
 }
 
 export async function subscribePageToWebhooks(

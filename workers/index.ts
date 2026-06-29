@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createLeadWorker } from "@/lib/queue";
-import { processLeadJob, importLeadsForUser } from "@/services/lead.service";
+import { processLeadJob } from "@/services/lead.service";
+import { importMetaLeadsForUser } from "@/services/lead-import.service";
 import type { LeadProcessingJobData, ImportLeadsJobData } from "@/lib/queue";
 import { writeSystemLog } from "@/lib/system-log";
 
@@ -11,7 +12,10 @@ const worker = createLeadWorker(async (job) => {
     await processLeadJob(job.data as LeadProcessingJobData);
   } else if (job.name === "import-leads") {
     const data = job.data as ImportLeadsJobData;
-    await importLeadsForUser(data.userId, data.sendToTelegram);
+    const result = await importMetaLeadsForUser(data.userId, data.sendToTelegram);
+    if (!result.success) {
+      throw new Error(result.message);
+    }
   }
 });
 
