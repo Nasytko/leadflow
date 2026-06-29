@@ -28,7 +28,7 @@ export function validateMetaLoginConfigIdInput(
     return {
       ok: false,
       error:
-        "Facebook Login Configuration ID must be a numeric Meta config ID (5–20 digits), not an email or free text",
+        "Facebook Login Configuration ID должен быть числовым ID из Meta → Facebook Login for Business → Configurations (5–20 цифр, не email).",
     };
   }
   return { ok: true, value: trimmed };

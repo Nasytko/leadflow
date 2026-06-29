@@ -4,9 +4,9 @@ import { getMissingScopes } from "@/lib/facebook-diagnosis";
 import { getLastOAuthError } from "@/lib/facebook-oauth-status";
 import { runDeploymentHealthChecks, getDeploymentUrls } from "@/lib/meta-deployment-health";
 import {
-  getPlatformLoginConfigStatus,
   isMetaConfiguredForUser,
   getIntegrationSettingsPublic,
+  getAdminPlatformMetaStatus,
 } from "@/services/integration-settings.service";
 import { buildOAuthUrlPreview, FB_OAUTH_SCOPES } from "@/services/facebook-auth.service";
 import { getDecryptedUserToken } from "@/services/facebook.service";
@@ -131,7 +131,7 @@ export async function runMetaHealthReport(
     lastOAuthError,
     lastOAuthSuccess,
     oauthPreview,
-    platformConfig,
+    credStatus,
     recentLogs,
   ] = await Promise.all([
     prisma.facebookConnection.findUnique({ where: { userId } }),
@@ -172,7 +172,7 @@ export async function runMetaHealthReport(
       orderBy: { createdAt: "desc" },
     }),
     buildOAuthUrlPreview(userId),
-    Promise.resolve(getPlatformLoginConfigStatus()),
+    getAdminPlatformMetaStatus(userId),
     showAdmin
       ? prisma.systemLog.findMany({
           where: { userId, source: "facebook" },
@@ -248,23 +248,53 @@ export async function runMetaHealthReport(
     }
   }
 
+  const platformConfig = {
+    configId: credStatus.metaLoginConfigId,
+    configIdPresent: !!credStatus.metaLoginConfigId,
+    configIdValid: credStatus.metaLoginConfigIdValid,
+    source: credStatus.metaLoginConfigIdSource,
+  };
+
   const oauthChecks: MetaHealthCheck[] = [
     mkCheck(
       "metaApp",
       metaConfigured,
       "health.oauth",
-      showAdmin ? oauthPreview?.appId ?? null : metaConfigured ? "configured" : null,
+      showAdmin
+        ? `${credStatus.metaAppId} (${credStatus.metaAppIdSource})`
+        : metaConfigured
+        ? "configured"
+        : null,
       !metaConfigured ? { href: "/admin/platform", labelKey: "health.actions.adminSettings" } : undefined,
       !metaConfigured
     ),
-    mkCheck("appSecret", metaConfigured, "health.oauth", showAdmin ? (metaConfigured ? "configured" : "missing") : null, undefined, !metaConfigured),
+    mkCheck(
+      "appSecret",
+      !!credStatus.metaAppSecretConfigured,
+      "health.oauth",
+      showAdmin
+        ? `source: ${credStatus.metaAppSecretSource}${credStatus.metaAppSecretDbIgnoredInSaas ? " · DB ignored" : ""}`
+        : credStatus.metaAppSecretConfigured
+        ? "configured"
+        : "missing",
+      undefined,
+      !credStatus.metaAppSecretConfigured
+    ),
     mkCheck(
       "loginConfig",
-      platformConfig.configIdPresent && platformConfig.configIdValid,
+      credStatus.metaLoginConfigIdValid,
       "health.oauth",
-      showAdmin ? platformConfig.configId : platformConfig.configIdPresent ? "present" : null,
+      showAdmin
+        ? `${credStatus.metaLoginConfigId ?? "—"} (${credStatus.metaLoginConfigIdSource})${
+            credStatus.metaLoginConfigIdIgnoredLegacy
+              ? ` · legacy ignored: ${credStatus.metaLoginConfigIdIgnoredLegacy}`
+              : ""
+          }`
+        : credStatus.metaLoginConfigIdValid
+        ? "valid"
+        : "invalid",
       { href: "/admin/platform", labelKey: "health.actions.adminSettings" },
-      !platformConfig.configIdValid && platformConfig.configIdPresent
+      !credStatus.metaLoginConfigIdValid
     ),
     mkCheck("redirectUri", !!getRedirectUri(), "health.oauth", showAdmin ? getRedirectUri() : null),
     mkCheck(
@@ -290,11 +320,29 @@ export async function runMetaHealthReport(
       "lastError",
       !lastOAuthError,
       "health.oauth",
-      lastOAuthError?.reason ?? null,
+      lastOAuthError
+        ? showAdmin
+          ? `${lastOAuthError.reason}: ${lastOAuthError.safeMessage}`
+          : lastOAuthError.reason
+        : null,
       lastOAuthError ? { href: "/meta/connect", labelKey: "health.actions.reconnect" } : undefined,
       !!lastOAuthError
     ),
   ];
+
+  if (credStatus.legacyDbOverridesInSaas) {
+    oauthChecks.push(
+      mkCheck(
+        "legacyDbOverride",
+        false,
+        "health.oauth",
+        "Legacy DB secret/config ignored — use env or run cleanup",
+        { href: "/admin/platform", labelKey: "health.actions.adminSettings" },
+        false,
+        true
+      )
+    );
+  }
 
   const permissionChecks: MetaHealthCheck[] = SCOPE_KEYS.map((scope) => {
     const granted = grantedScopes.map((s) => s.toLowerCase()).includes(scope.toLowerCase());

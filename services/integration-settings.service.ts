@@ -1,14 +1,24 @@
-import { decrypt, encrypt, hashToken } from "@/lib/encryption";
+import { encrypt, hashToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { getRedirectUri, getWebhookUrl } from "@/lib/env";
-import { showAdvancedMetaSettings } from "@/lib/deployment";
+import { showAdvancedMetaSettings, getDeploymentMode } from "@/lib/deployment";
 import {
-  normalizeMetaLoginConfigId,
   validateMetaLoginConfigIdInput,
   isValidMetaLoginConfigId,
+  normalizeMetaLoginConfigId,
 } from "@/lib/meta-login-config";
+import {
+  getEnvLoginConfigIdNormalized,
+  getEnvLoginConfigIdRaw,
+  getValidMetaLoginConfigId,
+  resolveOAuthMetaCredentialsFromSettings,
+  getPlatformCredentialsStatus,
+  isSaasDeployment,
+  getEnvMetaAppId,
+  getEnvMetaAppSecret,
+  cleanupLegacyMetaSettingsInDb,
+} from "@/lib/meta-platform-credentials";
 import { resetFacebookConnection } from "@/services/facebook.service";
-import { writeSystemLog } from "@/lib/system-log";
 import { META_GRAPH_API_BASE } from "@/lib/facebook-graph-config";
 
 export type MetaCredentials = {
@@ -17,51 +27,29 @@ export type MetaCredentials = {
   webhookVerifyToken?: string;
 };
 
+export {
+  getDeploymentMode,
+  getPlatformCredentialsStatus,
+  cleanupLegacyMetaSettingsInDb,
+  getValidMetaLoginConfigId,
+};
+
 export { getRedirectUri, getWebhookUrl };
 
-function isPlaceholder(value?: string | null): boolean {
-  if (!value) return true;
-  return (
-    value === "your-meta-app-id" ||
-    value === "your-meta-app-secret" ||
-    value === "your-webhook-verify-token" ||
-    value.startsWith("your-")
-  );
-}
-
-/** Fallback to env for platform operator; prefer per-user DB settings */
+/** OAuth / platform Meta credentials — SaaS uses env only; self-hosted may use DB. */
 export async function getMetaCredentials(
   userId: string
 ): Promise<MetaCredentials | null> {
   const settings = await prisma.integrationSettings.findUnique({
     where: { userId },
+    select: {
+      metaAppId: true,
+      metaAppSecretEncrypted: true,
+      metaWebhookVerifyTokenEncrypted: true,
+    },
   });
 
-  if (
-    settings?.metaAppId &&
-    settings.metaAppSecretEncrypted &&
-    settings.configured
-  ) {
-    return {
-      appId: settings.metaAppId,
-      appSecret: decrypt(settings.metaAppSecretEncrypted),
-      webhookVerifyToken: settings.metaWebhookVerifyTokenEncrypted
-        ? decrypt(settings.metaWebhookVerifyTokenEncrypted)
-        : undefined,
-    };
-  }
-
-  const envAppId = process.env.META_APP_ID;
-  const envSecret = process.env.META_APP_SECRET;
-  if (envAppId && envSecret && !isPlaceholder(envAppId) && !isPlaceholder(envSecret)) {
-    return {
-      appId: envAppId,
-      appSecret: envSecret,
-      webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN,
-    };
-  }
-
-  return null;
+  return resolveOAuthMetaCredentialsFromSettings(settings);
 }
 
 export async function isMetaConfiguredForUser(userId: string): Promise<boolean> {
@@ -70,56 +58,31 @@ export async function isMetaConfiguredForUser(userId: string): Promise<boolean> 
 }
 
 export async function getIntegrationSettingsPublic(userId: string) {
-  const settings = await prisma.integrationSettings.findUnique({
-    where: { userId },
-  });
-
-  const envLoginConfigId = getEnvLoginConfigId();
-
-  const loginConfigId =
-    normalizeMetaLoginConfigId(settings?.metaLoginConfigId) ??
-    envLoginConfigId;
+  const status = await getPlatformCredentialsStatus(userId);
 
   return {
-    metaAppId: settings?.metaAppId ?? "",
-    metaLoginConfigId: loginConfigId ?? "",
-    hasMetaLoginConfigId: !!loginConfigId,
-    hasMetaAppSecret: !!settings?.metaAppSecretEncrypted,
-    hasWebhookToken: !!settings?.metaWebhookVerifyTokenEncrypted,
-    configured: settings?.configured ?? false,
+    metaAppId: status.appId.activeValue ?? "",
+    metaLoginConfigId: status.loginConfig.value ?? "",
+    hasMetaLoginConfigId: !!status.loginConfig.value,
+    hasMetaAppSecret: status.appSecret.envPresent || status.appSecret.dbPresent,
+    hasWebhookToken:
+      status.webhookToken.envPresent || status.webhookToken.dbPresent,
+    configured: !!(status.appId.activeValue && status.appSecret.value),
     showAdvancedSettings: showAdvancedMetaSettings(),
     redirectUri: getRedirectUri(),
     webhookUrl: getWebhookUrl(),
+    credentialsSource: {
+      appId: status.appId.source,
+      appSecret: status.appSecret.source,
+      loginConfig: status.loginConfig.source,
+      legacyDbOverridesInSaas: status.legacyDbOverridesInSaas,
+    },
   };
 }
 
-/** Raw META_LOGIN_CONFIG_ID from env (may be invalid — not used in OAuth URL). */
-export function getEnvLoginConfigIdRaw(): string | null {
-  const id =
-    process.env.META_LOGIN_CONFIG_ID ??
-    process.env.FACEBOOK_LOGIN_CONFIG_ID ??
-    "";
-  const trimmed = id?.trim() ?? "";
-  if (!trimmed || isPlaceholder(trimmed)) return null;
-  return trimmed;
-}
-
-function getEnvLoginConfigId(): string | null {
-  const raw = getEnvLoginConfigIdRaw();
-  if (!raw) return null;
-  const normalized = normalizeMetaLoginConfigId(raw);
-  if (!normalized && raw) {
-    console.warn(
-      JSON.stringify({
-        level: "warn",
-        source: "facebook",
-        action: "oauth.invalid_env_config_id",
-        message:
-          "META_LOGIN_CONFIG_ID is set but invalid (must be numeric 5–20 digits). Using standard OAuth without config_id.",
-      })
-    );
-  }
-  return normalized;
+/** @deprecated use getEnvLoginConfigIdRaw from meta-platform-credentials */
+export function getEnvLoginConfigIdRawReexport(): string | null {
+  return getEnvLoginConfigIdRaw();
 }
 
 export function getPlatformLoginConfigStatus(): {
@@ -127,14 +90,16 @@ export function getPlatformLoginConfigStatus(): {
   configIdPresent: boolean;
   configIdValid: boolean;
   envRaw: string | null;
+  source: "env" | "db" | "none";
 } {
   const envRaw = getEnvLoginConfigIdRaw();
-  const configId = getEnvLoginConfigId();
+  const configId = getEnvLoginConfigIdNormalized();
   return {
     envRaw,
     configId,
     configIdPresent: !!configId,
     configIdValid: configId ? isValidMetaLoginConfigId(configId) : false,
+    source: configId ? "env" : "none",
   };
 }
 
@@ -144,32 +109,13 @@ export async function getLoginConfigId(userId: string): Promise<string | null> {
     select: { metaLoginConfigId: true },
   });
 
-  const rawDb = settings?.metaLoginConfigId?.trim() ?? "";
-  if (rawDb && !normalizeMetaLoginConfigId(rawDb)) {
-    await writeSystemLog({
-      userId,
-      level: "warn",
-      source: "facebook",
-      action: "oauth.invalid_config_id_ignored",
-      message:
-        "Invalid Facebook Login Configuration ID in settings ignored (must be numeric 5–20 digits, not email)",
-      metadata: { hasValue: true, length: rawDb.length },
-    });
-  }
+  const resolved = getValidMetaLoginConfigId({
+    userId,
+    dbRawValue: settings?.metaLoginConfigId,
+    logIgnored: true,
+  });
 
-  if (!showAdvancedMetaSettings()) {
-    return getEnvLoginConfigId();
-  }
-
-  const fromDb = normalizeMetaLoginConfigId(settings?.metaLoginConfigId);
-  if (fromDb) return fromDb;
-  return getEnvLoginConfigId();
-}
-
-export function getDeploymentMode(): string {
-  const mode = process.env.DEPLOYMENT_MODE?.toLowerCase();
-  if (mode === "saas" || mode === "self_hosted") return mode;
-  return showAdvancedMetaSettings() ? "self_hosted" : "saas";
+  return resolved.value;
 }
 
 export async function saveIntegrationSettings(
@@ -181,6 +127,10 @@ export async function saveIntegrationSettings(
     metaLoginConfigId?: string;
   }
 ) {
+  if (isSaasDeployment()) {
+    throw new Error("PLATFORM_MANAGED_META");
+  }
+
   const existing = await prisma.integrationSettings.findUnique({
     where: { userId },
   });
@@ -257,10 +207,19 @@ export async function findUserByWebhookVerifyToken(
   return settings?.userId ?? null;
 }
 
+function isPlaceholder(value?: string | null): boolean {
+  if (!value) return true;
+  return value.startsWith("your-");
+}
+
 export async function verifyWebhookTokenGlobal(token: string): Promise<boolean> {
   const envToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
   if (envToken && !isPlaceholder(envToken) && token === envToken) {
     return true;
+  }
+
+  if (isSaasDeployment()) {
+    return false;
   }
 
   const userId = await findUserByWebhookVerifyToken(token);
@@ -287,4 +246,31 @@ export async function validateMetaCredentials(
       error: e instanceof Error ? e.message : "Validation failed",
     };
   }
+}
+
+/** Admin diagnostics: env + DB credential status without secrets. */
+export async function getAdminPlatformMetaStatus(userId: string) {
+  const status = await getPlatformCredentialsStatus(userId);
+  const platformConfig = getPlatformLoginConfigStatus();
+
+  return {
+    deploymentMode: status.deploymentMode,
+    saasMode: status.saasMode,
+    metaAppId: status.appId.activeValue ?? getEnvMetaAppId() ?? "",
+    metaAppIdSource: status.appId.source,
+    metaAppSecretConfigured: !!status.appSecret.value,
+    metaAppSecretEnvPresent: status.appSecret.envPresent,
+    metaAppSecretDbPresent: status.appSecret.dbPresent,
+    metaAppSecretSource: status.appSecret.source,
+    metaAppSecretDbIgnoredInSaas: status.appSecret.dbIgnoredInSaas,
+    metaLoginConfigId: status.loginConfig.value,
+    metaLoginConfigIdValid: status.loginConfig.valid,
+    metaLoginConfigIdSource: status.loginConfig.source,
+    metaLoginConfigIdIgnoredLegacy: status.loginConfig.ignoredLegacyValue,
+    metaLoginConfigIdEnv: platformConfig.configId,
+    webhookVerifyTokenConfigured:
+      status.webhookToken.envPresent || status.webhookToken.dbPresent,
+    webhookVerifyTokenSource: status.webhookToken.activeSource,
+    legacyDbOverridesInSaas: status.legacyDbOverridesInSaas,
+  };
 }

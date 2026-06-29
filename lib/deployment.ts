@@ -27,3 +27,9 @@ export function showAdvancedMetaSettings(): boolean {
   if (process.env.SHOW_ADVANCED_META_SETTINGS === "false") return false;
   return !isPlatformMetaManaged();
 }
+
+export function getDeploymentMode(): string {
+  const mode = process.env.DEPLOYMENT_MODE?.toLowerCase();
+  if (mode === "saas" || mode === "self_hosted") return mode;
+  return showAdvancedMetaSettings() ? "self_hosted" : "saas";
+}

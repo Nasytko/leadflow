@@ -7,10 +7,12 @@ import {
   getIntegrationSettingsPublic,
   saveIntegrationSettings,
   validateMetaCredentials,
+  getMetaCredentials,
 } from "@/services/integration-settings.service";
-import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
+import { isSaasDeployment, getEnvMetaAppSecret, getEnvMetaAppId } from "@/lib/meta-platform-credentials";
 import { createAuditLog } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
+import { requireAuth, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
 
 const loginConfigIdSchema = z
   .string()
@@ -57,6 +59,14 @@ export async function PATCH(request: Request) {
     return apiError("VALIDATION", "Invalid input");
   }
 
+  if (isSaasDeployment()) {
+    return apiError(
+      "PLATFORM_MANAGED",
+      "Meta App настраивается администратором платформы через переменные окружения.",
+      403
+    );
+  }
+
   try {
     await saveIntegrationSettings(authResult.session.user.id, parsed.data);
 
@@ -100,15 +110,15 @@ export async function POST(request: Request) {
   let appId = parsed.data.metaAppId;
 
   if (!appSecret) {
-    const { getMetaCredentials } = await import(
-      "@/services/integration-settings.service"
-    );
     const creds = await getMetaCredentials(authResult.session.user.id);
     if (!creds?.appSecret) {
       return apiError("VALIDATION", "App Secret required");
     }
     appSecret = creds.appSecret;
     if (!appId) appId = creds.appId;
+  } else if (isSaasDeployment()) {
+    appSecret = getEnvMetaAppSecret() ?? appSecret;
+    appId = getEnvMetaAppId() ?? appId;
   }
 
   const result = await validateMetaCredentials(appId, appSecret);

@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   if (rateLimitError) return rateLimitError;
 
   const userId = authResult.session.user.id;
+  const isAdmin = authResult.session.user.isAdmin === true;
   const creds = await getMetaCredentials(userId);
   const preview = await buildOAuthUrlPreview(userId);
   const loginConfigId = await getLoginConfigId(userId);
@@ -55,19 +56,23 @@ export async function GET(request: Request) {
   const oauthUrl = preview?.oauthUrl ?? null;
 
   return apiSuccess({
-    configId,
+    configId: isAdmin ? configId : configIdValid ? "configured" : null,
     configIdPresent,
     configIdValid,
-    oauthUrl,
+    oauthUrl: isAdmin ? oauthUrl : null,
     appId: creds?.appId ?? preview?.appId ?? null,
     redirectUri: getRedirectUri(),
     hasAppSecret: !!(creds?.appSecret),
-    deploymentMode: getDeploymentMode(),
-    platformConfigEnvRaw: platformConfig.envRaw,
-    loginConfigIdUsed: configId,
+    ...(isAdmin
+      ? {
+          deploymentMode: getDeploymentMode(),
+          platformConfigEnvRaw: platformConfig.envRaw,
+          loginConfigIdUsed: configId,
+          oauthUrlPreview: oauthUrl,
+          scopes: preview?.scopes ?? null,
+        }
+      : {}),
     isLoginConfigIdValid: configIdValid,
-    scopes: preview?.scopes ?? null,
-    oauthUrlPreview: oauthUrl,
     metaConfigured: await isMetaConfiguredForUser(userId),
     dbConnectionExists: !!connection,
     connectionStatus: connection?.status ?? "disconnected",

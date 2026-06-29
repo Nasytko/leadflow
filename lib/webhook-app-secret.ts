@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getEnvMetaAppSecret,
+  isSaasDeployment,
+} from "@/lib/meta-platform-credentials";
 
 function isPlaceholder(value?: string | null): boolean {
   if (!value) return true;
@@ -7,9 +11,13 @@ function isPlaceholder(value?: string | null): boolean {
 
 /** App secret used to verify Meta webhook signatures (platform env first). */
 export async function getWebhookAppSecret(): Promise<string | null> {
-  const envSecret = process.env.META_APP_SECRET;
+  const envSecret = getEnvMetaAppSecret();
   if (envSecret && !isPlaceholder(envSecret)) {
     return envSecret;
+  }
+
+  if (isSaasDeployment()) {
+    return null;
   }
 
   const settings = await prisma.integrationSettings.findFirst({

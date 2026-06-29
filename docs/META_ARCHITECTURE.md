@@ -9,7 +9,47 @@
 
 `FacebookConnection` = **MetaConnection** (OAuth user token per `userId`, `@unique`).
 
-`IntegrationSettings` is optional per-user override for self-hosted; SaaS uses env credentials only.
+`IntegrationSettings` is optional per-user override for self-hosted; **SaaS uses env credentials only** (see `lib/meta-platform-credentials.ts`).
+
+### Platform credentials source of truth
+
+| `DEPLOYMENT_MODE` | App ID / Secret / Login Config / Webhook verify token |
+|-------------------|--------------------------------------------------------|
+| `saas` | **env only** — DB fields in `integration_settings` are ignored for OAuth |
+| `self_hosted` | DB override if valid, else env fallback |
+
+Env variables:
+
+- `META_APP_ID`
+- `META_APP_SECRET`
+- `META_LOGIN_CONFIG_ID` (or `FACEBOOK_LOGIN_CONFIG_ID`)
+- `META_WEBHOOK_VERIFY_TOKEN`
+- `FACEBOOK_REDIRECT_URI`
+
+### Legacy DB cleanup (production)
+
+If OAuth fails with code 190 or logs show invalid Login Config ID (e.g. email in DB), clear legacy overrides:
+
+```bash
+npm run meta:cleanup-legacy-settings
+```
+
+Or SQL (safe — does not touch `facebook_connections`, pages, forms, or leads):
+
+```sql
+UPDATE integration_settings
+SET
+  "metaAppSecretEncrypted" = NULL,
+  "metaLoginConfigId" = NULL,
+  "metaAppId" = NULL,
+  "configured" = false
+WHERE "metaAppSecretEncrypted" IS NOT NULL
+   OR "metaLoginConfigId" IS NOT NULL
+   OR "metaAppId" IS NOT NULL;
+```
+
+Verify after deploy: `/admin/platform` or `/meta/health` — active source should be `env`.
+
 
 ## Entity map
 
