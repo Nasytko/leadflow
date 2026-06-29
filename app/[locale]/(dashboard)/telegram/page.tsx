@@ -1,5 +1,10 @@
-import { TelegramContent } from "@/components/telegram/telegram-content";
+import { redirect } from "next/navigation";
 
-export default function TelegramPage() {
-  return <TelegramContent />;
+export default async function TelegramRedirectPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/meta/telegram`);
 }

@@ -34,7 +34,7 @@ type Form = {
   pageName: string;
 };
 
-export function FormsContent() {
+export function FormsContent({ embedded = false }: { embedded?: boolean }) {
   const t = useTranslations("forms");
   const tFacebook = useTranslations("facebook");
   const tCommon = useTranslations("common");
@@ -158,13 +158,24 @@ export function FormsContent() {
     facebookStatus === "error";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className={embedded ? "space-y-6" : "mx-auto max-w-7xl space-y-6"}>
+      {!embedded && (
       <PageHeader title={t("title")} subtitle={t("subtitle")} icon={FileText} gradient>
         <Button onClick={handleSync} disabled={syncing || facebookBroken} variant="outline" className="rounded-xl">
           <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
           {t("syncForms")}
         </Button>
       </PageHeader>
+      )}
+
+      {embedded && (
+        <div className="flex justify-end">
+          <Button onClick={handleSync} disabled={syncing || facebookBroken} variant="outline" size="sm" className="rounded-xl">
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {t("syncForms")}
+          </Button>
+        </div>
+      )}
 
       {(facebookBroken || facebookLastError) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
@@ -173,7 +184,7 @@ export function FormsContent() {
             {facebookLastError ?? tFacebook("tokenInvalid")}
           </p>
           <Button size="sm" variant="outline" asChild>
-            <Link href="/facebook">{tFacebook("reconnectButton")}</Link>
+            <Link href="/meta/connect">{tFacebook("reconnectButton")}</Link>
           </Button>
         </div>
       )}

@@ -1,9 +1,11 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
+import { useSession } from "next-auth/react";
 import { AlertTriangle, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn } from "@/lib/utils";
+import { getMetaUserErrorMessage } from "@/lib/meta-user-errors";
 
 export type LastOAuthErrorData = {
   safeMessage: string;
@@ -14,37 +16,18 @@ export type LastOAuthErrorData = {
   action: string;
 };
 
-const KNOWN_REASONS = [
-  "invalid_app_secret",
-  "invalid_client_secret",
-  "redirect_uri_mismatch",
-  "invalid_state",
-  "missing_permissions",
-  "token_exchange_failed",
-  "invalid_config_id",
-  "missing_code",
-  "oauth_denied",
-  "oauth_failed",
-  "sync_failed",
-] as const;
-
 const WARNING_REASONS = new Set([
   "invalid_state",
   "missing_permissions",
   "missing_code",
   "oauth_denied",
+  "no_pages",
+  "no_ad_accounts",
+  "webhook_not_verified",
 ]);
 
 function normalizeReason(reason: string): string {
   return reason === "invalid_client_secret" ? "invalid_app_secret" : reason;
-}
-
-function isSafeDetail(message: string, title: string): boolean {
-  const lower = message.toLowerCase();
-  if (lower.includes("secret") || lower.includes("token") || lower.includes("password")) {
-    return false;
-  }
-  return message.trim() !== title.trim();
 }
 
 export function FacebookOAuthErrorAlert({
@@ -58,14 +41,20 @@ export function FacebookOAuthErrorAlert({
   diagnosticsLoading?: boolean;
   className?: string;
 }) {
-  const t = useTranslations("facebook");
+  const tMeta = useTranslations("metaCenter");
+  const tFb = useTranslations("facebook");
   const locale = useLocale();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.isAdmin === true;
 
   const reason = normalizeReason(error.reason);
   const isWarning = WARNING_REASONS.has(reason);
-  const title = KNOWN_REASONS.includes(reason as (typeof KNOWN_REASONS)[number])
-    ? t(`oauthErrors.${reason}` as "oauthErrors.invalid_app_secret")
-    : t("oauthErrorAlertTitle");
+  const title = getMetaUserErrorMessage(
+    reason,
+    isAdmin,
+    (key) => tMeta(key as "errors.invalid_app_secret.user"),
+    error.safeMessage
+  );
 
   return (
     <div
@@ -96,24 +85,26 @@ export function FacebookOAuthErrorAlert({
           >
             {title}
           </p>
-          {isSafeDetail(error.safeMessage, title) && (
+          {isAdmin && error.safeMessage && error.safeMessage !== title && (
             <p className="text-sm text-muted-foreground break-words">
               {error.safeMessage}
             </p>
           )}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono">
-            {error.metaErrorType && (
-              <span>
-                {t("oauthErrorMetaType")}: {error.metaErrorType}
-              </span>
-            )}
-            {error.metaErrorCode != null && (
-              <span>
-                {t("oauthErrorMetaCode")}: {error.metaErrorCode}
-              </span>
-            )}
-            <span>{formatDate(error.createdAt, locale)}</span>
-          </div>
+          {isAdmin && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono">
+              {error.metaErrorType && (
+                <span>
+                  {tFb("oauthErrorMetaType")}: {error.metaErrorType}
+                </span>
+              )}
+              {error.metaErrorCode != null && (
+                <span>
+                  {tFb("oauthErrorMetaCode")}: {error.metaErrorCode}
+                </span>
+              )}
+              <span>{formatDate(error.createdAt, locale)}</span>
+            </div>
+          )}
         </div>
       </div>
       <Button
@@ -130,7 +121,7 @@ export function FacebookOAuthErrorAlert({
         )}
       >
         <Stethoscope className="h-4 w-4 mr-2" />
-        {t("openOAuthDiagnostics")}
+        {tFb("openOAuthDiagnostics")}
       </Button>
     </div>
   );

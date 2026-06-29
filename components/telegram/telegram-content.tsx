@@ -30,7 +30,7 @@ type TelegramStatus = {
   lastError?: string | null;
 };
 
-export function TelegramContent() {
+export function TelegramContent({ embedded = false }: { embedded?: boolean }) {
   const t = useTranslations("telegram");
   const tCommon = useTranslations("common");
   const [botToken, setBotToken] = useState("");
@@ -108,7 +108,7 @@ export function TelegramContent() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className={embedded ? "space-y-6" : "mx-auto max-w-3xl space-y-6"}>
         <Skeleton className="h-28 rounded-2xl" />
         <Skeleton className="h-80 rounded-2xl" />
       </div>
@@ -116,7 +116,8 @@ export function TelegramContent() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={embedded ? "space-y-6" : "mx-auto max-w-3xl space-y-6"}>
+      {!embedded && (
       <PageHeader title={t("title")} subtitle={t("subtitle")} icon={Send} gradient>
         <Button variant="outline" size="sm" asChild className="rounded-xl">
           <Link href="/wiki">
@@ -125,6 +126,7 @@ export function TelegramContent() {
           </Link>
         </Button>
       </PageHeader>
+      )}
 
       {connStatus && connStatus.status !== "disconnected" && (
         <Card className="rounded-2xl">

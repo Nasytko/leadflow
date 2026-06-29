@@ -59,6 +59,7 @@
     "dashboard": "Dashboard",
     "wiki": "Wiki",
     "facebook": "Facebook",
+    "metaCenter": "Meta Center",
     "adAudit": "Ad audit",
     "forms": "Forms",
     "telegram": "Telegram",
@@ -66,6 +67,7 @@
     "logs": "Logs",
     "settings": "Settings",
     "admin": "Admin",
+    "adminPlatform": "Platform Meta",
     "logout": "Logout",
     "groupOverview": "Overview",
     "groupIntegrations": "Integrations",
@@ -383,6 +385,14 @@
       "token_exchange_failed": "Failed to exchange Facebook authorization code for a token.",
       "sync_failed": "OAuth succeeded but forms sync failed."
     },
+    "loginConfigCardTitle": "Facebook Login Configuration",
+    "loginConfigCardIdLabel": "Configuration ID",
+    "loginConfigCardStatusLabel": "Status",
+    "loginConfigStatusPresent": "Present",
+    "loginConfigStatusMissing": "Missing",
+    "loginConfigStatusInvalid": "Invalid",
+    "loginConfigCardMissingHint": "Set META_LOGIN_CONFIG_ID in platform environment for Facebook Login for Business.",
+    "oauthDiagnosticsOAuthUrl": "OAuth URL (no state)",
     "oauthDiagnosticsTitle": "Facebook connection diagnostics",
     "openOAuthDiagnostics": "Open connection diagnostics",
     "oauthErrorAlertTitle": "Facebook connection error",
@@ -604,7 +614,13 @@
     "source": "Source",
     "managerNote": "Manager note",
     "noLeads": "No leads received yet",
-    "totalLabel": "total"
+    "totalLabel": "total",
+    "filterByPage": "Page",
+    "filterByTelegram": "Telegram",
+    "telegramStatus": "Telegram",
+    "exportCsv": "Export CSV",
+    "saveNote": "Save note",
+    "crmStatusDuplicate": "Duplicate"
   },
   "logs": {
     "title": "Logs",
@@ -809,6 +825,205 @@
     "invalidFacebookToken": "Facebook token is invalid. Please reconnect Facebook.",
     "telegramNotConnected": "Telegram is not connected"
   },
+  "metaCenter": {
+    "title": "Meta Center",
+    "subtitle": "Meta connection, leads, webhooks and ad audit in one place",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "healthTitle": "Is everything working?",
+    "healthSubtitle": "Meta integration health — green means ready, yellow needs setup",
+    "statusLevel": { "ok": "OK", "warning": "Warning", "error": "Error", "unknown": "Not connected" },
+    "nav": {
+      "overview": "Overview", "connect": "Connect", "businesses": "Businesses", "adAccounts": "Ad accounts",
+      "pages": "Pages", "forms": "Forms", "leads": "Leads", "audit": "Audit", "webhook": "Webhook",
+      "telegram": "Telegram", "diagnostics": "Diagnostics", "health": "Meta Health"
+    },
+    "wizard": {
+      "title": "Setup wizard", "subtitle": "From Meta connect to first lead",
+      "progress": "{done} of {total}", "nextStep": "Next step",
+      "step1": "Connect Meta", "step2": "Business", "step3": "Ad account", "step4": "Pages",
+      "step5": "Forms", "step6": "Telegram", "step7": "Test lead", "step8": "Ad audit"
+    },
+    "statusCards": {
+      "fixConnect": "Connect", "fixPermissions": "Reconnect", "fixDetails": "Details",
+      "fixPages": "Configure pages", "fixForms": "Enable forms", "fixWebhook": "Check webhook",
+      "fixTelegram": "Connect Telegram", "fixDiagnostics": "Diagnostics",
+      "oauth": { "title": "Meta OAuth", "ok": "Facebook connected", "error": "Meta connection error", "unknown": "Meta not connected" },
+      "permissions": { "title": "Permissions", "ok": "All required permissions granted", "warning": "Missing permissions — reconnect Meta" },
+      "businesses": { "title": "Businesses", "ok": "Business portfolios found", "warning": "No businesses — check Business Manager access" },
+      "adAccounts": { "title": "Ad accounts", "ok": "Ad accounts synced", "warning": "No ad accounts — check Ads Manager" },
+      "pages": { "title": "Pages", "ok": "Pages connected", "warning": "Some pages not connected", "error": "Connect at least one page" },
+      "forms": { "title": "Forms", "ok": "Forms enabled for sync", "warning": "Enable forms to receive leads" },
+      "webhook": { "title": "Webhook", "ok": "Webhook verified and receiving events", "warning": "Verified but no events yet", "error": "Webhook not verified" },
+      "telegram": { "title": "Telegram", "ok": "Telegram connected", "warning": "Connect Telegram for instant lead alerts" },
+      "worker": { "title": "Worker / Queue", "ok": "Processing queue is healthy", "warning": "Some webhook processing errors", "error": "Redis unavailable" }
+    },
+    "health": {
+      "title": "Meta Health Center",
+      "subtitle": "Full integration diagnostics — the system finds issues and suggests fixes",
+      "refresh": "Refresh", "copied": "Copied", "lastCheck": "Last check",
+      "runFullTest": "Run full diagnostics", "selfTestDone": "Done in {ms}ms", "selfTestFailed": "Diagnostics failed",
+      "actionCenter": "Quick actions", "adminPanel": "Admin mode", "graphResponses": "Graph API responses",
+      "status": { "ok": "OK", "warning": "Warning", "error": "Error", "unknown": "Not checked" },
+      "overall": {
+        "healthy": "Platform healthy", "healthyDesc": "Meta integration looks good.",
+        "needsAttention": "Needs attention", "needs_attentionDesc": "Some items need your attention below.",
+        "critical": "Critical", "criticalDesc": "Fix red items before going live."
+      },
+      "sections": {
+        "deployment": "Platform (deploy)", "oauth": "OAuth", "permissions": "Permissions", "api": "Facebook API",
+        "business": "Businesses", "pages": "Pages", "forms": "Forms", "adAccounts": "Ad accounts",
+        "campaigns": "Campaigns", "webhook": "Webhook", "worker": "Worker / Queue", "telegram": "Telegram"
+      },
+      "actions": {
+        "connect": "Connect Meta", "reconnect": "Reconnect Meta", "syncPages": "Sync pages", "syncForms": "Sync forms",
+        "syncAdAccounts": "Sync ad accounts", "syncCampaigns": "Sync campaigns", "syncBusinesses": "Sync businesses",
+        "connectPages": "Connect pages", "enableForms": "Enable forms", "checkWebhook": "Check webhook",
+        "testLead": "Test lead", "testTelegram": "Test Telegram", "connectTelegram": "Connect Telegram",
+        "adminSettings": "Platform settings", "rerun": "Re-run all checks"
+      },
+      "oauth": {
+        "metaApp": { "title": "Meta App", "meaning": "Platform OAuth app", "ok": "Configured", "action": "Contact platform admin" },
+        "appSecret": { "title": "App Secret", "meaning": "Server-side secret", "ok": "Configured", "action": "Check META_APP_SECRET" },
+        "loginConfig": { "title": "Login Configuration", "meaning": "Facebook Login for Business", "ok": "Valid", "action": "Check META_LOGIN_CONFIG_ID" },
+        "redirectUri": { "title": "Redirect URI", "meaning": "OAuth return URL", "ok": "Set", "action": "Check FACEBOOK_REDIRECT_URI" },
+        "oauthUrl": { "title": "OAuth URL", "meaning": "Connect link", "ok": "Builds", "action": "Reconnect Meta" },
+        "callback": { "title": "Callback", "meaning": "OAuth handler route", "ok": "Available", "action": "—" },
+        "lastSuccess": { "title": "Last successful OAuth", "meaning": "When connect last worked", "ok": "Yes", "action": "Connect Meta" },
+        "lastError": { "title": "Last OAuth error", "meaning": "What failed", "ok": "None", "action": "Try again" }
+      },
+      "permissions": {
+        "public_profile": { "title": "Profile", "meaning": "Facebook profile", "ok": "Granted", "warning": "Missing", "action": "Reconnect Meta" },
+        "email": { "title": "Email", "meaning": "Account email", "ok": "Granted", "warning": "Missing", "action": "Reconnect" },
+        "pages_show_list": { "title": "Pages list", "meaning": "Required to see pages", "ok": "Granted", "warning": "Missing — no pages", "action": "Reconnect and approve pages" },
+        "pages_read_engagement": { "title": "Page read", "meaning": "Page data access", "ok": "Granted", "warning": "Missing", "action": "Reconnect" },
+        "leads_retrieval": { "title": "Leads", "meaning": "Critical for Lead Ads", "ok": "Granted", "warning": "Missing — no leads", "action": "Reconnect and approve leads" },
+        "ads_read": { "title": "Ads read", "meaning": "Ad audit & accounts", "ok": "Granted", "warning": "Missing", "action": "Reconnect" },
+        "pages_manage_ads": { "title": "Page ads", "meaning": "Lead Ads on pages", "ok": "Granted", "warning": "Missing", "action": "Reconnect" },
+        "business_management": { "title": "Business Manager", "meaning": "Business assets", "ok": "Granted", "warning": "Missing", "action": "Reconnect" }
+      },
+      "api": {
+        "me": { "title": "/me", "meaning": "Facebook profile", "ok": "OK", "action": "Reconnect" },
+        "accounts": { "title": "/me/accounts", "meaning": "Pages", "ok": "OK", "action": "Sync pages" },
+        "businesses": { "title": "/me/businesses", "meaning": "Business portfolios", "ok": "OK", "action": "Check Business Manager" },
+        "adaccounts": { "title": "/me/adaccounts", "meaning": "Ad accounts", "ok": "OK", "action": "Sync ad accounts" }
+      },
+      "business": {
+        "count": { "title": "Business count", "meaning": "Portfolios found", "ok": "Found", "action": "Sync businesses" },
+        "primary": { "title": "Primary business", "meaning": "Main portfolio", "ok": "Set", "action": "Connect Meta" }
+      },
+      "pages": {
+        "count": { "title": "Pages", "meaning": "Total pages", "ok": "Found", "action": "No pages on this account" },
+        "connected": { "title": "Connected pages", "meaning": "Webhook active", "ok": "Yes", "action": "Connect a page" },
+        "lastSync": { "title": "Last sync", "meaning": "Pages refresh", "ok": "Recent", "action": "Sync pages" },
+        "lastError": { "title": "Last error", "meaning": "Page issue", "ok": "None", "action": "Check Pages section" }
+      },
+      "forms": {
+        "count": { "title": "Forms", "meaning": "Lead forms", "ok": "Found", "action": "Sync forms" },
+        "active": { "title": "Active forms", "meaning": "Active in Meta", "ok": "Yes", "action": "Create a Lead Form" },
+        "enabled": { "title": "Enabled in LeadBridge", "meaning": "Receiving leads", "ok": "Yes", "action": "Enable forms" },
+        "lastSync": { "title": "Last sync", "meaning": "Forms refresh", "ok": "Recent", "action": "Sync forms" },
+        "lastLead": { "title": "Last lead", "meaning": "Last received lead", "ok": "Yes", "action": "Send test lead" }
+      },
+      "adAccounts": {
+        "count": { "title": "Ad accounts", "meaning": "From Facebook", "ok": "Found", "action": "Check Ads Manager" },
+        "primary": { "title": "Primary account", "meaning": "Currency & timezone", "ok": "Set", "action": "Sync accounts" },
+        "campaigns": { "title": "Campaigns", "meaning": "Synced campaigns", "ok": "Yes", "action": "Sync campaigns" }
+      },
+      "campaigns": {
+        "count": { "title": "Campaigns", "meaning": "In database", "ok": "Yes", "action": "Sync campaigns" },
+        "lastSync": { "title": "Last sync", "meaning": "Campaign refresh", "ok": "Recent", "action": "Sync campaigns" }
+      },
+      "webhook": {
+        "verified": { "title": "Webhook verified", "meaning": "Meta confirmed URL", "ok": "Yes", "action": "Webhook not verified" },
+        "verifyToken": { "title": "Verify token", "meaning": "Webhook handshake", "ok": "Set", "action": "Check platform token" },
+        "signature": { "title": "Signature validation", "meaning": "Request security", "ok": "On", "action": "—" },
+        "lastEvent": { "title": "Last webhook", "meaning": "Last Meta event", "ok": "Received", "action": "Send test lead" },
+        "lastLeadgen": { "title": "Last leadgen", "meaning": "Last lead ID", "ok": "Yes", "action": "Check webhook" },
+        "errors": { "title": "Webhook errors", "meaning": "Failed events", "ok": "None", "action": "Open Webhook section" }
+      },
+      "worker": {
+        "redis": { "title": "Redis", "meaning": "Job queue", "ok": "Connected", "action": "Contact support" },
+        "queue": { "title": "Queue", "meaning": "Worker ready", "ok": "Ready", "action": "Check Redis" },
+        "lastJob": { "title": "Last lead processed", "meaning": "Queue activity", "ok": "Yes", "action": "Wait for first lead" },
+        "errors": { "title": "Queue errors", "meaning": "Processing failures", "ok": "None", "action": "Check logs" }
+      },
+      "telegram": {
+        "connected": { "title": "Telegram", "meaning": "Manager alerts", "ok": "Connected", "action": "Connect Telegram" },
+        "lastMessage": { "title": "Last message", "meaning": "Delivery status", "ok": "Sent", "action": "Send test" },
+        "lastError": { "title": "Last error", "meaning": "Send failure", "ok": "None", "action": "Check bot & Chat ID" }
+      },
+      "deployment": {
+        "nextAuthUrl": { "title": "NEXTAUTH_URL", "meaning": "App base URL", "ok": "Set", "action": "Set NEXTAUTH_URL" },
+        "redirectUri": { "title": "Redirect URI", "meaning": "Must match Meta App", "ok": "Set", "action": "Check FACEBOOK_REDIRECT_URI" },
+        "metaAppId": { "title": "META_APP_ID", "meaning": "Meta App ID", "ok": "Set", "action": "Set META_APP_ID" },
+        "metaAppSecret": { "title": "META_APP_SECRET", "meaning": "App secret", "ok": "Set", "action": "Set META_APP_SECRET" },
+        "metaLoginConfigId": { "title": "META_LOGIN_CONFIG_ID", "meaning": "Login Config ID", "ok": "Valid", "action": "Check config ID" },
+        "metaWebhookVerifyToken": { "title": "Webhook verify token", "meaning": "Webhook handshake", "ok": "Set", "action": "Set META_WEBHOOK_VERIFY_TOKEN" }
+      }
+    },
+    "connect": {
+      "title": "Connect Meta", "description": "One click to access pages, leads and ad accounts",
+      "connectButton": "Connect Meta", "connecting": "Redirecting…", "connectedTitle": "Meta connected",
+      "ctaTitle": "Connect your Meta account", "permissionsHint": "Meta will request access to:",
+      "permPages": "Facebook Pages", "permLeads": "Lead Ads leads", "permAds": "Ad accounts (read)", "permBusiness": "Business Manager"
+    },
+    "businesses": { "title": "Businesses", "description": "Business portfolios from your Facebook account", "connectFirst": "Connect Meta first" },
+    "adAccounts": { "title": "Ad accounts", "description": "Ad accounts for audit and lead attribution", "connectFirst": "Connect Meta first", "synced": "Accounts updated", "syncFailed": "Sync failed", "campaignsSynced": "Campaigns synced", "campaignsSyncFailed": "Campaign sync failed" },
+    "pages": { "title": "Pages", "description": "Connect pages for leadgen webhook", "connectFirst": "Connect Meta first" },
+    "forms": { "title": "Forms", "description": "Enable sync for Lead Forms you need" },
+    "leads": { "title": "Leads", "description": "Lead CRM from Meta Lead Ads" },
+    "audit": { "title": "Ad audit", "description": "Spend, leads, CPL and recommendations" },
+    "webhook": { "title": "Webhook", "description": "Webhook status and test lead", "testLeadTitle": "Test lead", "testLeadDesc": "Create a test lead in Meta Lead Ads Testing Tool — LeadBridge should receive the webhook within a minute." },
+    "telegram": { "title": "Telegram", "description": "Notify managers about new leads" },
+    "diagnostics": {
+      "title": "Diagnostics", "description": "Platform, OAuth, API, DB, webhook and worker checks",
+      "refresh": "Refresh", "loading": "Loading…", "copied": "Copied", "platformTitle": "Platform",
+      "oauthTitle": "OAuth", "apiTitle": "Facebook API", "databaseTitle": "Database", "webhookTitle": "Webhook",
+      "workerTitle": "Worker", "telegramTitle": "Telegram", "oauthUrlGenerated": "OAuth URL generated",
+      "configIdValid": "Login Config ID valid", "redirectUriValid": "Redirect URI configured",
+      "permissionsValid": "Permissions", "missing": "Missing", "connectionExists": "DB connection",
+      "businessesCount": "Businesses", "pagesCount": "Pages", "formsCount": "Forms", "leadsCount": "Leads",
+      "webhookVerified": "Webhook verified", "lastVerification": "Last verification", "lastLeadgenEvent": "Last leadgen",
+      "never": "Never", "redisConnected": "Redis", "queueReady": "Queue", "failedJobs": "Failed webhooks",
+      "telegramConnected": "Telegram", "lastDelivery": "Last delivery", "testTelegram": "Test message",
+      "telegramTestOk": "Message sent", "telegramTestFailed": "Send failed", "copyRedirectUri": "Copy Redirect URI"
+    },
+    "adminPlatform": {
+      "title": "Platform → Meta App", "subtitle": "Platform-level Meta App settings (admin only)",
+      "loading": "Loading…", "refresh": "Refresh", "metaAppTitle": "Meta App", "metaAppId": "Meta App ID",
+      "metaAppSecret": "Meta App Secret", "loginConfigId": "Login Configuration ID",
+      "webhookVerifyToken": "Webhook Verify Token", "redirectUri": "OAuth Redirect URI", "webhookUrl": "Webhook URL",
+      "configured": "Configured", "missing": "Missing", "copied": "Copied", "checkOAuth": "Check OAuth", "checkWebhook": "Check Webhook"
+    },
+    "help": {
+      "connect": "Facebook Login for Business — LeadBridge requests only required permissions.",
+      "business": "Business Portfolio is your company in Meta Business Manager.",
+      "adAccount": "Ad account is where Lead Ads campaigns run — needed for spend and CPL audit.",
+      "page": "Facebook Page is the lead source — webhook requires a connected page.",
+      "leadForm": "Lead Form is the ad lead capture form — enable sync for forms you use.",
+      "webhook": "Webhook notifies LeadBridge instantly when a new lead is created.",
+      "telegram": "Telegram delivers new leads to your manager chat.",
+      "audit": "Audit shows if ad spend is efficient and where leads are lost.",
+      "diagnostics": "Technical checks for admin and support.",
+      "leads": "All Meta leads with campaign attribution and CRM status.",
+      "permissions": "Meta needs pages, leads_retrieval, ads_read for full integration.",
+      "pageMissing": "A page may be hidden if your Facebook user has no role on it in Business Manager.",
+      "leadAccess": "Business Manager → Pages → assign people → enable Leads access."
+    },
+    "errors": {
+      "invalid_app_secret": { "user": "Meta connection is temporarily unavailable. The administrator has been notified.", "admin": "Invalid Meta App Secret. Check META_APP_SECRET." },
+      "missing_permissions": { "user": "Facebook is connected but missing permissions. Reconnect Meta and approve access.", "admin": "Missing OAuth scopes." },
+      "no_pages": { "user": "No pages found. Check page access in Business Manager.", "admin": "Graph /me/accounts returned zero pages." },
+      "no_ad_accounts": { "user": "No ad accounts found. Check Ads Manager access.", "admin": "Graph /me/adaccounts returned zero accounts." },
+      "webhook_not_verified": { "user": "Webhook is not verified yet. Contact support.", "admin": "Check Callback URL and Verify Token." },
+      "invalid_state": { "user": "Connection session expired. Try again.", "admin": "OAuth state missing or expired." },
+      "token_exchange_failed": { "user": "Could not complete Meta connection. Try again or contact support.", "admin": "Token exchange failed." },
+      "redirect_uri_mismatch": { "user": "Meta connection is temporarily unavailable.", "admin": "Redirect URI mismatch." },
+      "oauth_exception": { "user": "Meta temporarily rejected the connection. Please try again.", "admin": "OAuthException from Meta Graph API." },
+      "unknown": { "user": "An error occurred. Try again.", "admin": "Unknown OAuth error." }
+    }
+  },
   "metaAds": {
     "adAccountsTitle": "Ad accounts",
     "adAccountsDesc": "Ad Accounts from your Facebook profile (isolated per user)",
@@ -846,7 +1061,22 @@
       "low_ctr": "Low CTR — ads may be irrelevant",
       "leads_without_forms": "Leads exist but LeadBridge forms are not enabled",
       "webhook_not_connected": "Pages not connected — leadgen webhook inactive",
-      "telegram_not_connected": "Telegram not connected — leads are not delivered"
+      "telegram_not_connected": "Telegram not connected — leads are not delivered to managers"
+    },
+    "kpiImpressions": "Impressions",
+    "kpiClicks": "Clicks",
+    "kpiReach": "Reach",
+    "recommendationsTitle": "What to do next",
+    "recommendationsSubtitle": "Practical steps in plain language",
+    "recommendations": {
+      "spendWithoutLeads": "You have spend but no leads — check the form, offer and landing experience.",
+      "highCpl": "Cost per lead is high — narrow targeting or test new creatives.",
+      "lowCtr": "Low CTR — headline or image may not match the audience.",
+      "leadsWithoutForms": "Meta reports leads but LeadBridge forms are disabled — enable them in Forms.",
+      "webhookNotConnected": "Connect a page and verify webhook or leads won't arrive automatically.",
+      "telegramNotConnected": "Connect Telegram so managers get instant alerts.",
+      "allGood": "No critical issues for this period. Keep monitoring CPL and lead quality.",
+      "reviewCampaigns": "Review top-spend campaigns and compare CPL between them."
     }
   },
   "theme": {

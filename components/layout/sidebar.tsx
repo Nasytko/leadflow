@@ -6,14 +6,10 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
-  Facebook,
-  FileText,
-  Send,
   Users,
   ScrollText,
   Settings,
   Shield,
-  BarChart3,
   Megaphone,
   BookOpen,
   Zap,
@@ -30,10 +26,7 @@ const navGroups = [
   {
     labelKey: "groupIntegrations",
     items: [
-      { href: "/facebook", icon: Facebook, key: "facebook" },
-      { href: "/ad-audit", icon: BarChart3, key: "adAudit" },
-      { href: "/forms", icon: FileText, key: "forms" },
-      { href: "/telegram", icon: Send, key: "telegram" },
+      { href: "/meta", icon: Megaphone, key: "metaCenter" },
     ],
   },
   {
@@ -52,7 +45,10 @@ const navGroups = [
 type NavItem = (typeof navGroups)[number]["items"][number];
 
 const allNavItems: NavItem[] = navGroups.flatMap((g) => [...g.items]);
-const adminNavItem = { href: "/admin/users", icon: Shield, key: "admin" } as const;
+const adminNavItems = [
+  { href: "/admin/users", icon: Shield, key: "admin" } as const,
+  { href: "/admin/platform", icon: Settings, key: "adminPlatform" } as const,
+];
 
 function NavLink({
   href,
@@ -112,7 +108,9 @@ export function Sidebar() {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const isActive =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  item.href === "/meta"
+                    ? pathname === "/meta" || pathname.startsWith("/meta/")
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <NavLink
                     key={item.href}
@@ -133,16 +131,17 @@ export function Sidebar() {
               {t("groupAdmin")}
             </p>
             <div className="space-y-0.5">
-              <NavLink
-                key={adminNavItem.href}
-                href={adminNavItem.href}
-                icon={adminNavItem.icon}
-                label={t(adminNavItem.key)}
-                isActive={
-                  pathname === adminNavItem.href ||
-                  pathname.startsWith(`${adminNavItem.href}/`)
-                }
-              />
+              {adminNavItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={t(item.key)}
+                  isActive={
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  }
+                />
+              ))}
             </div>
           </div>
         )}
@@ -170,13 +169,16 @@ export function MobileNav() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.isAdmin === true;
   const mobileItems = allNavItems.filter((item) => item.key !== "wiki");
-  const items = isAdmin ? [...mobileItems, adminNavItem] : mobileItems;
+  const items = isAdmin ? [...mobileItems, ...adminNavItems] : mobileItems;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-sidebar-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
       <div className="flex overflow-x-auto px-1 py-1.5 scrollbar-none">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive =
+            item.href === "/meta"
+              ? pathname === "/meta" || pathname.startsWith("/meta/")
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <NavLink
               key={item.href}

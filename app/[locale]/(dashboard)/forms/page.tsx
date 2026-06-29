@@ -1,5 +1,10 @@
-import { FormsContent } from "@/components/forms/forms-content";
+import { redirect } from "next/navigation";
 
-export default function FormsPage() {
-  return <FormsContent />;
+export default async function FormsRedirectPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/meta/forms`);
 }

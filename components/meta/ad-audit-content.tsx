@@ -50,7 +50,28 @@ type AuditData = {
   warnings: Array<{ code: string; severity: string; message: string }>;
 };
 
-export function AdAuditContent() {
+function buildRecommendations(
+  warnings: AuditData["warnings"],
+  t: (key: string) => string
+): string[] {
+  const codes = new Set(warnings.map((w) => w.message));
+  const items: string[] = [];
+  if (codes.has("spend_without_leads")) items.push(t("recommendations.spendWithoutLeads"));
+  if (codes.has("high_cpl")) items.push(t("recommendations.highCpl"));
+  if (codes.has("low_ctr")) items.push(t("recommendations.lowCtr"));
+  if (codes.has("leads_without_forms")) items.push(t("recommendations.leadsWithoutForms"));
+  if (codes.has("webhook_not_connected")) items.push(t("recommendations.webhookNotConnected"));
+  if (codes.has("telegram_not_connected")) items.push(t("recommendations.telegramNotConnected"));
+  if (items.length === 0 && warnings.length === 0) {
+    items.push(t("recommendations.allGood"));
+  }
+  if (items.length === 0) {
+    items.push(t("recommendations.reviewCampaigns"));
+  }
+  return items.slice(0, 5);
+}
+
+export function AdAuditContent({ embedded = false }: { embedded?: boolean }) {
   const t = useTranslations("metaAds");
   const searchParams = useSearchParams();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
@@ -105,8 +126,13 @@ export function AdAuditContent() {
     return <p className="text-muted-foreground">{t("loading")}</p>;
   }
 
+  const recommendations = audit
+    ? buildRecommendations(audit.warnings, t)
+    : [];
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className={embedded ? "space-y-6" : "mx-auto max-w-6xl space-y-6"}>
+      {!embedded && (
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <BarChart3 className="h-7 w-7 text-[#1877F2]" />
@@ -114,6 +140,7 @@ export function AdAuditContent() {
         </h1>
         <p className="text-muted-foreground mt-1">{t("auditSubtitle")}</p>
       </div>
+      )}
 
       <Card className="rounded-2xl">
         <CardHeader>
@@ -180,6 +207,9 @@ export function AdAuditContent() {
               { label: t("kpiCtr"), value: `${audit.summary.ctr.toFixed(2)}%` },
               { label: t("kpiCpm"), value: audit.summary.cpm.toFixed(2) },
               { label: t("kpiCpc"), value: audit.summary.cpc.toFixed(2) },
+              { label: t("kpiImpressions"), value: String(audit.summary.impressions) },
+              { label: t("kpiClicks"), value: String(audit.summary.clicks) },
+              { label: t("kpiReach"), value: String(audit.summary.reach) },
             ].map((kpi) => (
               <Card key={kpi.label} className="rounded-2xl">
                 <CardContent className="pt-6">
@@ -258,6 +288,25 @@ export function AdAuditContent() {
               </table>
             </CardContent>
           </Card>
+
+          {recommendations.length > 0 && (
+            <Card className="rounded-2xl border-[#1877F2]/20">
+              <CardHeader>
+                <CardTitle>{t("recommendationsTitle")}</CardTitle>
+                <CardDescription>{t("recommendationsSubtitle")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  {recommendations.map((item, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-[#1877F2] font-bold">{i + 1}.</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { MetaSettingsForm } from "@/components/integrations/meta-settings-form";
 import { FacebookOAuthErrorAlert } from "@/components/facebook/facebook-oauth-error-alert";
 import type { LastOAuthErrorData } from "@/components/facebook/facebook-oauth-error-alert";
+import { FacebookLoginConfigCard } from "@/components/facebook/facebook-login-config-card";
 import { FacebookStatusCard } from "@/components/facebook/facebook-status-card";
 import { FacebookSetupWizard } from "@/components/facebook/facebook-setup-wizard";
 import { FacebookWebhookDiagnostics } from "@/components/facebook/facebook-webhook-diagnostics";
@@ -120,6 +121,10 @@ type StatusData = {
 };
 
 type OAuthDebugData = {
+  configId?: string | null;
+  configIdPresent?: boolean;
+  configIdValid?: boolean;
+  oauthUrl?: string | null;
   appId?: string | null;
   redirectUri?: string;
   hasAppSecret?: boolean;
@@ -631,8 +636,19 @@ export function FacebookContent() {
           )}
 
           {showOauthDiagnosticsPanel && oauthDebugData && (
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm font-mono">
+            <div className="space-y-3">
+              <FacebookLoginConfigCard
+                configId={oauthDebugData.configId ?? oauthDebugData.loginConfigIdUsed}
+                configIdPresent={oauthDebugData.configIdPresent}
+                configIdValid={oauthDebugData.configIdValid ?? oauthDebugData.isLoginConfigIdValid}
+              />
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm font-mono">
               <p className="font-medium font-sans">{t("oauthDiagnosticsTitle")}</p>
+              {oauthDebugData.oauthUrl && (
+                <p className="text-xs text-muted-foreground break-all">
+                  {t("oauthDiagnosticsOAuthUrl")}: {oauthDebugData.oauthUrl}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground break-all">
                 {t("oauthDiagnosticsRedirectUri")}: {oauthDebugData.redirectUri}
               </p>
@@ -691,6 +707,7 @@ export function FacebookContent() {
                   {t("oauthDiagnosticsLastSyncError")}: {oauthDebugData.lastSyncError}
                 </p>
               )}
+              </div>
             </div>
           )}
 

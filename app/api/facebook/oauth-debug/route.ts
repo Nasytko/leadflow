@@ -2,6 +2,7 @@ import {
   getMetaCredentials,
   getLoginConfigId,
   getDeploymentMode,
+  getPlatformLoginConfigStatus,
   isMetaConfiguredForUser,
 } from "@/services/integration-settings.service";
 import { buildOAuthUrlPreview } from "@/services/facebook-auth.service";
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
   const creds = await getMetaCredentials(userId);
   const preview = await buildOAuthUrlPreview(userId);
   const loginConfigId = await getLoginConfigId(userId);
+  const platformConfig = getPlatformLoginConfigStatus();
 
   const [connection, pagesCount, businessesCount, lastCallbackLog, lastOAuthError, lastSyncErrorLog] =
     await Promise.all([
@@ -47,15 +49,25 @@ export async function GET(request: Request) {
       }),
     ]);
 
+  const configId = preview?.configId ?? loginConfigId;
+  const configIdPresent = preview?.configIdPresent ?? !!loginConfigId;
+  const configIdValid = preview?.configIdValid ?? false;
+  const oauthUrl = preview?.oauthUrl ?? null;
+
   return apiSuccess({
+    configId,
+    configIdPresent,
+    configIdValid,
+    oauthUrl,
     appId: creds?.appId ?? preview?.appId ?? null,
     redirectUri: getRedirectUri(),
     hasAppSecret: !!(creds?.appSecret),
     deploymentMode: getDeploymentMode(),
-    loginConfigIdUsed: loginConfigId,
-    isLoginConfigIdValid: preview?.isLoginConfigIdValid ?? false,
+    platformConfigEnvRaw: platformConfig.envRaw,
+    loginConfigIdUsed: configId,
+    isLoginConfigIdValid: configIdValid,
     scopes: preview?.scopes ?? null,
-    oauthUrlPreview: preview?.oauthUrlPreview ?? null,
+    oauthUrlPreview: oauthUrl,
     metaConfigured: await isMetaConfiguredForUser(userId),
     dbConnectionExists: !!connection,
     connectionStatus: connection?.status ?? "disconnected",

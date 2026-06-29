@@ -60,6 +60,7 @@
     "dashboard": "Дашборд",
     "wiki": "Wiki",
     "facebook": "Facebook",
+    "metaCenter": "Meta Center",
     "adAudit": "Аудит рекламы",
     "forms": "Формы",
     "telegram": "Telegram",
@@ -67,6 +68,7 @@
     "logs": "Логи",
     "settings": "Настройки",
     "admin": "Админка",
+    "adminPlatform": "Platform Meta",
     "logout": "Выйти",
     "groupOverview": "Обзор",
     "groupIntegrations": "Интеграции",
@@ -371,6 +373,14 @@
       "token_exchange_failed": "Не удалось обменять код Facebook на токен. Проверьте настройки Meta App.",
       "sync_failed": "OAuth прошёл, но синхронизация форм не удалась."
     },
+    "loginConfigCardTitle": "Facebook Login Configuration",
+    "loginConfigCardIdLabel": "Configuration ID",
+    "loginConfigCardStatusLabel": "Status",
+    "loginConfigStatusPresent": "Present",
+    "loginConfigStatusMissing": "Missing",
+    "loginConfigStatusInvalid": "Invalid",
+    "loginConfigCardMissingHint": "Задайте META_LOGIN_CONFIG_ID в переменных окружения платформы для Facebook Login for Business.",
+    "oauthDiagnosticsOAuthUrl": "OAuth URL (без state)",
     "oauthDiagnosticsTitle": "Диагностика подключения Facebook",
     "openOAuthDiagnostics": "Открыть диагностику подключения",
     "oauthErrorAlertTitle": "Ошибка подключения Facebook",
@@ -596,7 +606,13 @@
     "source": "Источник",
     "managerNote": "Заметка менеджера",
     "noLeads": "Лиды пока не получены",
-    "totalLabel": "всего"
+    "totalLabel": "всего",
+    "filterByPage": "Страница",
+    "filterByTelegram": "Telegram",
+    "telegramStatus": "Telegram",
+    "exportCsv": "Экспорт CSV",
+    "saveNote": "Сохранить заметку",
+    "crmStatusDuplicate": "Дубль"
   },
   "logs": {
     "title": "Логи",
@@ -801,6 +817,410 @@
     "invalidFacebookToken": "Токен Facebook недействителен. Подключите Facebook заново.",
     "telegramNotConnected": "Telegram не подключён"
   },
+  "metaCenter": {
+    "title": "Meta Center",
+    "subtitle": "Подключение Meta, лиды, webhook и аудит рекламы в одном месте",
+    "refresh": "Обновить",
+    "loading": "Загрузка…",
+    "healthTitle": "Всё работает?",
+    "healthSubtitle": "Статус интеграции Meta — зелёный значит можно работать, жёлтый — нужно донастроить",
+    "statusLevel": {
+      "ok": "OK",
+      "warning": "Внимание",
+      "error": "Ошибка",
+      "unknown": "Не подключено"
+    },
+    "nav": {
+      "overview": "Обзор",
+      "connect": "Подключение",
+      "businesses": "Компании",
+      "adAccounts": "Кабинеты",
+      "pages": "Страницы",
+      "forms": "Формы",
+      "leads": "Лиды",
+      "audit": "Аудит",
+      "webhook": "Webhook",
+      "telegram": "Telegram",
+      "diagnostics": "Диагностика",
+      "health": "Здоровье Meta"
+    },
+    "wizard": {
+      "title": "Мастер настройки",
+      "subtitle": "Пошаговый путь от подключения Meta до первого лида",
+      "progress": "{done} из {total}",
+      "nextStep": "Следующий шаг",
+      "step1": "Подключить Meta",
+      "step2": "Выбрать компанию",
+      "step3": "Рекламный кабинет",
+      "step4": "Страницы",
+      "step5": "Формы",
+      "step6": "Telegram",
+      "step7": "Тестовый лид",
+      "step8": "Аудит рекламы"
+    },
+    "statusCards": {
+      "fixConnect": "Подключить",
+      "fixPermissions": "Переподключить",
+      "fixDetails": "Подробнее",
+      "fixPages": "Настроить страницы",
+      "fixForms": "Включить формы",
+      "fixWebhook": "Проверить webhook",
+      "fixTelegram": "Подключить Telegram",
+      "fixDiagnostics": "Открыть Health Center",
+      "oauth": {
+        "title": "Meta OAuth",
+        "ok": "Facebook подключён",
+        "error": "Ошибка подключения Meta",
+        "unknown": "Meta ещё не подключён"
+      },
+      "permissions": {
+        "title": "Разрешения",
+        "ok": "Все нужные разрешения выданы",
+        "warning": "Не хватает разрешений — переподключите Meta"
+      },
+      "businesses": {
+        "title": "Компании",
+        "ok": "Business Portfolio найдены",
+        "warning": "Компании не найдены — проверьте доступ в Business Manager"
+      },
+      "adAccounts": {
+        "title": "Рекламные кабинеты",
+        "ok": "Рекламные кабинеты синхронизированы",
+        "warning": "Кабинеты не найдены — проверьте Ads Manager"
+      },
+      "pages": {
+        "title": "Страницы",
+        "ok": "Страницы подключены",
+        "warning": "Есть страницы, но не все подключены",
+        "error": "Подключите хотя бы одну страницу"
+      },
+      "forms": {
+        "title": "Формы",
+        "ok": "Формы включены для синхронизации",
+        "warning": "Включите формы для получения лидов"
+      },
+      "webhook": {
+        "title": "Webhook",
+        "ok": "Webhook подтверждён и получает события",
+        "warning": "Webhook подтверждён, но событий пока не было",
+        "error": "Webhook не подтверждён — лиды не придут автоматически"
+      },
+      "telegram": {
+        "title": "Telegram",
+        "ok": "Telegram подключён",
+        "warning": "Подключите Telegram, чтобы получать лиды менеджерам"
+      },
+      "worker": {
+        "title": "Worker / Queue",
+        "ok": "Очередь обработки работает",
+        "warning": "Есть ошибки обработки webhook",
+        "error": "Redis недоступен — лиды не обрабатываются"
+      }
+    },
+    "health": {
+      "title": "Meta Health Center",
+      "subtitle": "Полная диагностика интеграции — система сама найдёт проблему и подскажет решение",
+      "refresh": "Обновить",
+      "copied": "Скопировано",
+      "lastCheck": "Последняя проверка",
+      "runFullTest": "Запустить полную диагностику",
+      "selfTestDone": "Диагностика завершена за {ms} мс",
+      "selfTestFailed": "Не удалось выполнить диагностику",
+      "actionCenter": "Быстрые действия",
+      "adminPanel": "Режим администратора",
+      "graphResponses": "Ответы Graph API",
+      "status": { "ok": "OK", "warning": "Внимание", "error": "Ошибка", "unknown": "Не проверено" },
+      "overall": {
+        "healthy": "Всё работает",
+        "healthyDesc": "Интеграция Meta настроена корректно. Можно принимать лиды.",
+        "needsAttention": "Нужно внимание",
+        "needs_attentionDesc": "Есть настройки, которые стоит проверить — см. карточки ниже.",
+        "critical": "Критическая проблема",
+        "criticalDesc": "Интеграция не работает полностью. Исправьте пункты с красным статусом."
+      },
+      "sections": {
+        "deployment": "Платформа (деплой)",
+        "oauth": "OAuth",
+        "permissions": "Разрешения",
+        "api": "Facebook API",
+        "business": "Компании",
+        "pages": "Страницы",
+        "forms": "Формы",
+        "adAccounts": "Рекламные кабинеты",
+        "campaigns": "Кампании",
+        "webhook": "Webhook",
+        "worker": "Worker / Очередь",
+        "telegram": "Telegram"
+      },
+      "actions": {
+        "connect": "Подключить Meta",
+        "reconnect": "Переподключить Meta",
+        "syncPages": "Синхронизировать страницы",
+        "syncForms": "Синхронизировать формы",
+        "syncAdAccounts": "Синхронизировать кабинеты",
+        "syncCampaigns": "Синхронизировать кампании",
+        "syncBusinesses": "Синхронизировать компании",
+        "connectPages": "Подключить страницы",
+        "enableForms": "Включить формы",
+        "checkWebhook": "Проверить Webhook",
+        "testLead": "Тестовый лид",
+        "testTelegram": "Тест в Telegram",
+        "connectTelegram": "Подключить Telegram",
+        "adminSettings": "Настройки платформы",
+        "rerun": "Повторить все проверки"
+      },
+      "oauth": {
+        "metaApp": { "title": "Meta App", "meaning": "Приложение Meta для OAuth", "ok": "Настроено", "action": "Обратитесь к администратору платформы" },
+        "appSecret": { "title": "App Secret", "meaning": "Секрет приложения на сервере", "ok": "Настроено", "action": "Администратор должен проверить META_APP_SECRET" },
+        "loginConfig": { "title": "Login Configuration", "meaning": "Facebook Login for Business", "ok": "Настроено", "action": "Проверьте META_LOGIN_CONFIG_ID" },
+        "redirectUri": { "title": "Redirect URI", "meaning": "Адрес возврата после OAuth", "ok": "Настроен", "action": "Проверьте FACEBOOK_REDIRECT_URI" },
+        "oauthUrl": { "title": "OAuth URL", "meaning": "Ссылка для подключения Meta", "ok": "Собирается", "action": "Подключите Meta заново" },
+        "callback": { "title": "Callback", "meaning": "Маршрут обработки OAuth", "ok": "Доступен", "action": "—" },
+        "lastSuccess": { "title": "Последнее успешное подключение", "meaning": "Когда OAuth прошёл успешно", "ok": "Было", "action": "Подключите Meta" },
+        "lastError": { "title": "Последняя ошибка OAuth", "meaning": "Что пошло не так при подключении", "ok": "Ошибок нет", "action": "Попробуйте подключиться ещё раз" }
+      },
+      "permissions": {
+        "public_profile": { "title": "Профиль", "meaning": "Имя и фото Facebook-аккаунта", "ok": "Выдано", "warning": "Не выдано — переподключите Meta", "action": "Подтвердите доступ при подключении" },
+        "email": { "title": "Email", "meaning": "Email Facebook-аккаунта", "ok": "Выдано", "warning": "Не выдано", "action": "Переподключите Meta" },
+        "pages_show_list": { "title": "Список страниц", "meaning": "Без этого LeadBridge не увидит ваши страницы", "ok": "Выдано", "warning": "Не выдано — страницы не появятся", "action": "Переподключите и подтвердите доступ к страницам" },
+        "pages_read_engagement": { "title": "Чтение страниц", "meaning": "Доступ к данным страниц", "ok": "Выдано", "warning": "Не выдано", "action": "Переподключите Meta" },
+        "leads_retrieval": { "title": "Лиды", "meaning": "Критично для получения заявок из Lead Ads", "ok": "Выдано", "warning": "Не выдано — лиды не придут", "action": "Переподключите и разрешите доступ к лидам" },
+        "ads_read": { "title": "Реклама (чтение)", "meaning": "Нужно для аудита рекламы и кабинетов", "ok": "Выдано", "warning": "Не выдано", "action": "Переподключите Meta" },
+        "pages_manage_ads": { "title": "Реклама на страницах", "meaning": "Доступ к Lead Ads на страницах", "ok": "Выдано", "warning": "Не выдано", "action": "Переподключите Meta" },
+        "business_management": { "title": "Business Manager", "meaning": "Доступ к компаниям и активам", "ok": "Выдано", "warning": "Не выдано", "action": "Переподключите Meta" }
+      },
+      "api": {
+        "me": { "title": "/me", "meaning": "Профиль Facebook", "ok": "Отвечает", "action": "Переподключите Meta" },
+        "accounts": { "title": "/me/accounts", "meaning": "Страницы Facebook", "ok": "Отвечает", "action": "Синхронизируйте страницы" },
+        "businesses": { "title": "/me/businesses", "meaning": "Компании Business Manager", "ok": "Отвечает", "action": "Проверьте доступ в Business Manager" },
+        "adaccounts": { "title": "/me/adaccounts", "meaning": "Рекламные кабинеты", "ok": "Отвечает", "action": "Синхронизируйте кабинеты" }
+      },
+      "business": {
+        "count": { "title": "Количество компаний", "meaning": "Business Portfolio в аккаунте", "ok": "Найдены", "action": "Синхронизируйте компании" },
+        "primary": { "title": "Основная компания", "meaning": "Primary Business Portfolio", "ok": "Выбрана", "action": "Подключите Meta и синхронизируйте" }
+      },
+      "pages": {
+        "count": { "title": "Страницы", "meaning": "Всего страниц в аккаунте", "ok": "Есть", "action": "У выбранного Facebook-аккаунта нет доступных страниц" },
+        "connected": { "title": "Подключённые страницы", "meaning": "Страницы с активным webhook", "ok": "Подключены", "action": "Подключите хотя бы одну страницу" },
+        "lastSync": { "title": "Последняя синхронизация", "meaning": "Когда обновлялись страницы", "ok": "Недавно", "action": "Нажмите «Синхронизировать страницы»" },
+        "lastError": { "title": "Последняя ошибка", "meaning": "Проблема при работе со страницей", "ok": "Нет ошибок", "action": "Проверьте страницу в разделе «Страницы»" }
+      },
+      "forms": {
+        "count": { "title": "Формы", "meaning": "Lead Forms на страницах", "ok": "Найдены", "action": "Синхронизируйте формы" },
+        "active": { "title": "Активные формы", "meaning": "Формы со статусом Active в Meta", "ok": "Есть", "action": "Создайте Lead Form в Meta" },
+        "enabled": { "title": "Включённые в LeadBridge", "meaning": "Формы, с которых принимаем лиды", "ok": "Включены", "action": "Включите нужные формы" },
+        "lastSync": { "title": "Последняя синхронизация", "meaning": "Обновление списка форм", "ok": "Недавно", "action": "Синхронизируйте формы" },
+        "lastLead": { "title": "Последний лид", "meaning": "Когда приходила последняя заявка", "ok": "Был", "action": "Отправьте тестовый лид" }
+      },
+      "adAccounts": {
+        "count": { "title": "Рекламные кабинеты", "meaning": "Ad Accounts из Facebook", "ok": "Найдены", "action": "Проверьте доступ в Ads Manager" },
+        "primary": { "title": "Основной кабинет", "meaning": "Валюта и часовой пояс", "ok": "Настроен", "action": "Синхронизируйте кабинеты" },
+        "campaigns": { "title": "Кампании", "meaning": "Синхронизированные кампании", "ok": "Есть", "action": "Синхронизируйте кампании" }
+      },
+      "campaigns": {
+        "count": { "title": "Кампании", "meaning": "Всего в базе", "ok": "Есть", "action": "Синхронизируйте кампании" },
+        "lastSync": { "title": "Последняя синхронизация", "meaning": "Обновление кампаний", "ok": "Недавно", "action": "Синхронизируйте кампании" }
+      },
+      "webhook": {
+        "verified": { "title": "Webhook подтверждён", "meaning": "Meta успешно проверила URL", "ok": "Да", "action": "Webhook ещё не подтверждён — лиды не придут автоматически" },
+        "verifyToken": { "title": "Verify Token", "meaning": "Токен подтверждения webhook", "ok": "Настроен", "action": "Администратор должен проверить токен" },
+        "signature": { "title": "Проверка подписи", "meaning": "Защита от поддельных запросов", "ok": "Включена", "action": "—" },
+        "lastEvent": { "title": "Последний webhook", "meaning": "Когда Meta отправляла событие", "ok": "Был", "action": "Отправьте тестовый лид" },
+        "lastLeadgen": { "title": "Последний leadgen", "meaning": "ID последней заявки из Meta", "ok": "Получен", "action": "Проверьте форму и webhook" },
+        "errors": { "title": "Ошибки webhook", "meaning": "Неудачные события", "ok": "Нет", "action": "Откройте раздел Webhook" }
+      },
+      "worker": {
+        "redis": { "title": "Redis", "meaning": "Очередь обработки лидов", "ok": "Подключён", "action": "Свяжитесь с поддержкой — очередь недоступна" },
+        "queue": { "title": "Очередь", "meaning": "Готовность worker", "ok": "Готова", "action": "Проверьте Redis" },
+        "lastJob": { "title": "Последний лид", "meaning": "Последняя обработанная заявка", "ok": "Был", "action": "Дождитесь первого лида" },
+        "errors": { "title": "Ошибки очереди", "meaning": "Сбои обработки", "ok": "Нет", "action": "Проверьте логи" }
+      },
+      "telegram": {
+        "connected": { "title": "Telegram", "meaning": "Уведомления менеджерам", "ok": "Подключён", "action": "Подключите Telegram — иначе лиды не отправятся менеджеру" },
+        "lastMessage": { "title": "Последнее сообщение", "meaning": "Доставка в Telegram", "ok": "Успешно", "action": "Отправьте тест" },
+        "lastError": { "title": "Последняя ошибка", "meaning": "Проблема отправки", "ok": "Нет", "action": "Проверьте бота и Chat ID" }
+      },
+      "deployment": {
+        "nextAuthUrl": { "title": "NEXTAUTH_URL", "meaning": "Базовый URL приложения", "ok": "Настроен", "action": "Задайте NEXTAUTH_URL в .env" },
+        "redirectUri": { "title": "Redirect URI", "meaning": "Должен совпадать с Meta App", "ok": "Настроен", "action": "Проверьте FACEBOOK_REDIRECT_URI" },
+        "metaAppId": { "title": "META_APP_ID", "meaning": "ID приложения Meta", "ok": "Задан", "action": "Задайте META_APP_ID" },
+        "metaAppSecret": { "title": "META_APP_SECRET", "meaning": "Секрет приложения", "ok": "Задан", "action": "Задайте META_APP_SECRET" },
+        "metaLoginConfigId": { "title": "META_LOGIN_CONFIG_ID", "meaning": "Login Configuration ID", "ok": "Валиден", "action": "Проверьте META_LOGIN_CONFIG_ID" },
+        "metaWebhookVerifyToken": { "title": "Webhook Verify Token", "meaning": "Токен подтверждения webhook", "ok": "Задан", "action": "Задайте META_WEBHOOK_VERIFY_TOKEN" }
+      }
+    },
+    "connect": {
+      "title": "Подключение Meta",
+      "description": "Один клик — и LeadBridge получит доступ к страницам, лидам и рекламным кабинетам",
+      "helpKey": "connect",
+      "connectButton": "Подключить Meta",
+      "connecting": "Перенаправление…",
+      "connectedTitle": "Meta подключён",
+      "ctaTitle": "Подключите Meta",
+      "permissionsHint": "Meta запросит доступ к:",
+      "permPages": "Страницам Facebook",
+      "permLeads": "Лидам из Lead Ads",
+      "permAds": "Рекламным кабинетам (чтение)",
+      "permBusiness": "Business Manager"
+    },
+    "businesses": {
+      "title": "Компании",
+      "description": "Business Portfolio из вашего Facebook-аккаунта",
+      "connectFirst": "Сначала подключите Meta на шаге «Подключение»"
+    },
+    "adAccounts": {
+      "title": "Рекламные кабинеты",
+      "description": "Ad Accounts для аудита рекламы и атрибуции лидов",
+      "connectFirst": "Сначала подключите Meta",
+      "synced": "Кабинеты обновлены",
+      "syncFailed": "Не удалось синхронизировать кабинеты",
+      "campaignsSynced": "Кампании синхронизированы",
+      "campaignsSyncFailed": "Не удалось синхронизировать кампании"
+    },
+    "pages": {
+      "title": "Страницы",
+      "description": "Подключите страницы для webhook leadgen",
+      "connectFirst": "Сначала подключите Meta"
+    },
+    "forms": {
+      "title": "Формы",
+      "description": "Lead Forms — включите синхронизацию для нужных форм"
+    },
+    "leads": {
+      "title": "Лиды",
+      "description": "CRM лидов из Meta Lead Ads"
+    },
+    "audit": {
+      "title": "Аудит рекламы",
+      "description": "Расход, лиды, CPL и практические рекомендации"
+    },
+    "webhook": {
+      "title": "Webhook",
+      "description": "Статус webhook и тестовый лид",
+      "testLeadTitle": "Тестовый лид",
+      "testLeadDesc": "Создайте тестовую заявку в Meta Lead Ads Testing Tool — LeadBridge должен получить webhook в течение минуты."
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Уведомления менеджерам о новых лидах"
+    },
+    "diagnostics": {
+      "title": "Диагностика",
+      "description": "Проверка платформы, OAuth, API, БД, webhook и worker",
+      "refresh": "Обновить",
+      "loading": "Загрузка…",
+      "copied": "Скопировано",
+      "platformTitle": "Platform",
+      "oauthTitle": "OAuth",
+      "apiTitle": "Facebook API",
+      "databaseTitle": "Database",
+      "webhookTitle": "Webhook",
+      "workerTitle": "Worker",
+      "telegramTitle": "Telegram",
+      "oauthUrlGenerated": "OAuth URL сгенерирован",
+      "configIdValid": "Login Config ID валиден",
+      "redirectUriValid": "Redirect URI настроен",
+      "permissionsValid": "Разрешения",
+      "missing": "Не хватает",
+      "connectionExists": "Подключение в БД",
+      "businessesCount": "Компании",
+      "pagesCount": "Страницы",
+      "formsCount": "Формы",
+      "leadsCount": "Лиды",
+      "webhookVerified": "Webhook подтверждён",
+      "lastVerification": "Последняя верификация",
+      "lastLeadgenEvent": "Последний leadgen",
+      "never": "Никогда",
+      "redisConnected": "Redis",
+      "queueReady": "Очередь",
+      "failedJobs": "Ошибки webhook",
+      "telegramConnected": "Telegram",
+      "lastDelivery": "Последняя доставка",
+      "testTelegram": "Тестовое сообщение",
+      "telegramTestOk": "Сообщение отправлено",
+      "telegramTestFailed": "Не удалось отправить",
+      "copyRedirectUri": "Скопировать Redirect URI"
+    },
+    "adminPlatform": {
+      "title": "Platform → Meta App",
+      "subtitle": "Настройки Meta App на уровне платформы (только для администратора)",
+      "loading": "Загрузка…",
+      "refresh": "Обновить",
+      "metaAppTitle": "Meta App",
+      "metaAppId": "Meta App ID",
+      "metaAppSecret": "Meta App Secret",
+      "loginConfigId": "Login Configuration ID",
+      "webhookVerifyToken": "Webhook Verify Token",
+      "redirectUri": "OAuth Redirect URI",
+      "webhookUrl": "Webhook URL",
+      "configured": "Настроено",
+      "missing": "Не задано",
+      "copied": "Скопировано",
+      "checkOAuth": "Проверить OAuth",
+      "checkWebhook": "Проверить Webhook"
+    },
+    "help": {
+      "connect": "Подключение через Facebook Login for Business. LeadBridge запросит только нужные разрешения — без App Secret на вашей стороне.",
+      "business": "Business Portfolio — это компания в Meta Business Manager. Через неё управляют страницами, кабинетами и доступами.",
+      "adAccount": "Рекламный кабинет — место, где крутятся кампании Lead Ads. Нужен для аудита расхода и CPL.",
+      "page": "Страница Facebook — источник лидов. Без подключённой страницы webhook leadgen не сработает.",
+      "leadForm": "Lead Form — форма заявки в Lead Ads. Включите синхронизацию для форм, с которых хотите получать лиды.",
+      "webhook": "Webhook — мгновенное уведомление LeadBridge о новой заявке. Meta отправляет leadgen_id, мы забираем данные лида.",
+      "telegram": "Telegram доставляет новые лиды менеджеру в чат — без захода в кабинет.",
+      "audit": "Аудит показывает, тратит ли реклама бюджет эффективно и где теряются лиды.",
+      "diagnostics": "Техническая проверка для администратора и поддержки.",
+      "leads": "Все заявки из Meta с атрибуцией кампании и статусом обработки.",
+      "permissions": "Meta запрашивает pages, leads_retrieval, ads_read — без них интеграция не работает полностью.",
+      "pageMissing": "Страница может не отображаться, если у вашего Facebook-аккаунта нет роли на странице в Business Manager.",
+      "leadAccess": "В Business Manager → Страницы → Назначить людей → включите доступ к лидам (Leads access)."
+    },
+    "errors": {
+      "invalid_app_secret": {
+        "user": "Подключение Meta временно недоступно. Администратор уже уведомлён.",
+        "admin": "Invalid Meta App Secret. Check META_APP_SECRET."
+      },
+      "missing_permissions": {
+        "user": "Facebook подключён, но не выдал все нужные разрешения. Подключите Meta заново и подтвердите доступ.",
+        "admin": "Missing OAuth scopes. User must reconnect and grant leads_retrieval, ads_read, pages_show_list."
+      },
+      "no_pages": {
+        "user": "Страницы не найдены. Проверьте, что ваш Facebook аккаунт имеет доступ к странице в Business Manager.",
+        "admin": "Graph /me/accounts returned zero pages for this user token."
+      },
+      "no_ad_accounts": {
+        "user": "Рекламные кабинеты не найдены. Проверьте доступ в Ads Manager.",
+        "admin": "Graph /me/adaccounts returned zero accounts."
+      },
+      "webhook_not_verified": {
+        "user": "Webhook ещё не подтверждён в Meta. Обратитесь в поддержку — мы проверим настройки.",
+        "admin": "Webhook not verified. Check Callback URL and Verify Token in Meta App Dashboard."
+      },
+      "invalid_state": {
+        "user": "Сессия подключения устарела. Попробуйте подключиться заново.",
+        "admin": "OAuth state missing or expired in Redis."
+      },
+      "token_exchange_failed": {
+        "user": "Не удалось завершить подключение Meta. Попробуйте ещё раз или обратитесь в поддержку.",
+        "admin": "Token exchange failed. Check redirect URI and app credentials."
+      },
+      "redirect_uri_mismatch": {
+        "user": "Подключение Meta временно недоступно. Администратор уже уведомлён.",
+        "admin": "Redirect URI mismatch. FACEBOOK_REDIRECT_URI must match Meta App settings."
+      },
+      "oauth_failed": {
+        "user": "Не удалось подключить Meta. Попробуйте ещё раз.",
+        "admin": "OAuth callback failed. See SystemLog for details."
+      },
+      "oauth_exception": {
+        "user": "Meta временно отклонила подключение. Попробуйте подключиться ещё раз.",
+        "admin": "OAuthException from Meta Graph API. Check SystemLog and App Dashboard."
+      },
+      "unknown": {
+        "user": "Произошла ошибка при подключении Meta. Попробуйте ещё раз.",
+        "admin": "Unknown OAuth error. Check SystemLog."
+      }
+    }
+  },
   "metaAds": {
     "adAccountsTitle": "Рекламные кабинеты",
     "adAccountsDesc": "Ad Accounts вашего Facebook-аккаунта (изолированы по userId)",
@@ -838,7 +1258,22 @@
       "low_ctr": "Низкий CTR — объявления могут быть нерелевантны",
       "leads_without_forms": "Лиды есть, но формы LeadBridge не включены",
       "webhook_not_connected": "Страницы не подключены — webhook leadgen не активен",
-      "telegram_not_connected": "Telegram не подключён — лиды не доставляются"
+      "telegram_not_connected": "Telegram не подключён — лиды не доставляются менеджеру"
+    },
+    "kpiImpressions": "Показы",
+    "kpiClicks": "Клики",
+    "kpiReach": "Охват",
+    "recommendationsTitle": "Что сделать дальше",
+    "recommendationsSubtitle": "Практические шаги без маркетингового жаргона",
+    "recommendations": {
+      "spendWithoutLeads": "Есть расход, но нет лидов — проверьте форму, посадочную и оффер. Возможно, объявление кликают, но не оставляют заявку.",
+      "highCpl": "Слишком дорогой лид — сузьте аудиторию или протестируйте новый креатив.",
+      "lowCtr": "Мало кликов — заголовок и картинка могут быть нерелевантны. Попробуйте другой текст или изображение.",
+      "leadsWithoutForms": "Meta отдаёт лиды, но формы в LeadBridge не включены — включите нужные формы в разделе «Формы».",
+      "webhookNotConnected": "Подключите страницу и дождитесь подтверждения webhook — иначе лиды не придут автоматически.",
+      "telegramNotConnected": "Подключите Telegram — иначе менеджер не узнает о новой заявке сразу.",
+      "allGood": "По выбранному периоду критичных проблем не видно. Продолжайте следить за CPL и качеством лидов.",
+      "reviewCampaigns": "Просмотрите кампании с наибольшим расходом и сравните CPL между ними."
     }
   },
   "theme": {

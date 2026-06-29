@@ -36,6 +36,41 @@ export type DebugTokenResult = {
   error?: string;
 };
 
+export type FacebookOAuthUrlParts = {
+  clientId: string;
+  redirectUri: string;
+  configId: string | null;
+  scopes: string;
+};
+
+/** Build OAuth query params; config_id only when a valid Login Configuration ID is resolved. */
+export function buildFacebookOAuthParams(
+  parts: FacebookOAuthUrlParts & { state?: string }
+): URLSearchParams {
+  const params = new URLSearchParams({
+    client_id: parts.clientId,
+    redirect_uri: parts.redirectUri,
+    response_type: "code",
+    scope: parts.scopes,
+  });
+
+  if (parts.state) {
+    params.set("state", parts.state);
+  }
+
+  if (parts.configId && isValidMetaLoginConfigId(parts.configId)) {
+    params.set("config_id", parts.configId);
+  }
+
+  return params;
+}
+
+export function buildFacebookOAuthUrl(
+  parts: FacebookOAuthUrlParts & { state?: string }
+): string {
+  return `${META_OAUTH_DIALOG_BASE}?${buildFacebookOAuthParams(parts)}`;
+}
+
 export async function getFacebookAuthUrl(
   userId: string,
   state: string
@@ -44,34 +79,31 @@ export async function getFacebookAuthUrl(
   if (!creds) {
     throw new Error("Meta App not configured");
   }
-  const redirectUri = getRedirectUri();
+
   const configId = await getLoginConfigId(userId);
 
-  const params = new URLSearchParams({
-    client_id: creds.appId,
-    redirect_uri: redirectUri,
+  return buildFacebookOAuthUrl({
+    clientId: creds.appId,
+    redirectUri: getRedirectUri(),
+    configId,
+    scopes: FB_SCOPES,
     state,
-    response_type: "code",
   });
-
-  if (configId) {
-    // Facebook Login for Business — permissions come from the configuration
-    params.set("config_id", configId);
-    // Explicit scopes as supplement (Meta may merge with config permissions)
-    params.set("scope", FB_SCOPES);
-  } else {
-    params.set("scope", FB_SCOPES);
-  }
-
-  return `${META_OAUTH_DIALOG_BASE}?${params}`;
 }
 
 export type OAuthUrlPreview = {
   appId: string;
   redirectUri: string;
   scopes: string;
+  configId: string | null;
+  configIdPresent: boolean;
+  configIdValid: boolean;
+  oauthUrl: string;
+  /** @deprecated use configId */
   loginConfigIdUsed: string | null;
+  /** @deprecated use configIdValid */
   isLoginConfigIdValid: boolean;
+  /** @deprecated use oauthUrl */
   oauthUrlPreview: string;
 };
 
@@ -84,50 +116,66 @@ export async function buildOAuthUrlPreview(
 
   const redirectUri = getRedirectUri();
   const configId = await getLoginConfigId(userId);
-  const isLoginConfigIdValid = configId ? isValidMetaLoginConfigId(configId) : false;
-
-  const params = new URLSearchParams({
-    client_id: creds.appId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: FB_SCOPES,
+  const configIdValid = configId ? isValidMetaLoginConfigId(configId) : false;
+  const oauthUrl = buildFacebookOAuthUrl({
+    clientId: creds.appId,
+    redirectUri,
+    configId,
+    scopes: FB_SCOPES,
   });
-  if (configId && isLoginConfigIdValid) {
-    params.set("config_id", configId);
-  }
 
   return {
     appId: creds.appId,
     redirectUri,
     scopes: FB_SCOPES,
+    configId,
+    configIdPresent: !!configId,
+    configIdValid,
+    oauthUrl,
     loginConfigIdUsed: configId,
-    isLoginConfigIdValid,
-    oauthUrlPreview: `${META_OAUTH_DIALOG_BASE}?${params}`,
+    isLoginConfigIdValid: configIdValid,
+    oauthUrlPreview: oauthUrl,
   };
 }
 
-/** Log OAuth URL shape without secrets (for support/debug). */
-export async function logOAuthUrlPreview(userId: string, state: string): Promise<void> {
-  const creds = await getMetaCredentials(userId);
-  if (!creds) return;
-  const redirectUri = getRedirectUri();
-  const configId = await getLoginConfigId(userId);
+/** Log OAuth redirect parameters before user leaves for Meta (never log state). */
+export async function logFacebookOAuthUrlGenerated(
+  userId: string,
+  parts: FacebookOAuthUrlParts
+): Promise<void> {
+  const configIdUsed =
+    parts.configId && isValidMetaLoginConfigId(parts.configId)
+      ? parts.configId
+      : null;
 
   await writeSystemLog({
     userId,
     level: "info",
     source: "facebook",
-    action: "oauth.url_preview",
-    message: "Facebook OAuth URL prepared",
+    action: "oauth.url_generated",
+    message: "Facebook OAuth URL generated",
     metadata: {
-      clientId: creds.appId,
-      redirectUri,
-      hasConfigId: !!configId,
-      configIdLength: configId?.length ?? 0,
-      scopes: FB_SCOPES,
-      stateLength: state.length,
+      client_id: parts.clientId,
+      redirect_uri: parts.redirectUri,
+      config_id: configIdUsed,
+      has_config_id: !!configIdUsed,
+      scopes: parts.scopes,
     },
   });
+}
+
+/** @deprecated use logFacebookOAuthUrlGenerated */
+export async function logOAuthUrlPreview(userId: string, state: string): Promise<void> {
+  const creds = await getMetaCredentials(userId);
+  if (!creds) return;
+  const configId = await getLoginConfigId(userId);
+  await logFacebookOAuthUrlGenerated(userId, {
+    clientId: creds.appId,
+    redirectUri: getRedirectUri(),
+    configId,
+    scopes: FB_SCOPES,
+  });
+  void state;
 }
 
 export async function exchangeCodeForToken(

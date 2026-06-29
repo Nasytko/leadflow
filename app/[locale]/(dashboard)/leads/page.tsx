@@ -1,5 +1,10 @@
-import { LeadsContent } from "@/components/leads/leads-content";
+import { redirect } from "next/navigation";
 
-export default function LeadsPage() {
-  return <LeadsContent />;
+export default async function LeadsRedirectPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/meta/leads`);
 }

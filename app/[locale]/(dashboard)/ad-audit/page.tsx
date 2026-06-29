@@ -1,10 +1,10 @@
-import { Suspense } from "react";
-import { AdAuditContent } from "@/components/meta/ad-audit-content";
+import { redirect } from "next/navigation";
 
-export default function AdAuditPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AdAuditContent />
-    </Suspense>
-  );
+export default async function AdAuditRedirectPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/meta/audit`);
 }

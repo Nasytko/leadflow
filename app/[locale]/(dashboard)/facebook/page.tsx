@@ -1,10 +1,10 @@
-import { Suspense } from "react";
-import { FacebookContent } from "@/components/facebook/facebook-content";
+import { redirect } from "next/navigation";
 
-export default function FacebookPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <FacebookContent />
-    </Suspense>
-  );
+export default async function FacebookPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/meta/connect`);
 }

@@ -50,6 +50,7 @@ function parseOAuthErrorLog(log: {
 /** Normalize legacy / alias error codes for UI mapping. */
 export function normalizeOAuthErrorReason(code: string): string {
   if (code === "invalid_client_secret") return "invalid_app_secret";
+  if (code.toLowerCase().includes("oauthexception")) return "oauth_exception";
   return code;
 }
 

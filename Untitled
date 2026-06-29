@@ -1,0 +1,399 @@
+Ты — Senior SaaS Product Architect, Senior Fullstack Developer, Meta Marketing API specialist и Performance Marketing consultant.
+
+Проект: LeadBridge.
+
+Цель:
+Превратить текущую Facebook-интеграцию в полноценный, понятный и масштабируемый Meta Integration Center для SaaS-продукта.
+
+Продукт должен быть простым для обычного пользователя:
+- пользователь не видит App ID, App Secret, Webhook Verify Token;
+- пользователь просто нажимает “Подключить Meta”;
+- дальше видит понятный пошаговый мастер;
+- если что-то не работает — интерфейс объясняет проблему человеческим языком;
+- технические ошибки видны только админу.
+
+========================
+1. Продуктовая структура
+========================
+
+Сделать новый центр:
+
+Meta Center
+
+Разделы:
+1. Обзор
+2. Подключение Meta
+3. Компании
+4. Рекламные кабинеты
+5. Страницы
+6. Формы
+7. Лиды
+8. Аудит рекламы
+9. Webhook
+10. Telegram
+11. Диагностика
+
+Обычный пользователь должен видеть понятный путь:
+Подключить Meta → выбрать компанию → выбрать рекламный кабинет → выбрать страницы → выбрать формы → подключить Telegram → получить тестовый лид → открыть аудит рекламы.
+
+========================
+2. Onboarding Wizard
+========================
+
+Сделать пошаговый мастер:
+
+Шаг 1: Подключить Meta
+- кнопка “Подключить Meta”
+- показать что будет запрошено: страницы, лиды, рекламные кабинеты
+
+Шаг 2: Компания
+- список Business Portfolio
+- логотип
+- название
+- verification status
+- подсказка если компания не найдена
+
+Шаг 3: Рекламный кабинет
+- список ad accounts
+- статус
+- валюта
+- timezone
+- кнопка “Синхронизировать кампании”
+
+Шаг 4: Страницы
+- список pages
+- avatar
+- tasks/permissions
+- webhook status
+- кнопка “Подключить страницу”
+
+Шаг 5: Формы
+- все формы, не только ACTIVE
+- статус Meta
+- количество лидов
+- последний лид
+- переключатель синхронизации
+
+Шаг 6: Telegram
+- подключение Telegram
+- тестовое сообщение
+
+Шаг 7: Тестовый лид
+- инструкция как создать тестовый lead в Meta Lead Ads Testing Tool
+- диагностика последнего webhook
+- статус worker/queue
+
+Шаг 8: Аудит рекламы
+- выбор рекламного кабинета
+- период
+- запуск анализа
+
+========================
+3. Dashboard “Всё работает?”
+========================
+
+Сделать status cards:
+
+Meta OAuth
+- connected / not connected
+- account name
+- last check
+
+Permissions
+- granted permissions
+- missing permissions
+- warning если не хватает ads_read/leads_retrieval
+
+Businesses
+- count
+- selected business
+
+Ad Accounts
+- count
+- selected account
+
+Pages
+- count
+- connected pages
+
+Forms
+- total forms
+- enabled forms
+
+Webhook
+- verified
+- last webhook time
+- last leadgen_id
+
+Telegram
+- connected
+- last delivery status
+
+Worker / Queue
+- worker ready
+- failed jobs count
+- last processed lead
+
+Каждая карточка должна иметь:
+- зелёный/жёлтый/красный статус
+- короткое объяснение
+- кнопку “Исправить” или “Подробнее”
+
+========================
+4. Human-readable errors
+========================
+
+Сделать слой user-friendly ошибок.
+
+Примеры:
+
+invalid_app_secret:
+User message:
+“Подключение Meta временно недоступно. Администратор уже уведомлён.”
+Admin message:
+“Invalid Meta App Secret. Check META_APP_SECRET.”
+
+missing_permissions:
+“Facebook подключён, но не выдал все нужные разрешения. Подключите Meta заново и подтвердите доступ.”
+
+no_pages:
+“Страницы не найдены. Проверьте, что ваш Facebook аккаунт имеет доступ к странице в Business Manager.”
+
+no_ad_accounts:
+“Рекламные кабинеты не найдены. Проверьте доступ в Ads Manager.”
+
+webhook_not_verified:
+“Webhook ещё не подтверждён в Meta. Проверьте Callback URL и Verify Token.”
+
+invalid_state:
+“Сессия подключения устарела. Попробуйте подключиться заново.”
+
+token_exchange_failed:
+“Не удалось завершить подключение Meta. Попробуйте ещё раз или обратитесь в поддержку.”
+
+========================
+5. Diagnostics Center
+========================
+
+Добавить страницу /diagnostics или /meta/diagnostics.
+
+Проверки:
+
+Platform:
+- NEXTAUTH_URL
+- FACEBOOK_REDIRECT_URI
+- META_APP_ID present
+- META_APP_SECRET present
+- META_LOGIN_CONFIG_ID present
+- META_WEBHOOK_VERIFY_TOKEN present
+
+OAuth:
+- auth URL generated
+- redirect URI valid
+- config_id valid numeric
+- last callback attempt
+- last successful token exchange
+- last OAuth error
+
+Facebook API:
+- /me works
+- /me/businesses works
+- /me/accounts works
+- /me/adaccounts works
+- permissions valid
+
+Database:
+- connection exists
+- businesses count
+- pages count
+- forms count
+- leads count
+
+Webhook:
+- verify token matches
+- last verification
+- last leadgen event
+- signature validation status
+
+Worker:
+- Redis connected
+- queue ready
+- failed jobs
+- last job processed
+
+Telegram:
+- bot configured
+- last send status
+- test message button
+
+========================
+6. Ad Audit UX
+========================
+
+Страница “Аудит рекламы” должна быть понятной маркетологу.
+
+Показать KPI:
+- Расход
+- Лиды
+- CPL
+- CTR
+- CPM
+- CPC
+- Показы
+- Клики
+- Охват
+
+Показать выводы:
+- “Есть расход без лидов”
+- “Высокий CPL”
+- “Низкий CTR”
+- “Кампания тратит бюджет, но не даёт заявок”
+- “Форма получает лиды, но webhook не включён”
+- “Telegram не подключён — лиды не отправляются менеджеру”
+
+Добавить блок “Что сделать дальше”:
+- 3–5 практических рекомендаций
+- простым языком
+- без сложного маркетингового жаргона
+
+========================
+7. Lead CRM
+========================
+
+Улучшить страницу лидов:
+
+Колонки:
+- дата
+- имя
+- телефон
+- email
+- страница
+- форма
+- campaign
+- adset
+- ad
+- статус
+- отправлен в Telegram
+- менеджер
+- примечание
+
+Статусы:
+- новый
+- в работе
+- связались
+- квалифицирован
+- продажа
+- отказ
+- дубль
+
+Фичи:
+- фильтр по форме
+- фильтр по странице
+- фильтр по статусу
+- фильтр по дате
+- поиск по телефону/email
+- кнопка “Отметить обработанным”
+- заметка менеджера
+- экспорт CSV
+
+========================
+8. Multi-tenant safety
+========================
+
+Проверить все API.
+
+Каждый запрос должен быть ограничен userId.
+
+Пользователь A не может видеть:
+- businesses User B
+- ad accounts User B
+- pages User B
+- forms User B
+- leads User B
+- diagnostics User B
+- Telegram settings User B
+
+Webhook должен определять userId через pageId/formId.
+
+========================
+9. Admin Platform Settings
+========================
+
+Добавить admin-only страницу:
+
+Settings → Platform → Meta App
+
+Поля:
+- Meta App ID
+- Meta App Secret status only, без показа секрета
+- Login Configuration ID
+- Webhook Verify Token status only
+- OAuth Redirect URI readonly
+- Webhook URL readonly
+
+Кнопки:
+- Проверить Meta App
+- Проверить OAuth URL
+- Проверить Webhook
+- Проверить permissions
+- Скопировать redirect URI
+- Скопировать webhook URL
+
+Обычные пользователи эту страницу не видят.
+
+========================
+10. Documentation in app
+========================
+
+Добавить короткие подсказки в UI:
+
+Что такое Business Portfolio?
+Что такое рекламный кабинет?
+Что такое страница?
+Что такое Lead Form?
+Что такое Webhook?
+Почему нужны разрешения?
+Почему страница может не отображаться?
+Как дать доступ к лидам в Business Manager?
+
+Подсказки должны быть короткими, понятными и полезными.
+
+========================
+11. Product polish
+========================
+
+Сделать интерфейс приятным:
+- один главный CTA на каждом шаге
+- пустые состояния с объяснением
+- понятные success/error состояния
+- progress bar
+- красивые cards
+- copy buttons
+- skeleton loading
+- retry buttons
+- “last synced” labels
+- “sync now” buttons
+
+========================
+12. Acceptance criteria
+========================
+
+После реализации:
+
+- npm run build проходит
+- npm run security:check проходит
+- npx prisma validate проходит
+- пользователь может подключить Meta
+- видит компании
+- видит рекламные кабинеты
+- видит страницы
+- видит формы
+- может включить формы
+- может получить тестовый лид
+- лид приходит в LeadBridge
+- лид отправляется в Telegram
+- аудит рекламы открывается
+- ошибки показываются понятным языком
+- технические детали доступны админу
+- обычный пользователь не видит App Secret / App ID
+- все API защищены userId

@@ -5,9 +5,11 @@ import { showAdvancedMetaSettings } from "@/lib/deployment";
 import {
   normalizeMetaLoginConfigId,
   validateMetaLoginConfigIdInput,
+  isValidMetaLoginConfigId,
 } from "@/lib/meta-login-config";
 import { resetFacebookConnection } from "@/services/facebook.service";
 import { writeSystemLog } from "@/lib/system-log";
+import { META_GRAPH_API_BASE } from "@/lib/facebook-graph-config";
 
 export type MetaCredentials = {
   appId: string;
@@ -91,13 +93,49 @@ export async function getIntegrationSettingsPublic(userId: string) {
   };
 }
 
-function getEnvLoginConfigId(): string | null {
+/** Raw META_LOGIN_CONFIG_ID from env (may be invalid — not used in OAuth URL). */
+export function getEnvLoginConfigIdRaw(): string | null {
   const id =
     process.env.META_LOGIN_CONFIG_ID ??
     process.env.FACEBOOK_LOGIN_CONFIG_ID ??
     "";
-  if (!id || isPlaceholder(id)) return null;
-  return normalizeMetaLoginConfigId(id);
+  const trimmed = id?.trim() ?? "";
+  if (!trimmed || isPlaceholder(trimmed)) return null;
+  return trimmed;
+}
+
+function getEnvLoginConfigId(): string | null {
+  const raw = getEnvLoginConfigIdRaw();
+  if (!raw) return null;
+  const normalized = normalizeMetaLoginConfigId(raw);
+  if (!normalized && raw) {
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        source: "facebook",
+        action: "oauth.invalid_env_config_id",
+        message:
+          "META_LOGIN_CONFIG_ID is set but invalid (must be numeric 5–20 digits). Using standard OAuth without config_id.",
+      })
+    );
+  }
+  return normalized;
+}
+
+export function getPlatformLoginConfigStatus(): {
+  configId: string | null;
+  configIdPresent: boolean;
+  configIdValid: boolean;
+  envRaw: string | null;
+} {
+  const envRaw = getEnvLoginConfigIdRaw();
+  const configId = getEnvLoginConfigId();
+  return {
+    envRaw,
+    configId,
+    configIdPresent: !!configId,
+    configIdValid: configId ? isValidMetaLoginConfigId(configId) : false,
+  };
 }
 
 export async function getLoginConfigId(userId: string): Promise<string | null> {
@@ -236,7 +274,7 @@ export async function validateMetaCredentials(
   try {
     const appToken = `${appId}|${appSecret}`;
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/${appId}?fields=id,name&access_token=${appToken}`
+      `${META_GRAPH_API_BASE}/${appId}?fields=id,name&access_token=${appToken}`
     );
     const data = await res.json();
     if (!res.ok || data.error) {

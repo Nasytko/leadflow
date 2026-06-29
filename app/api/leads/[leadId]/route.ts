@@ -7,19 +7,25 @@ import {
 } from "@/services/lead.service";
 import { mapLeadPublic } from "@/lib/lead-mapper";
 
-const patchSchema = z.object({
-  action: z.enum([
-    "set_new",
-    "set_contacted",
-    "set_qualified",
-    "set_converted",
-    "set_rejected",
-    "set_in_progress",
-    "set_processed",
-    "resend_telegram",
-  ]),
-  managerNote: z.string().optional(),
-});
+const patchSchema = z
+  .object({
+    action: z
+      .enum([
+        "set_new",
+        "set_contacted",
+        "set_qualified",
+        "set_converted",
+        "set_rejected",
+        "set_in_progress",
+        "set_processed",
+        "resend_telegram",
+      ])
+      .optional(),
+    managerNote: z.string().optional(),
+  })
+  .refine((data) => data.action || data.managerNote !== undefined, {
+    message: "action or managerNote required",
+  });
 
 export async function GET(
   request: Request,
@@ -75,7 +81,7 @@ export async function PATCH(
   try {
     if (parsed.data.action === "resend_telegram") {
       await resendLeadToTelegram(userId, leadId);
-    } else {
+    } else if (parsed.data.action) {
       const statusMap = {
         set_new: "new",
         set_contacted: "contacted",
@@ -91,6 +97,11 @@ export async function PATCH(
         statusMap[parsed.data.action],
         parsed.data.managerNote
       );
+    } else if (parsed.data.managerNote !== undefined) {
+      await prisma.lead.updateMany({
+        where: { id: leadId, userId },
+        data: { managerNote: parsed.data.managerNote },
+      });
     }
 
     const lead = await prisma.lead.findFirst({
