@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, checkRateLimit, apiSuccess, apiError, requireCsrf } from "@/lib/api-helpers";
+import { logAdminAction } from "@/lib/admin-auth";
+import {
+  createEmailVerificationToken,
+  sendVerificationEmail,
+} from "@/lib/email-verification";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -9,7 +14,7 @@ export async function GET(request: Request) {
   const rateLimitError = await checkRateLimit(request, authResult.session.user.id);
   if (rateLimitError) return rateLimitError;
 
-  const users = await prisma.user.findMany({
+  const users = await     prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,
     select: {
@@ -21,6 +26,8 @@ export async function GET(request: Request) {
       createdAt: true,
       lastLoginAt: true,
       emailVerifiedAt: true,
+      facebookConnection: { select: { status: true } },
+      telegramConnection: { select: { status: true } },
       _count: {
         select: {
           facebookPages: true,
@@ -30,12 +37,6 @@ export async function GET(request: Request) {
     },
   });
 
-  const formsCountByUser = await prisma.facebookForm.groupBy({
-    by: ["pageId"],
-    _count: { _all: true },
-  }).catch(() => []);
-
-  // lightweight: forms per user via page relation
   const pages = await prisma.facebookPage.findMany({
     select: { id: true, userId: true },
   });
@@ -52,7 +53,16 @@ export async function GET(request: Request) {
 
   return apiSuccess({
     users: users.map((u) => ({
-      ...u,
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      status: u.status,
+      isAdmin: u.isAdmin,
+      createdAt: u.createdAt,
+      lastLoginAt: u.lastLoginAt,
+      emailVerifiedAt: u.emailVerifiedAt,
+      facebookConnected: u.facebookConnection?.status === "connected",
+      telegramConnected: u.telegramConnection?.status === "connected",
       pagesCount: u._count.facebookPages,
       leadsCount: u._count.leads,
       formsCount: formsByUser.get(u.id) ?? 0,
@@ -61,7 +71,15 @@ export async function GET(request: Request) {
 }
 
 const patchSchema = z.object({
-  action: z.enum(["approve", "block", "unblock", "make_admin", "remove_admin"]),
+  action: z.enum([
+    "approve",
+    "block",
+    "unblock",
+    "make_admin",
+    "remove_admin",
+    "verify_email",
+    "resend_verification",
+  ]),
 });
 
 export async function PATCH(request: Request) {
@@ -93,7 +111,7 @@ export async function PATCH(request: Request) {
 
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { emailVerifiedAt: true, isAdmin: true },
+    select: { emailVerifiedAt: true, isAdmin: true, email: true, status: true },
   });
   if (!target) return apiError("NOT_FOUND", "User not found", 404);
 
@@ -107,6 +125,35 @@ export async function PATCH(request: Request) {
   if (parsed.data.action === "block") data.status = "blocked";
   if (parsed.data.action === "unblock") data.status = "active";
   if (parsed.data.action === "make_admin") data.isAdmin = true;
+  if (parsed.data.action === "verify_email") {
+    data.emailVerifiedAt = new Date();
+    if (target.status === "pending_email_verification") data.status = "active";
+  }
+  if (parsed.data.action === "resend_verification") {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, locale: true },
+    });
+    if (!user) return apiError("NOT_FOUND", "User not found", 404);
+    const { verifyUrl } = await createEmailVerificationToken({
+      userId,
+      email: user.email,
+      locale: user.locale as "ru" | "en",
+    });
+    await sendVerificationEmail({
+      to: user.email,
+      locale: user.locale as "ru" | "en",
+      verifyUrl,
+    });
+    await logAdminAction({
+      adminUserId: actorId,
+      action: "resend_verification",
+      resource: userId,
+      metadata: { targetEmail: target.email },
+      request,
+    });
+    return apiSuccess({ sent: true });
+  }
   if (parsed.data.action === "remove_admin") {
     if (target.isAdmin) {
       const adminCount = await prisma.user.count({ where: { isAdmin: true } });
@@ -120,7 +167,15 @@ export async function PATCH(request: Request) {
   const updated = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, email: true, status: true, isAdmin: true },
+    select: { id: true, email: true, status: true, isAdmin: true, emailVerifiedAt: true },
+  });
+
+  await logAdminAction({
+    adminUserId: actorId,
+    action: `user_${parsed.data.action}`,
+    resource: userId,
+    metadata: { email: updated.email },
+    request,
   });
 
   return apiSuccess({ user: updated });

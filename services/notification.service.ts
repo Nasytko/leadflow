@@ -1,3 +1,7 @@
+import type { TelegramMessageTemplateSettings } from "@/lib/telegram-template-settings";
+import { DEFAULT_TELEGRAM_TEMPLATE_SETTINGS } from "@/lib/telegram-template-settings";
+import { renderTelegramMessage } from "@/lib/telegram-template-renderer";
+
 type NotificationLocale = "ru" | "en";
 
 export type { NotificationLocale };
@@ -20,99 +24,18 @@ export type TelegramLeadContext = {
 
 export function buildTelegramMessage(
   locale: NotificationLocale,
-  params: TelegramLeadContext
+  params: TelegramLeadContext,
+  settings: TelegramMessageTemplateSettings = DEFAULT_TELEGRAM_TEMPLATE_SETTINGS
 ): string {
-  const {
-    formName,
-    name,
-    phone,
-    email,
-    createdTime,
-    allFields,
-    pageName,
-    businessName,
-    campaignName,
-    adsetName,
-    adName,
-    source,
-    leadgenId,
-  } = params;
-
-  const standardFields = new Set([
-    "full_name", "name", "email", "phone_number", "phone",
-    "имя", "телефон", "почта", "email_address",
-  ]);
-
-  const additionalFields = Object.entries(allFields)
-    .filter(([key]) => !standardFields.has(key.toLowerCase()))
-    .map(([key, value]) => `• ${key}: ${escapeHtml(value)}`)
-    .join("\n");
-
-  const sourceLabel =
-    source === "manual_import"
-      ? locale === "en"
-        ? "Historical import"
-        : "Исторический импорт"
-      : locale === "en"
-      ? "Webhook (real-time)"
-      : "Webhook (real-time)";
-
-  const attribution = [
-    pageName ? (locale === "en" ? `📄 Page: ${escapeHtml(pageName)}` : `📄 Страница: ${escapeHtml(pageName)}`) : null,
-    businessName ? (locale === "en" ? `🏢 Business: ${escapeHtml(businessName)}` : `🏢 Компания: ${escapeHtml(businessName)}`) : null,
-    campaignName ? (locale === "en" ? `📣 Campaign: ${escapeHtml(campaignName)}` : `📣 Кампания: ${escapeHtml(campaignName)}`) : null,
-    adsetName ? (locale === "en" ? `🎯 Ad set: ${escapeHtml(adsetName)}` : `🎯 Группа объявлений: ${escapeHtml(adsetName)}`) : null,
-    adName ? (locale === "en" ? `📢 Ad: ${escapeHtml(adName)}` : `📢 Объявление: ${escapeHtml(adName)}`) : null,
-  ].filter(Boolean);
-
-  if (locale === "en") {
-    return [
-      "🔥 <b>New Facebook Lead</b>",
-      "",
-      `📋 Form: <b>${escapeHtml(formName)}</b>`,
-      ...attribution,
-      "",
-      `👤 Name: ${escapeHtml(name || "—")}`,
-      `📞 Phone: ${escapeHtml(phone || "—")}`,
-      `📧 Email: ${escapeHtml(email || "—")}`,
-      "",
-      `📅 Date: ${escapeHtml(createdTime)}`,
-      `🔗 Source: ${escapeHtml(sourceLabel)}`,
-      leadgenId ? `🆔 Lead ID: <code>${escapeHtml(leadgenId)}</code>` : null,
-      "",
-      "📝 <b>Additional Fields:</b>",
-      additionalFields || "—",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  }
-
-  return [
-    "🔥 <b>Новый лид Facebook</b>",
-    "",
-    `📋 Форма: <b>${escapeHtml(formName)}</b>`,
-    ...attribution,
-    "",
-    `👤 Имя: ${escapeHtml(name || "—")}`,
-    `📞 Телефон: ${escapeHtml(phone || "—")}`,
-    `📧 Email: ${escapeHtml(email || "—")}`,
-    "",
-    `📅 Дата: ${escapeHtml(createdTime)}`,
-    `🔗 Источник: ${escapeHtml(sourceLabel)}`,
-    leadgenId ? `🆔 Lead ID: <code>${escapeHtml(leadgenId)}</code>` : null,
-    "",
-    "📝 <b>Дополнительные поля:</b>",
-    additionalFields || "—",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return renderTelegramMessage(locale, params, settings).html;
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+export function buildTelegramMessageWithButtons(
+  locale: NotificationLocale,
+  params: TelegramLeadContext,
+  settings: TelegramMessageTemplateSettings = DEFAULT_TELEGRAM_TEMPLATE_SETTINGS
+) {
+  return renderTelegramMessage(locale, params, settings);
 }
 
 export function formatLeadCreatedTime(

@@ -46,8 +46,7 @@ type NavItem = (typeof navGroups)[number]["items"][number];
 
 const allNavItems: NavItem[] = navGroups.flatMap((g) => [...g.items]);
 const adminNavItems = [
-  { href: "/admin/users", icon: Shield, key: "admin" } as const,
-  { href: "/admin/platform", icon: Settings, key: "adminPlatform" } as const,
+  { href: "/admin", icon: Shield, key: "adminCenter" } as const,
 ];
 
 function NavLink({

@@ -10,11 +10,15 @@ import {
   findPageByFacebookId,
 } from "./facebook.service";
 import {
-  buildTelegramMessage,
+  buildTelegramMessageWithButtons,
   formatLeadCreatedTime,
   extractLeadFromFacebookData,
 } from "./notification.service";
-import { sendTelegramMessage } from "./telegram.service";
+import {
+  sendTelegramMessage,
+  buildTelegramInlineKeyboard,
+} from "./telegram.service";
+import { parseTelegramTemplateSettings } from "@/lib/telegram-template-settings";
 import { extractLeadAttribution } from "@/lib/lead-mapper";
 import { resolveLeadAttributionLinks } from "@/services/meta-ads.service";
 
@@ -298,8 +302,9 @@ async function deliverToTelegram(
 
   const botToken = decrypt(telegram.botTokenEncrypted);
   const locale = (telegram.notificationLocale as "ru" | "en") ?? "ru";
+  const templateSettings = parseTelegramTemplateSettings(telegram.messageTemplateSettings);
 
-  const message = buildTelegramMessage(locale, {
+  const rendered = buildTelegramMessageWithButtons(locale, {
     formName: leadInfo.formName,
     name: leadInfo.name,
     phone: leadInfo.phone,
@@ -313,7 +318,8 @@ async function deliverToTelegram(
     adName: leadInfo.adName,
     source: leadInfo.source,
     leadgenId: leadInfo.leadgenId,
-  });
+  }, templateSettings);
+  const message = rendered.html;
 
   let deliveryLog = existingDeliveryLogId
     ? await prisma.deliveryLog.findFirst({
@@ -349,7 +355,9 @@ async function deliverToTelegram(
     });
   }
 
-  const result = await sendTelegramMessage(botToken, telegram.chatId, message);
+  const result = await sendTelegramMessage(botToken, telegram.chatId, message, {
+    inlineKeyboard: buildTelegramInlineKeyboard(rendered.inlineButtons),
+  });
 
   if (result.ok) {
     await prisma.deliveryLog.update({

@@ -14,6 +14,7 @@ import {
   BarChart3,
   Webhook,
   Send,
+  MessageSquare,
   Stethoscope,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/meta/audit", icon: BarChart3, key: "audit" },
   { href: "/meta/webhook", icon: Webhook, key: "webhook" },
   { href: "/meta/telegram", icon: Send, key: "telegram" },
+  { href: "/meta/telegram/messages", icon: MessageSquare, key: "telegramMessages" },
   { href: "/meta/health", icon: Stethoscope, key: "health" },
 ] as const;
 

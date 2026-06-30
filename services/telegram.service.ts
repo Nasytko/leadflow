@@ -1,5 +1,10 @@
 import { decrypt, encrypt } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
+import {
+  parseTelegramTemplateSettings,
+  type TelegramMessageTemplateSettings,
+} from "@/lib/telegram-template-settings";
+import type { TelegramInlineButton } from "@/lib/telegram-template-renderer";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const TELEGRAM_TIMEOUT_MS = 30_000;
@@ -37,16 +42,24 @@ export async function getTelegramBotInfo(botToken: string) {
 export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
-  text: string
+  text: string,
+  options?: {
+    inlineKeyboard?: Array<Array<{ text: string; url?: string; callback_data?: string }>>;
+  }
 ): Promise<{ ok: boolean; messageId?: number; error?: string; errorCode?: string }> {
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+  };
+  if (options?.inlineKeyboard?.length) {
+    body.reply_markup = { inline_keyboard: options.inlineKeyboard };
+  }
+
   const res = await telegramFetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "HTML",
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await res.json();
@@ -192,6 +205,7 @@ export function mapTelegramConnectionPublic(conn: {
   lastError: string | null;
   lastErrorAt: Date | null;
   lastCheckedAt?: Date | null;
+  messageTemplateSettings?: unknown;
 }) {
   return {
     connected: conn.status === "connected",
@@ -202,5 +216,44 @@ export function mapTelegramConnectionPublic(conn: {
     lastError: conn.lastError,
     lastErrorAt: conn.lastErrorAt,
     lastCheckedAt: conn.lastCheckedAt ?? null,
+    messageTemplateSettings: parseTelegramTemplateSettings(conn.messageTemplateSettings),
   };
+}
+
+export async function getTelegramTemplateSettings(
+  userId: string
+): Promise<TelegramMessageTemplateSettings> {
+  const conn = await prisma.telegramConnection.findUnique({
+    where: { userId },
+    select: { messageTemplateSettings: true },
+  });
+  return parseTelegramTemplateSettings(conn?.messageTemplateSettings);
+}
+
+export async function saveTelegramTemplateSettings(
+  userId: string,
+  settings: TelegramMessageTemplateSettings
+) {
+  const conn = await prisma.telegramConnection.findUnique({ where: { userId } });
+  if (!conn) {
+    throw new Error("Telegram not connected");
+  }
+  return prisma.telegramConnection.update({
+    where: { userId },
+    data: { messageTemplateSettings: settings },
+  });
+}
+
+export function buildTelegramInlineKeyboard(
+  buttons: TelegramInlineButton[]
+): Array<Array<{ text: string; url?: string; callback_data?: string }>> {
+  return buttons
+    .filter((b) => b.url || b.callbackData)
+    .map((b) => [
+      {
+        text: b.label,
+        ...(b.url ? { url: b.url } : {}),
+        ...(b.callbackData ? { callback_data: b.callbackData } : {}),
+      },
+    ]);
 }

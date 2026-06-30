@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { AdminShell } from "@/components/admin/admin-shell";
 
 export default async function AdminLayout({
   children,
@@ -21,5 +22,5 @@ export default async function AdminLayout({
     redirect(`/${user?.locale ?? "ru"}/dashboard`);
   }
 
-  return children;
+  return <AdminShell>{children}</AdminShell>;
 }

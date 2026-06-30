@@ -1,10 +1,10 @@
-import { Suspense } from "react";
-import { AdminPlatformMetaSettings } from "@/components/admin/admin-platform-meta-settings";
+import { redirect } from "next/navigation";
 
-export default function AdminPlatformPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AdminPlatformMetaSettings />
-    </Suspense>
-  );
+export default async function AdminPlatformRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/admin/platform/meta`);
 }

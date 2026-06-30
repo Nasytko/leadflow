@@ -67,6 +67,7 @@
     "logs": "Logs",
     "settings": "Settings",
     "admin": "Admin",
+    "adminCenter": "Admin Center",
     "adminPlatform": "Platform Meta",
     "logout": "Logout",
     "groupOverview": "Overview",
@@ -568,7 +569,8 @@
     "howToStep1": "Create a bot via @BotFather",
     "howToStep2": "Add the bot to your chat or channel",
     "howToStep3": "Use @userinfobot or @getidsbot to get Chat ID",
-    "openWiki": "Guide in Wiki"
+    "openWiki": "Guide in Wiki",
+    "openTemplates": "Message templates"
   },
   "leads": {
     "title": "Leads",
@@ -841,7 +843,7 @@
     "nav": {
       "overview": "Overview", "connect": "Connect", "businesses": "Businesses", "adAccounts": "Ad accounts",
       "pages": "Pages", "forms": "Forms", "leads": "Leads", "audit": "Audit", "webhook": "Webhook",
-      "telegram": "Telegram", "diagnostics": "Diagnostics", "health": "Meta Health"
+      "telegram": "Telegram", "telegramMessages": "Templates", "diagnostics": "Diagnostics", "health": "Meta Health"
     },
     "wizard": {
       "title": "Setup wizard", "subtitle": "From Meta connect to first lead",
@@ -981,6 +983,7 @@
     "audit": { "title": "Ad audit", "description": "Spend, leads, CPL and recommendations" },
     "webhook": { "title": "Webhook", "description": "Webhook status and test lead", "testLeadTitle": "Test lead", "testLeadDesc": "Create a test lead in Meta Lead Ads Testing Tool — LeadBridge should receive the webhook within a minute." },
     "telegram": { "title": "Telegram", "description": "Notify managers about new leads" },
+    "telegramMessages": { "title": "Message templates", "description": "Template gallery and live Telegram preview" },
     "diagnostics": {
       "title": "Diagnostics", "description": "Platform, OAuth, API, DB, webhook and worker checks",
       "refresh": "Refresh", "loading": "Loading…", "copied": "Copied", "platformTitle": "Platform",
@@ -1044,49 +1047,202 @@
     "adAccountStatusDisabled": "Disabled",
     "adAccountStatusUnknown": "Unknown",
     "adAccountBusiness": "Business: {name}",
-    "auditTitle": "Meta ad audit",
-    "auditSubtitle": "Spend, leads, CPL and warnings for the selected ad account",
-    "auditFilters": "Audit parameters",
-    "selectAdAccount": "Select ad account",
-    "period7d": "7 days",
-    "period30d": "30 days",
-    "runAudit": "Run audit",
-    "auditFailed": "Audit failed",
+    "auditTitle": "Ad audit",
+    "auditSubtitle": "See which campaigns bring leads and which waste budget.",
+    "auditPositioning": "LeadBridge shows which ad campaigns actually generate leads.",
+    "auditFilters": "Period & account",
+    "dataForPeriod": "Data for",
+    "periodLabel": "Period",
+    "period": {
+      "today": "Today", "yesterday": "Yesterday", "last_7d": "Last 7 days", "last_30d": "Last 30 days",
+      "this_month": "This month", "last_month": "Last month", "all_time": "All time", "custom": "Custom"
+    },
+    "allTimeNote": "Meta API limits all-time to ~37 months.",
+    "selectAdAccount": "Ad account",
+    "runAudit": "Refresh",
+    "auditRunning": "Loading…",
+    "auditFailed": "Could not load audit",
     "loading": "Loading…",
     "kpiSpend": "Spend",
+    "kpiMetaLeads": "Meta leads",
+    "kpiLeadBridgeLeads": "LeadBridge leads",
+    "kpiLeadBridgeHint": "Leads actually received",
     "kpiLeads": "Leads",
-    "kpiCpl": "CPL",
+    "kpiCpl": "Cost per lead",
+    "kpiCplHint": "CPL — cost of one lead",
     "kpiCtr": "CTR",
+    "kpiCtrHint": "CTR — ad engagement rate",
     "kpiCpm": "CPM",
+    "kpiCpmHint": "CPM — cost per 1000 impressions",
     "kpiCpc": "CPC",
-    "campaignsTable": "Campaigns",
-    "campaignsTableDesc": "Metrics for the selected period",
-    "adsTable": "Ads",
-    "colName": "Name",
-    "colAdId": "Ad ID",
-    "warnings": {
-      "high_cpl": "High CPL — review targeting and creatives",
-      "spend_without_leads": "Spend without leads in this period",
-      "low_ctr": "Low CTR — ads may be irrelevant",
-      "leads_without_forms": "Leads exist but LeadBridge forms are not enabled",
-      "webhook_not_connected": "Pages not connected — leadgen webhook inactive",
-      "telegram_not_connected": "Telegram not connected — leads are not delivered to managers"
+    "kpiConversion": "Click → lead",
+    "kpiConversionHint": "Share of clicks that became leads",
+    "kpiWebhook": "Webhook",
+    "webhookOk": "Working",
+    "webhookIssue": "Check",
+    "lastLeadAgo": "Recent leads",
+    "noLeadsYet": "No leads yet",
+    "leadSyncTitle": "Meta vs LeadBridge",
+    "leadSyncDesc": "Lead gap between Meta reporting and LeadBridge delivery",
+    "leadSyncStats": "LeadBridge received {leadBridge} of {meta} Meta leads",
+    "leadSyncMatch": "Match: {rate}%",
+    "chartSpend": "Spend by day", "chartLeads": "Leads by day", "chartCpl": "CPL by day", "chartCtr": "CTR by day",
+    "chartEmpty": "Not enough data for a chart",
+    "campaignsTable": "Campaigns", "campaignsTableDesc": "Campaign performance",
+    "adsTable": "Ads", "adsTableDesc": "Ad-level performance",
+    "colName": "Campaign", "colAd": "Ad", "colCampaign": "Campaign", "colAdSet": "Ad set",
+    "colQuality": "Quality", "colStatus": "Status", "colActions": "Actions", "colAdId": "Ad ID",
+    "detailBtn": "Details", "detailCampaign": "Campaign", "detailAd": "Ad",
+    "unnamedCampaign": "Unnamed campaign", "unnamedAd": "Unnamed ad", "unnamedAdSet": "Unnamed ad set",
+    "quality": {
+      "effective": "Effective", "attention": "Needs attention", "wasting": "Wasting budget", "insufficient": "Not enough data"
     },
-    "kpiImpressions": "Impressions",
-    "kpiClicks": "Clicks",
-    "kpiReach": "Reach",
-    "recommendationsTitle": "What to do next",
-    "recommendationsSubtitle": "Practical steps in plain language",
+    "qualityHint": {
+      "effective": "Good lead volume and CPL.", "attention": "Check CTR or CPL.", "wasting": "Spend without leads.", "insufficient": "Too little data."
+    },
+    "adFilter": {
+      "all": "All", "effective": "Best", "wasting": "Wasting", "no_leads": "No leads", "low_ctr": "Low CTR", "high_cpl": "High CPL"
+    },
+    "comparison": {
+      "spend": "Spend changed by {value}%", "leads": "Leads changed by {value}%", "cpl": "CPL changed by {value}%",
+      "ctr": "CTR changed by {value}%", "cpm": "CPM changed by {value}%", "clicks": "Clicks changed by {value}%", "conversion": "Conversion changed by {value}%"
+    },
+    "emptyNoAccounts": "No ad accounts", "emptyNoAccountsDesc": "Connect Meta and sync ad accounts.", "goAdAccounts": "Ad accounts",
+    "emptyNoData": "No data for period", "emptyNoDataDesc": "Meta returned no data for this period.", "emptyNoAdsRead": "Missing ads_read. Reconnect Meta.",
+    "adminBlock": "Admin", "actionCheckWebhook": "Check webhook", "actionOpenForms": "Forms", "actionOpenTelegram": "Telegram",
+    "actionOpenConnect": "Connect Meta", "actionOpenAds": "View ads", "actionViewCampaign": "Campaign", "actionViewAd": "Ad",
+    "kpiImpressions": "Impressions", "kpiClicks": "Clicks", "kpiReach": "Reach",
+    "recommendationsTitle": "What to do next", "recommendationsSubtitle": "Data-driven recommendations",
     "recommendations": {
-      "spendWithoutLeads": "You have spend but no leads — check the form, offer and landing experience.",
-      "highCpl": "Cost per lead is high — narrow targeting or test new creatives.",
-      "lowCtr": "Low CTR — headline or image may not match the audience.",
-      "leadsWithoutForms": "Meta reports leads but LeadBridge forms are disabled — enable them in Forms.",
-      "webhookNotConnected": "Connect a page and verify webhook or leads won't arrive automatically.",
-      "telegramNotConnected": "Connect Telegram so managers get instant alerts.",
-      "allGood": "No critical issues for this period. Keep monitoring CPL and lead quality.",
-      "reviewCampaigns": "Review top-spend campaigns and compare CPL between them."
+      "recCampaignScale": "Campaign \"{name}\" CPL {cpl} {currency}. Consider +10–20% budget.",
+      "recAdZeroLeads": "\"{name}\" spent {spend} {currency} with 0 leads. Review or pause.",
+      "recLowCtr": "CTR below 1%. Try a new creative.", "recLeadMismatch": "Meta {meta} vs LeadBridge {leadBridge}. Check webhook.",
+      "recNoActivity": "No activity this period.", "recNoLeadsPeriod": "No new leads. Check forms and campaigns.",
+      "recWebhookIssue": "Webhook may be failing.", "recTelegramIssue": "Telegram not connected.",
+      "recFormsDisabled": "Forms not enabled.", "recAllGood": "No critical issues found."
+    },
+    "marketingScoreTitle": "Marketing Score",
+    "marketingScoreDesc": "Overall ad performance and lead delivery score",
+    "scoreStatus": {
+      "excellent": "Excellent", "good": "Good", "attention": "Room to improve", "critical": "Needs attention"
+    },
+    "scoreFactors": {
+      "scoreCtrExcellent": "CTR above average", "scoreCtrGood": "CTR is healthy", "scoreCtrAverage": "CTR is average",
+      "scoreCtrLow": "CTR below average", "scoreCtrNoData": "Not enough CTR data",
+      "scoreCplBelowAvg": "CPL below average", "scoreCplAverage": "CPL within range", "scoreCplAboveAvg": "CPL above average",
+      "scoreCplHigh": "CPL too high", "scoreCplNoData": "No CPL data", "scoreCplOk": "CPL is fine",
+      "scoreWebhookOk": "Webhook is working", "scoreWebhookIssue": "Webhook issue",
+      "scoreMatchExcellent": "All leads delivered ({rate}%)", "scoreMatchGood": "Good lead match ({rate}%)",
+      "scoreMatchWarning": "Not all leads arrived ({rate}%)", "scoreMatchCritical": "Critical lead mismatch ({rate}%)",
+      "scoreMatchNoData": "No lead comparison data", "scoreTelegramOk": "Telegram is working", "scoreTelegramIssue": "Telegram not connected",
+      "scoreLeadsOk": "{count} leads received", "scoreLeadsNone": "No leads in period",
+      "scoreMetaOk": "Meta API is working", "scoreMetaIssue": "Meta API issue", "scoreZeroLeadAds": "Ads with zero leads ({count})"
+    },
+    "mainInsightTitle": "Key takeaway",
+    "mainInsightFor": "For period: {period}",
+    "insightHeadlineActive": "{count} leads in this period",
+    "insightHeadlineEmpty": "No leads in this period",
+    "insightLeadsReceived": "Received {count} leads",
+    "insightCplDown": "CPL down {value}%", "insightCplUp": "CPL up {value}%",
+    "insightBestCampaign": "Best campaign — \"{name}\"", "insightWorstCampaign": "Worst — \"{name}\"",
+    "insightScaleBudget": "Consider +15% budget on \"{name}\"", "insightNoData": "Not enough data for insights",
+    "roiTitle": "ROI", "roiDesc": "Estimate return on ad spend",
+    "roiAvgOrder": "Average order value", "roiProfitPerLead": "Profit per client",
+    "roiModeRevenue": "By revenue", "roiModeProfit": "By profit", "roiSave": "Save",
+    "roiSpend": "Spent", "roiLeads": "Leads", "roiExpectedRevenue": "Expected revenue", "roiPercent": "ROI", "roiProfit": "Profit",
+    "systemHealthTitle": "System status", "systemHealthOk": "All systems operational", "systemHealthIssue": "Some issues detected",
+    "systemHealthFix": "Open diagnostics",
+    "healthMetaApi": "Meta API", "healthWebhook": "Webhook", "healthTelegram": "Telegram",
+    "healthLeadDelivery": "Lead delivery", "healthOAuth": "OAuth",
+    "matchRateTitle": "Lead match", "matchRateLabel": "Match", "matchRateWarning": "Not all leads reached LeadBridge. Check webhook.",
+    "activityTitle": "Recent activity", "activityLastLead": "Last lead", "activityLastSync": "Last sync",
+    "activityLastError": "Last error", "activityNoErrors": "none",
+    "healthHistoryTitle": "Health history ({days} days)", "healthHistoryErrors": "Errors"
+  },
+  "telegramMessages": {
+    "title": "Message templates",
+    "subtitle": "Customize how leads look in Telegram",
+    "templatesTitle": "Choose a template", "templatesDesc": "Switch templates and see live preview",
+    "previewTitle": "Preview", "previewDesc": "How the message looks in Telegram",
+    "fieldsTitle": "Message fields", "buttonsTitle": "Inline buttons", "stylingTitle": "Styling",
+    "styleEmoji": "Emoji", "styleMinimal": "Minimal", "styleDividers": "Dividers", "styleEmptyLines": "Empty lines",
+    "signatureTitle": "Signature", "signatureLeadbridge": "Sent via LeadBridge", "signatureNone": "No signature",
+    "sendTest": "Send sample", "testSending": "Sending…", "testSent": "Sample sent to Telegram", "testFailed": "Send failed",
+    "saveFailed": "Save failed", "saving": "Saving…",
+    "notConnectedTitle": "Telegram not connected", "notConnectedDesc": "Connect your bot first", "goConnect": "Connect Telegram",
+    "fields": {
+      "name": "Name", "phone": "Phone", "email": "Email", "comment": "Comment", "formName": "Form name",
+      "pageName": "Page name", "campaign": "Campaign", "adSet": "Ad set", "ad": "Ad", "time": "Time",
+      "utm": "UTM", "cpl": "CPL", "source": "Source", "leadId": "Lead ID"
+    },
+    "buttons": { "call": "Call", "copyPhone": "Copy phone", "openCrm": "Open CRM", "openAudit": "Open audit" },
+    "templates": {
+      "classic": { "name": "Classic", "description": "Clean and readable", "badge": "Most popular" },
+      "business": { "name": "Business", "description": "For business owners", "badge": "For B2B" },
+      "sales": { "name": "Sales", "description": "Maximum info for sales team", "badge": "For sales" },
+      "compact": { "name": "Compact", "description": "Short messages for high volume", "badge": "Minimal" },
+      "premium": { "name": "Premium", "description": "Premium look", "badge": "PRO" },
+      "emoji": { "name": "Emoji", "description": "Friendly for small business", "badge": "NEW" }
     }
+  },
+  "adminCenter": {
+    "title": "Platform Admin",
+    "env": "Environment",
+    "deployment": "Mode",
+    "statusHealthy": "Platform healthy",
+    "statusAttention": "Needs attention",
+    "statusCritical": "Critical",
+    "runDiagnostics": "Run diagnostics",
+    "nav": {
+      "overview": "Overview", "health": "Platform Health", "users": "Users", "meta": "Meta Platform",
+      "email": "Email Delivery", "telegram": "Telegram", "queue": "Queue & Workers", "logs": "System Logs",
+      "auditLog": "Audit Log", "security": "Security", "backups": "Backups", "featureFlags": "Feature Flags", "billing": "Billing"
+    },
+    "overview": {
+      "loadError": "Failed to load dashboard",
+      "platformStatus": { "healthy": "Platform is healthy", "attention": "Warnings detected", "critical": "Critical issues" },
+      "usersTotal": "Total users", "activeUsers": "Active", "verifiedEmails": "Verified emails",
+      "fbConnections": "Facebook connected", "telegramConnected": "Telegram connected",
+      "leadsToday": "Leads today", "leadsWeek": "Leads (7 days)", "failedJobs": "Failed deliveries",
+      "needsAttention": "Needs attention",
+      "alertSmtpNotConfigured": "SMTP not configured",
+      "alertTelegramFailures": "Telegram failures ({count})",
+      "alertWebhookFailures": "Webhook failures ({count})",
+      "alertUnverifiedUsers": "Unverified emails ({count})",
+      "alertPendingApproval": "Pending approval ({count})",
+      "actionFix": "Fix", "actionViewLogs": "View logs", "actionOpen": "Open"
+    },
+    "health": {
+      "runFull": "Run full diagnostics", "diagnosticsDone": "Diagnostics saved", "diagnosticsFailed": "Diagnostics failed",
+      "status": { "healthy": "All systems operational", "attention": "Warnings present", "critical": "Critical errors" },
+      "category": { "infrastructure": "Infrastructure", "meta": "Meta", "email": "Email", "security": "Security" },
+      "checkDatabase": "Database", "checkRedis": "Redis", "checkAppUrl": "App URL", "checkEncryptionKey": "Encryption key",
+      "checkNextAuth": "NextAuth", "checkMetaAppId": "Meta App ID", "checkMetaAppSecret": "Meta App Secret",
+      "checkMetaLoginConfig": "Login Config ID", "checkSmtp": "SMTP", "checkLastWebhook": "Last webhook",
+      "checkCsrf": "CSRF", "checkRateLimit": "Rate limit", "checkAdminCount": "Admins", "checkUnverifiedUsers": "Unverified users"
+    },
+    "email": {
+      "settingsTitle": "Email settings", "enabled": "Enabled", "smtpHost": "SMTP Host", "smtpPort": "Port",
+      "smtpSecure": "TLS/SSL", "smtpUsername": "Username", "smtpPassword": "Password (write-only)",
+      "fromEmail": "From email", "fromName": "From name", "source": "Source", "save": "Save", "saving": "Saving…",
+      "saved": "Saved", "saveFailed": "Save failed", "testTitle": "Test email", "sendTest": "Send test",
+      "testSent": "Email sent", "testFailed": "Send failed", "sentToday": "Sent today", "failedToday": "Failed today"
+    },
+    "queue": {
+      "waiting": "Waiting", "active": "Active", "completed": "Completed", "failed": "Failed", "delayed": "Delayed",
+      "retryAll": "Retry all failed", "retried": "Retried: {count}", "failedJobs": "Failed jobs"
+    },
+    "logs": { "empty": "No logs", "time": "Time", "level": "Level", "source": "Source", "message": "Message" },
+    "auditLog": { "empty": "No entries", "time": "Time", "level": "Action", "source": "Admin", "message": "Resource" },
+    "telegram": { "connectedUsers": "Connected bots", "failedWeek": "Failures (7d)" },
+    "security": { "adminCount": "Admins", "unverified": "Unverified", "adminsTitle": "Administrator list" },
+    "featureFlags": { "on": "On", "off": "Off" },
+    "backups": {
+      "title": "Backups",
+      "desc": "Automated backups are configured at infrastructure level (PostgreSQL).",
+      "commandHint": "pg_dump $DATABASE_URL > backup.sql"
+    },
+    "billing": { "title": "Billing & plans", "comingSoon": "Coming soon" }
   },
   "theme": {
     "light": "Light",

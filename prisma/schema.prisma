@@ -13,6 +13,7 @@ model User {
   passwordHash String
   name         String?
   locale       String   @default("ru")
+  auditPreferences Json @default("{}")
   status       String   @default("pending_email_verification")
   isAdmin      Boolean  @default(false)
   emailVerifiedAt DateTime?
@@ -39,6 +40,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   integrationSettings IntegrationSettings?
   processedLeads          Lead[]                   @relation("ProcessedLeads")
+  adminDiagnosticRuns     AdminDiagnosticRun[]
 
   @@map("users")
 }
@@ -364,6 +366,7 @@ model TelegramConnection {
   botTokenEncrypted  String    @db.Text
   chatId             String
   notificationLocale String    @default("ru")
+  messageTemplateSettings Json @default("{}")
   verified           Boolean   @default(false)
   status             String    @default("disconnected")
   lastError          String?
@@ -526,4 +529,50 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@map("audit_logs")
+}
+
+model PlatformEmailSettings {
+  id                    String    @id @default("platform")
+  provider              String    @default("smtp")
+  smtpHost              String?
+  smtpPort              Int?
+  smtpSecure            Boolean   @default(false)
+  smtpUsername          String?
+  smtpPasswordEncrypted String?   @db.Text
+  fromName              String?
+  fromEmail             String?
+  replyToEmail          String?
+  enabled               Boolean   @default(false)
+  lastSentAt            DateTime?
+  lastError             String?
+  lastErrorAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("platform_email_settings")
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  enabled     Boolean  @default(false)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+model AdminDiagnosticRun {
+  id                String   @id @default(cuid())
+  triggeredByUserId String?
+  status            String
+  summary           Json     @default("{}")
+  checks            Json     @default("[]")
+  createdAt         DateTime @default(now())
+
+  triggeredBy User? @relation(fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("admin_diagnostic_runs")
 }

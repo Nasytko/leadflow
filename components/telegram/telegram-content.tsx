@@ -120,6 +120,11 @@ export function TelegramContent({ embedded = false }: { embedded?: boolean }) {
       {!embedded && (
       <PageHeader title={t("title")} subtitle={t("subtitle")} icon={Send} gradient>
         <Button variant="outline" size="sm" asChild className="rounded-xl">
+          <Link href="/meta/telegram/messages">
+            {t("openTemplates")}
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild className="rounded-xl">
           <Link href="/wiki">
             <BookOpen className="h-4 w-4 mr-2" />
             {t("openWiki")}

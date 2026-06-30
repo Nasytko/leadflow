@@ -15,11 +15,15 @@ import {
   InvalidFacebookTokenError,
 } from "@/services/facebook.service";
 import {
-  buildTelegramMessage,
+  buildTelegramMessageWithButtons,
   formatLeadCreatedTime,
   extractLeadFromFacebookData,
 } from "@/services/notification.service";
-import { sendTelegramMessage } from "@/services/telegram.service";
+import {
+  sendTelegramMessage,
+  buildTelegramInlineKeyboard,
+} from "@/services/telegram.service";
+import { parseTelegramTemplateSettings } from "@/lib/telegram-template-settings";
 import { extractLeadAttribution } from "@/lib/lead-mapper";
 import { resolveLeadAttributionLinks } from "@/services/meta-ads.service";
 import { Prisma } from "@prisma/client";
@@ -440,7 +444,8 @@ async function trySendImportedLeadToTelegram(
 
   const botToken = decrypt(telegram.botTokenEncrypted);
   const locale = (telegram.notificationLocale as "ru" | "en") ?? "ru";
-  const message = buildTelegramMessage(locale, {
+  const templateSettings = parseTelegramTemplateSettings(telegram.messageTemplateSettings);
+  const rendered = buildTelegramMessageWithButtons(locale, {
     formName: form.formName,
     name: name ?? "",
     phone: phone ?? "",
@@ -449,9 +454,12 @@ async function trySendImportedLeadToTelegram(
     allFields: fields,
     pageName: form.page.pageName,
     source: "manual_import",
-  });
+  }, templateSettings);
+  const message = rendered.html;
 
-  const result = await sendTelegramMessage(botToken, telegram.chatId, message);
+  const result = await sendTelegramMessage(botToken, telegram.chatId, message, {
+    inlineKeyboard: buildTelegramInlineKeyboard(rendered.inlineButtons),
+  });
 
   if (result.ok) {
     await prisma.lead.update({

@@ -32,10 +32,16 @@ export async function GET(request: Request) {
       period,
       dateFrom,
       dateTo,
+      isAdmin: authResult.session.user.isAdmin === true,
     });
     return apiSuccess(audit);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Audit failed";
+    const message =
+      error instanceof Error
+        ? error.message.includes("Graph")
+          ? "Meta не вернула данные за выбранный период."
+          : error.message
+        : "Не удалось выполнить аудит";
     return apiError("AUDIT_FAILED", message, 400);
   }
 }
