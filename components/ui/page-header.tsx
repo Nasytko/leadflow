@@ -23,7 +23,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-6 sm:p-8",
+        "relative overflow-hidden rounded-lg border p-6 sm:p-8",
         gradient
           ? "bg-gradient-to-br from-primary/8 via-card to-card border-primary/15"
           : "bg-card border-border/60",
@@ -36,8 +36,8 @@ export function PageHeader({
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           {Icon && (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-              <Icon className="h-6 w-6" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
+              <Icon className="h-5 w-5" />
             </div>
           )}
           <div>

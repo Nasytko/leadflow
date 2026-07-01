@@ -1,100 +1,118 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
-import { formatDate } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Facebook,
-  Send,
-  FileText,
   Users,
   TrendingUp,
-  ArrowRight,
+  BarChart3,
+  RefreshCw,
+  Settings2,
+  Activity,
+  Clock,
+  Zap,
   CheckCircle2,
   Circle,
-  BookOpen,
-  Activity,
-  Zap,
-  AlertTriangle,
-  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  facebookStatusBadgeVariant,
-  telegramStatusBadgeVariant,
-} from "@/lib/connection-status";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import type { DashboardStats } from "@/types";
+import { DashboardLineChart, DashboardDonutChart } from "@/components/dashboard/dashboard-charts";
 
-type StatsResponse = DashboardStats & {
-  healthCards?: Array<{
-    id: string;
-    status: "ok" | "warning" | "error" | "unknown";
-    lastCheckedAt: string | null;
-    lastError: string | null;
-    detail?: string | null;
-    href?: string;
-  }>;
-  recentLeads: Array<{
-    id: string;
-    name: string | null;
-    email: string | null;
-    createdTime: string;
-    form?: { formName: string };
-  }>;
-  recentLogs: Array<{
-    id: string;
-    type: string;
-    status: string;
-    createdAt: string;
-  }>;
+type HealthCard = {
+  id: string;
+  status: "ok" | "warning" | "error" | "unknown";
 };
 
+type StatsResponse = DashboardStats & {
+  healthCards?: HealthCard[];
+  leadsByDay?: Array<{ date: string; value: number }>;
+  leadSources?: Array<{ name: string; count: number; pct: number }>;
+  campaignSummary?: Array<{ name: string; leads: number; channel: string }>;
+  recentEvents?: Array<{
+    id: string;
+    at: string;
+    messageKey: string;
+    messageParams?: Record<string, string>;
+    status: "ok" | "warning" | "error";
+  }>;
+  lastLeadAt?: string | null;
+  todayTrend?: number | null;
+  weekTrend?: number | null;
+  monthTrend?: number | null;
+};
+
+const SYSTEM_STATUS_IDS = ["facebook", "pages", "forms", "webhook", "telegram", "queue"] as const;
+
 const SETUP_STEPS = [
-  { key: "facebookAccount", href: "/facebook", labelKey: "setupFacebook" },
-  { key: "businessPortfolio", href: "/facebook", labelKey: "setupBusiness" },
-  { key: "pagesSelected", href: "/facebook", labelKey: "setupPages" },
-  { key: "formsEnabled", href: "/forms", labelKey: "setupForms" },
-  { key: "webhookVerified", href: "/facebook", labelKey: "setupWebhook" },
-  { key: "telegram", href: "/telegram", labelKey: "setupTelegram" },
+  { key: "facebookAccount", href: "/meta/connect", labelKey: "setupFacebook" },
+  { key: "businessPortfolio", href: "/meta/connect", labelKey: "setupBusiness" },
+  { key: "pagesSelected", href: "/meta/pages", labelKey: "setupPages" },
+  { key: "formsEnabled", href: "/meta/forms", labelKey: "setupForms" },
+  { key: "webhookVerified", href: "/meta/webhook", labelKey: "setupWebhook" },
+  { key: "telegram", href: "/meta/telegram", labelKey: "setupTelegram" },
   { key: "testLead", href: "/leads", labelKey: "setupTestLead" },
 ] as const;
 
+function timeAgo(iso: string | null, locale: string): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return locale === "ru" ? "только что" : "just now";
+  if (minutes < 60) return locale === "ru" ? `${minutes} мин назад` : `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return locale === "ru" ? `${hours} ч назад` : `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return locale === "ru" ? `${days} дн назад` : `${days}d ago`;
+}
+
 export function DashboardContent() {
   const t = useTranslations("dashboard");
-  const tCommon = useTranslations("common");
-  const tLeads = useTranslations("leads");
-  const tLogs = useTranslations("logs");
   const locale = useLocale();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
+
+  const loadStats = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const res = await fetch("/api/dashboard/stats").then((r) => r.json());
+      if (res.data) {
+        setStats(res.data);
+        setRefreshedAt(new Date());
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.data) setStats(res.data);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    loadStats();
+  }, [loadStats]);
 
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl space-y-6">
-        <Skeleton className="h-32 w-full rounded-2xl" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-64 rounded-lg lg:col-span-1" />
+          <Skeleton className="h-64 rounded-lg lg:col-span-2" />
         </div>
       </div>
     );
@@ -104,94 +122,66 @@ export function DashboardContent() {
     ? Math.round((stats.setupCompleted / stats.setupTotal) * 100)
     : 0;
 
+  const systemCards =
+    stats?.healthCards?.filter((c) =>
+      (SYSTEM_STATUS_IDS as readonly string[]).includes(c.id)
+    ) ?? [];
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
-        icon={LayoutDashboard}
-        gradient
-        badge={
-          stats && (
-            <Badge variant={setupPercent === 100 ? "success" : "warning"}>
-              {t("setupProgress", { percent: setupPercent })}
-            </Badge>
-          )
-        }
-      >
-        <Button variant="outline" size="sm" asChild className="rounded-xl">
-          <Link href="/wiki">
-            <BookOpen className="h-4 w-4 mr-2" />
-            {t("openWiki")}
-          </Link>
-        </Button>
-      </PageHeader>
-
-      {stats?.healthCards && stats.healthCards.length > 0 && (
-        <Card className="rounded-2xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              {t("healthTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {stats.healthCards.map((card) => {
-                const label = t(`health_${card.id}` as "health_facebook");
-                const variant =
-                  card.status === "ok"
-                    ? "success"
-                    : card.status === "warning"
-                    ? "warning"
-                    : card.status === "error"
-                    ? "destructive"
-                    : "secondary";
-                const inner = (
-                  <div className="rounded-xl border p-3 space-y-1 hover:bg-muted/40 transition-colors">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium">{label}</p>
-                      <Badge variant={variant} className="text-[10px]">
-                        {t(`healthStatus_${card.status}`)}
-                      </Badge>
-                    </div>
-                    {card.detail && (
-                      <p className="text-[10px] text-muted-foreground truncate">{card.detail}</p>
-                    )}
-                    {card.lastError && (
-                      <p className="text-[10px] text-destructive line-clamp-2">{card.lastError}</p>
-                    )}
-                  </div>
-                );
-                return card.href ? (
-                  <Link key={card.id} href={card.href}>
-                    {inner}
-                  </Link>
-                ) : (
-                  <div key={card.id}>{inner}</div>
-                );
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+            {t("title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {refreshedAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              {t("lastRefresh", {
+                time: refreshedAt.toLocaleTimeString(locale, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
               })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => loadStats(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-lg" asChild>
+            <Link href="/settings">
+              <Settings2 className="h-4 w-4 mr-2" />
+              {t("configure")}
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-      {/* Setup progress */}
       {stats && setupPercent < 100 && (
-        <Card className="rounded-2xl border-primary/15 bg-primary/[0.03]">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+        <Card className="rounded-lg border-primary/15 bg-primary/[0.02]">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm flex items-center gap-2 font-semibold">
               <Zap className="h-4 w-4 text-primary" />
               {t("gettingStarted")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 pb-4 space-y-3">
             <ProgressBar
               value={stats.setupCompleted}
               max={stats.setupTotal}
               label={t("setupLabel")}
             />
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="flex flex-wrap gap-2">
               {SETUP_STEPS.map((step) => {
                 const done = stats.setupSteps[step.key];
                 return (
@@ -199,18 +189,18 @@ export function DashboardContent() {
                     key={step.key}
                     href={step.href}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all hover:shadow-sm",
+                      "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
                       done
                         ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
-                        : "border-border/60 hover:border-primary/30"
+                        : "border-border hover:border-primary/30"
                     )}
                   >
                     {done ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                     ) : (
-                      <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     )}
-                    <span className="truncate">{t(step.labelKey)}</span>
+                    {t(step.labelKey)}
                   </Link>
                 );
               })}
@@ -219,265 +209,164 @@ export function DashboardContent() {
         </Card>
       )}
 
-      {/* KPI Grid */}
-      <div>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          <BarChart3 className="h-4 w-4" />
-          {t("kpiTitle")}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard
-            label={t("leadsToday")}
-            value={stats?.leadsToday ?? 0}
-            sublabel={t("leadsTodayDesc")}
-            icon={Users}
-            variant="brand"
-          />
-          <KpiCard
-            label={t("leadsThisWeek")}
-            value={stats?.leadsThisWeek ?? 0}
-            sublabel={t("leadsThisWeekDesc")}
-            icon={TrendingUp}
-            variant="success"
-          />
-          <KpiCard
-            label={t("leadsThisMonth")}
-            value={stats?.leadsThisMonth ?? 0}
-            sublabel={t("totalLeads", { count: stats?.totalLeads ?? 0 })}
-            icon={BarChart3}
-          />
-          <KpiCard
-            label={t("deliveryRate")}
-            value={
-              stats?.deliverySuccessRate !== null && stats?.deliverySuccessRate !== undefined
-                ? `${stats.deliverySuccessRate}%`
-                : "—"
-            }
-            sublabel={t("deliveryRateDesc", {
-              failed: stats?.failedDeliveriesToday ?? 0,
-            })}
-            icon={Activity}
-            variant={
-              stats?.failedDeliveriesToday
-                ? "warning"
-                : stats?.deliverySuccessRate && stats.deliverySuccessRate >= 95
-                ? "success"
-                : "default"
-            }
-          />
-          <KpiCard
-            label={t("facebookStatus")}
-            value={
-              <Badge variant={facebookStatusBadgeVariant(stats?.facebookStatus ?? "disconnected")}>
-                {stats?.facebookStatus === "connected"
-                  ? tCommon("connected")
-                  : stats?.facebookStatus === "disconnected"
-                  ? tCommon("notConnected")
-                  : t(`facebookStatus_${stats?.facebookStatus ?? "error"}`)}
-              </Badge>
-            }
-            sublabel={
-              stats?.facebookLastError ??
-              (stats?.facebookUserName
-                ? t("facebookConnectedAs", { name: stats.facebookUserName })
-                : t("pagesCount", {
-                    connected: stats?.connectedPages ?? 0,
-                    total: stats?.totalPages ?? 0,
-                  }))
-            }
-            icon={Facebook}
-            variant={
-              stats?.facebookStatus === "connected"
-                ? "facebook"
-                : stats?.facebookStatus === "disconnected"
-                ? "default"
-                : "warning"
-            }
-          />
-          <KpiCard
-            label={t("telegramStatus")}
-            value={
-              <Badge variant={telegramStatusBadgeVariant(stats?.telegramStatus ?? "disconnected")}>
-                {stats?.telegramStatus === "connected"
-                  ? tCommon("connected")
-                  : stats?.telegramStatus === "disconnected"
-                  ? tCommon("notConnected")
-                  : t(`telegramStatus_error`)}
-              </Badge>
-            }
-            sublabel={stats?.telegramLastError ?? undefined}
-            icon={Send}
-            variant={stats?.telegramStatus === "connected" ? "success" : "default"}
-          />
-          <KpiCard
-            label={t("activeForms")}
-            value={stats?.activeForms ?? 0}
-            sublabel={
-              stats?.failedFormsSync
-                ? t("formsSyncFailed", { count: stats.failedFormsSync })
-                : t("formsCount", { total: stats?.totalForms ?? 0 })
-            }
-            icon={FileText}
-            variant={stats?.failedFormsSync ? "warning" : "default"}
-          />
-          <KpiCard
-            label={t("webhookStatus")}
-            value={
-              <Badge variant={stats?.webhookVerified ? "success" : "warning"}>
-                {stats?.webhookVerified ? t("webhookVerified") : t("webhookNotVerified")}
-              </Badge>
-            }
-            sublabel={
-              stats?.lastWebhookError ??
-              (stats?.lastWebhookAt
-                ? `${stats.lastWebhookStatus ?? "—"} · ${formatDate(stats.lastWebhookAt, locale)}`
-                : undefined)
-            }
-            icon={Activity}
-            variant={stats?.failedWebhookEvents ? "warning" : "default"}
-          />
-          <KpiCard
-            label={t("metaAppStatus")}
-            value={
-              <Badge variant={stats?.metaConfigured ? "success" : "warning"}>
-                {stats?.metaConfigured ? t("metaReady") : t("metaNotReady")}
-              </Badge>
-            }
-            icon={Zap}
-            variant={stats?.metaConfigured ? "brand" : "warning"}
-          />
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard
+          label={t("leadsToday")}
+          value={stats?.leadsToday ?? 0}
+          icon={Users}
+          variant="brand"
+          trend={stats?.todayTrend ?? undefined}
+          trendLabel={t("vsYesterday")}
+        />
+        <KpiCard
+          label={t("leadsThisWeek")}
+          value={stats?.leadsThisWeek ?? 0}
+          icon={TrendingUp}
+          variant="success"
+          trend={stats?.weekTrend ?? undefined}
+          trendLabel={t("vsPrevWeek")}
+        />
+        <KpiCard
+          label={t("leadsThisMonth")}
+          value={stats?.leadsThisMonth ?? 0}
+          icon={BarChart3}
+          trend={stats?.monthTrend ?? undefined}
+          trendLabel={t("vsPrevMonth")}
+        />
+        <KpiCard
+          label={t("totalLeadsLabel")}
+          value={stats?.totalLeads ?? 0}
+          sublabel={t("allTime")}
+          icon={Users}
+        />
+        <KpiCard
+          label={t("lastLead")}
+          value={timeAgo(stats?.lastLeadAt ?? null, locale)}
+          sublabel={t("lastLeadDesc")}
+          icon={Clock}
+        />
       </div>
 
-      {/* Quick actions */}
-      <div className="flex flex-wrap gap-3">
-        <Button asChild className="rounded-xl">
-          <Link href="/facebook">
-            <Facebook className="h-4 w-4 mr-2" />
-            {t("actionFacebook")}
-          </Link>
-        </Button>
-        <Button variant="outline" asChild className="rounded-xl">
-          <Link href="/forms">
-            <FileText className="h-4 w-4 mr-2" />
-            {t("actionForms")}
-          </Link>
-        </Button>
-        <Button variant="outline" asChild className="rounded-xl">
-          <Link href="/telegram">
-            <Send className="h-4 w-4 mr-2" />
-            {t("actionTelegram")}
-          </Link>
-        </Button>
-        <Button variant="outline" asChild className="rounded-xl">
-          <Link href="/leads">
-            <Users className="h-4 w-4 mr-2" />
-            {t("actionLeads")}
-          </Link>
-        </Button>
-      </div>
-
-      {/* Activity panels */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">{t("recentLeads")}</CardTitle>
-            <Link
-              href="/leads"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-            >
-              {t("viewAll")} <ArrowRight className="h-3 w-3" />
-            </Link>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="rounded-lg lg:col-span-1">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              {t("systemStatus")}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            {stats?.recentLeads?.length ? (
-              <div className="space-y-3">
-                {stats.recentLeads.map((lead) => (
-                  <div
-                    key={lead.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/50 px-4 py-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{lead.name || "—"}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {lead.form?.formName}
+          <CardContent className="px-4 pb-4">
+            <ul className="space-y-2">
+              {systemCards.map((card) => (
+                <li
+                  key={card.id}
+                  className="flex items-center justify-between gap-2 text-sm py-1"
+                >
+                  <span>{t(`health_${card.id}` as "health_facebook")}</span>
+                  <StatusBadge
+                    status={card.status}
+                    label={t(`healthStatus_${card.status}`)}
+                  />
+                </li>
+              ))}
+              <li className="flex items-center justify-between gap-2 text-sm py-1">
+                <span>{t("health_database")}</span>
+                <StatusBadge status="ok" label={t("healthStatus_ok")} />
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg lg:col-span-2">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold">{t("leadsChart30d")}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <DashboardLineChart data={stats?.leadsByDay ?? []} height={220} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="rounded-lg">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold">{t("leadSources")}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {stats?.leadSources?.length ? (
+              <DashboardDonutChart data={stats.leadSources} />
+            ) : (
+              <EmptyState icon={BarChart3} title={t("noSources")} description={t("noSourcesDesc")} />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold">{t("campaignsTable")}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {stats?.campaignSummary?.length ? (
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="pb-2 font-medium">{t("campaignName")}</th>
+                      <th className="pb-2 font-medium">{t("campaignChannel")}</th>
+                      <th className="pb-2 font-medium text-right">{t("campaignLeads")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.campaignSummary.map((row) => (
+                      <tr key={row.name} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 pr-2 max-w-[140px] truncate">{row.name}</td>
+                        <td className="py-2 text-muted-foreground">{row.channel}</td>
+                        <td className="py-2 text-right font-medium">{row.leads}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState icon={BarChart3} title={t("noCampaigns")} description={t("noCampaignsDesc")} />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="text-sm font-semibold">{t("recentEvents")}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {stats?.recentEvents?.length ? (
+              <ul className="space-y-3">
+                {stats.recentEvents.map((ev) => (
+                  <li key={ev.id} className="flex gap-3 text-sm">
+                    <span
+                      className={cn(
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        ev.status === "ok" && "bg-emerald-500",
+                        ev.status === "warning" && "bg-amber-500",
+                        ev.status === "error" && "bg-red-500"
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="leading-snug">
+                        {t(ev.messageKey as "eventLeadReceived", ev.messageParams ?? {})}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {timeAgo(ev.at, locale)}
                       </p>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {formatDate(lead.createdTime, locale)}
-                    </span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <EmptyState
-                icon={Users}
-                title={tLeads("noLeads")}
-                description={t("noLeadsDesc")}
-              >
-                <Button size="sm" asChild>
-                  <Link href="/facebook">{t("actionFacebook")}</Link>
-                </Button>
-              </EmptyState>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">{t("recentLogs")}</CardTitle>
-            <Link
-              href="/logs"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-            >
-              {t("viewAll")} <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {stats?.recentLogs?.length ? (
-              <div className="space-y-3">
-                {stats.recentLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/50 px-4 py-3"
-                  >
-                    <span className="text-sm truncate">{log.type}</span>
-                    <Badge
-                      variant={
-                        log.status === "success"
-                          ? "success"
-                          : log.status === "failed"
-                          ? "destructive"
-                          : "warning"
-                      }
-                    >
-                      {log.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon={Activity} title={tLogs("noLogs")} description={t("noLogsDesc")} />
+              <EmptyState icon={Activity} title={t("noEvents")} description={t("noEventsDesc")} />
             )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Health alert */}
-      {stats?.failedDeliveriesToday ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-5 py-4">
-          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-sm">{t("deliveryAlertTitle")}</p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {t("deliveryAlertDesc", { count: stats.failedDeliveriesToday })}
-            </p>
-            <Button variant="outline" size="sm" asChild className="mt-3 rounded-xl">
-              <Link href="/logs">{t("viewLogs")}</Link>
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

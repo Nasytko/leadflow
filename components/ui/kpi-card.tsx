@@ -41,7 +41,7 @@ export function KpiCard({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "group relative w-full overflow-hidden rounded-2xl border p-5 text-left transition-all hover:shadow-md",
+        "group relative w-full overflow-hidden rounded-lg border p-4 text-left transition-all hover:shadow-sm",
         styles.card,
         onClick && "cursor-pointer hover:border-primary/30"
       )}
@@ -51,7 +51,7 @@ export function KpiCard({
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{value}</p>
+          <p className="mt-1.5 text-2xl font-bold tracking-tight">{value}</p>
           {sublabel && (
             <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
           )}
@@ -70,8 +70,8 @@ export function KpiCard({
           )}
         </div>
         {Icon && (
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", styles.icon)}>
-            <Icon className="h-5 w-5" />
+          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", styles.icon)}>
+            <Icon className="h-4 w-4" />
           </div>
         )}
       </div>

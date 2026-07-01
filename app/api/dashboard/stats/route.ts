@@ -3,6 +3,13 @@ import { requireAuth, apiSuccess } from "@/lib/api-helpers";
 import { getIntegrationSettingsPublic } from "@/services/integration-settings.service";
 import { buildWizardSteps } from "@/lib/facebook-diagnosis";
 import { buildDashboardHealthCards } from "@/lib/dashboard-health";
+import {
+  getLeadsByDay,
+  getLeadSources,
+  getCampaignSummary,
+  getRecentEvents,
+  getLeadTrends,
+} from "@/lib/dashboard-analytics";
 import { checkRateLimit } from "@/lib/api-helpers";
 
 export async function GET(request: Request) {
@@ -172,6 +179,15 @@ export async function GET(request: Request) {
     queuedWebhooks,
   });
 
+  const [leadsByDay, leadSources, campaignSummary, recentEvents, trends] =
+    await Promise.all([
+      getLeadsByDay(userId, 30),
+      getLeadSources(userId),
+      getCampaignSummary(userId),
+      getRecentEvents(userId, 8),
+      getLeadTrends(userId),
+    ]);
+
   return apiSuccess({
     facebookConnected: facebookStatus === "connected",
     facebookStatus,
@@ -204,5 +220,13 @@ export async function GET(request: Request) {
     healthCards,
     recentLeads,
     recentLogs,
+    leadsByDay,
+    leadSources,
+    campaignSummary,
+    recentEvents,
+    lastLeadAt: lastLead?.createdTime?.toISOString() ?? null,
+    todayTrend: trends.todayTrend,
+    weekTrend: trends.weekTrend,
+    monthTrend: trends.monthTrend,
   });
 }
