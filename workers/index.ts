@@ -5,7 +5,7 @@ import { importMetaLeadsForUser } from "@/services/lead-import.service";
 import type { LeadProcessingJobData, ImportLeadsJobData } from "@/lib/queue";
 import { writeSystemLog } from "@/lib/system-log";
 
-console.log("LeadBridge worker starting...");
+console.log("ORVIX worker starting...");
 
 const worker = createLeadWorker(async (job) => {
   if (job.name === "process-lead" || job.name === "retry-telegram") {
@@ -66,4 +66,4 @@ async function shutdown(signal: string) {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
-console.log("LeadBridge worker ready");
+console.log("ORVIX worker ready");

@@ -13,8 +13,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LeadBridge",
-  description: "Facebook Lead Ads to Telegram without code",
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
+  title: {
+    default: "ORVIX",
+    template: "%s | ORVIX",
+  },
+  description:
+    "Lead operations platform. Connect sources, automate decisions, deliver events anywhere.",
+  applicationName: "ORVIX",
+  openGraph: {
+    title: "ORVIX",
+    description:
+      "Lead operations platform. Connect sources, automate decisions, deliver events anywhere.",
+    siteName: "ORVIX",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "ORVIX",
+    description:
+      "Lead operations platform. Connect sources, automate decisions, deliver events anywhere.",
+  },
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({

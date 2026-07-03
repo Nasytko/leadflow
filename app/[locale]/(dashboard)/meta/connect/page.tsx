@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { MetaConnectSection } from "@/components/meta-center/sections/meta-connect-section";
 
 export default function MetaConnectPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<PageSkeleton />}>
       <MetaConnectSection />
     </Suspense>
   );

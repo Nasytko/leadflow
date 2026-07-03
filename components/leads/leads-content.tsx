@@ -25,7 +25,10 @@ import { useLocale } from "next-intl";
 import { Users, Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client-api";
+import { Link } from "@/i18n/navigation";
 
 type Lead = {
   id: string;
@@ -257,7 +260,7 @@ export function LeadsContent({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className={embedded ? "space-y-6" : "mx-auto max-w-7xl space-y-6"}>
       {!embedded && (
-      <PageHeader title={t("title")} subtitle={t("subtitle")} icon={Users} gradient>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} icon={Users}>
         <Badge variant="secondary">{total} {t("totalLabel")}</Badge>
       </PageHeader>
       )}
@@ -333,11 +336,41 @@ export function LeadsContent({ embedded = false }: { embedded?: boolean }) {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <p className="p-6">{tCommon("loading")}</p>
+            <div className="space-y-3 p-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           ) : leads.length === 0 ? (
-            <p className="p-6 text-muted-foreground">{t("noLeads")}</p>
+            <EmptyState icon={Users} title={t("noLeads")} description={t("noLeadsDesc")}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <Button asChild className="min-h-11">
+                  <Link href="/meta/connect">{t("noLeadsCtaConnect")}</Link>
+                </Button>
+                <Button variant="outline" asChild className="min-h-11">
+                  <Link href="/meta/webhook">{t("noLeadsCtaTest")}</Link>
+                </Button>
+              </div>
+            </EmptyState>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="md:hidden divide-y">
+              {leads.map((lead) => (
+                <button
+                  key={lead.id}
+                  type="button"
+                  className="w-full text-left p-4 hover:bg-muted/50 transition-colors"
+                  onClick={() => openLead(lead.id)}
+                >
+                  <p className="font-medium">{lead.name ?? "—"}</p>
+                  <p className="type-caption mt-1">{lead.phone ?? lead.email ?? "—"}</p>
+                  <p className="type-caption text-muted-foreground mt-1">
+                    {formatDate(lead.createdTime, locale)}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
@@ -385,6 +418,7 @@ export function LeadsContent({ embedded = false }: { embedded?: boolean }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

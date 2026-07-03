@@ -2,79 +2,99 @@
 
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import { TrendingDown, TrendingUp } from "lucide-react";
-
-type KpiVariant = "default" | "success" | "warning" | "brand" | "facebook";
-
-const variantStyles: Record<KpiVariant, { card: string; icon: string }> = {
-  default: { card: "border-border/60", icon: "bg-muted text-muted-foreground" },
-  success: { card: "border-emerald-500/25 bg-emerald-500/[0.04]", icon: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
-  warning: { card: "border-amber-500/25 bg-amber-500/[0.04]", icon: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  brand: { card: "border-primary/25 bg-primary/[0.04]", icon: "bg-primary/15 text-primary" },
-  facebook: { card: "border-[#1877F2]/25 bg-[#1877F2]/[0.04]", icon: "bg-[#1877F2]/15 text-[#1877F2]" },
-};
 
 export function KpiCard({
   label,
   value,
   sublabel,
-  icon: Icon,
-  variant = "default",
+  icon: _icon,
+  variant: _variant = "default",
   trend,
   trendLabel,
   onClick,
+  className,
+  minimal = false,
 }: {
   label: string;
   value: React.ReactNode;
   sublabel?: string;
   icon?: LucideIcon;
-  variant?: KpiVariant;
+  variant?: "default" | "success" | "warning" | "brand" | "facebook";
   trend?: number;
   trendLabel?: string;
   onClick?: () => void;
+  className?: string;
+  minimal?: boolean;
 }) {
-  const styles = variantStyles[variant];
   const Wrapper = onClick ? "button" : "div";
+
+  if (minimal) {
+    return (
+      <Wrapper
+        type={onClick ? "button" : undefined}
+        onClick={onClick}
+        className={cn(
+          "text-left",
+          onClick && "cursor-pointer hover:opacity-80 transition-opacity",
+          className
+        )}
+      >
+        <p className="type-label mb-4">{label}</p>
+        <p className="text-[2rem] font-medium tracking-[-0.03em] tabular-nums text-foreground leading-none">
+          {value}
+        </p>
+        {(trend !== undefined || sublabel || trendLabel) && (
+          <p className="type-caption mt-3">
+            {trend !== undefined && (
+              <span
+                className={cn(
+                  "tabular-nums",
+                  trend >= 0 ? "text-foreground/70" : "text-destructive"
+                )}
+              >
+                {trend > 0 ? "+" : ""}
+                {trend}%
+              </span>
+            )}
+            {trendLabel && (
+              <span className="text-muted-foreground">
+                {trend !== undefined ? " · " : ""}
+                {trendLabel}
+              </span>
+            )}
+            {sublabel && !trendLabel && (
+              <span className="text-muted-foreground">{sublabel}</span>
+            )}
+          </p>
+        )}
+      </Wrapper>
+    );
+  }
 
   return (
     <Wrapper
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "group relative w-full overflow-hidden rounded-lg border p-4 text-left transition-all hover:shadow-sm",
-        styles.card,
-        onClick && "cursor-pointer hover:border-primary/30"
+        "group relative w-full overflow-hidden rounded-lg border border-border/70 bg-card p-6 text-left transition-colors",
+        onClick && "cursor-pointer hover:border-border",
+        className
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {label}
-          </p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight">{value}</p>
-          {sublabel && (
-            <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
-          )}
+      <p className="type-label mb-4">{label}</p>
+      <p className="text-[1.75rem] font-medium tracking-[-0.03em] tabular-nums">{value}</p>
+      {(sublabel || trend !== undefined) && (
+        <p className="type-caption mt-3">
           {trend !== undefined && (
-            <div className="mt-2 flex items-center gap-1 text-xs">
-              {trend >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-              )}
-              <span className={trend >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}>
-                {trend > 0 ? "+" : ""}{trend}%
-              </span>
-              {trendLabel && <span className="text-muted-foreground">{trendLabel}</span>}
-            </div>
+            <span className="tabular-nums">
+              {trend > 0 ? "+" : ""}
+              {trend}%
+            </span>
           )}
-        </div>
-        {Icon && (
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", styles.icon)}>
-            <Icon className="h-4 w-4" />
-          </div>
-        )}
-      </div>
+          {trendLabel && <span> · {trendLabel}</span>}
+          {sublabel && !trendLabel && sublabel}
+        </p>
+      )}
     </Wrapper>
   );
 }

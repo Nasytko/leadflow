@@ -6,6 +6,7 @@ import {
   resendLeadToTelegram,
 } from "@/services/lead.service";
 import { mapLeadPublic } from "@/lib/lead-mapper";
+import { tenantLeadWhere } from "@/lib/lead-tenant";
 
 const patchSchema = z
   .object({
@@ -37,7 +38,7 @@ export async function GET(
   const { leadId } = await params;
 
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, userId: authResult.session.user.id },
+    where: tenantLeadWhere(authResult.session.user.id, leadId),
     include: {
       form: {
         include: {
@@ -99,13 +100,13 @@ export async function PATCH(
       );
     } else if (parsed.data.managerNote !== undefined) {
       await prisma.lead.updateMany({
-        where: { id: leadId, userId },
+        where: tenantLeadWhere(userId, leadId),
         data: { managerNote: parsed.data.managerNote },
       });
     }
 
     const lead = await prisma.lead.findFirst({
-      where: { id: leadId, userId },
+      where: tenantLeadWhere(userId, leadId),
       include: {
         form: { include: { page: { include: { business: true } } } },
         processedBy: { select: { id: true, name: true, email: true } },

@@ -182,6 +182,7 @@ export async function GET(request: Request) {
       expiresIn: longToken.expires_in,
       facebookUserId: profile.id,
       facebookUserName: profile.name,
+      facebookUserEmail: profile.email,
       facebookUserPictureUrl: profile.pictureUrl,
       metaAppIdAtAuth: creds.appId,
       metaLoginConfigIdAtAuth: loginConfigId ?? undefined,

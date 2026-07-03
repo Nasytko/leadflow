@@ -326,7 +326,7 @@ export function MatchRateCard({ data }: { data: LeadSyncData }) {
             <p className="text-[10px] text-muted-foreground">{t("kpiMetaLeads")}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">LeadBridge</p>
+            <p className="text-xs text-muted-foreground mb-1">ORVIX</p>
             <p className="text-2xl font-bold text-emerald-600">{data.leadBridgeLeads}</p>
             <p className="text-[10px] text-muted-foreground">{t("kpiLeadBridgeLeads")}</p>
           </div>

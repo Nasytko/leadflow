@@ -65,6 +65,8 @@ export async function GET(request: Request) {
     ? mapFacebookConnectionPublic(connection, {
         hasLoginConfigId,
         pagesCount: effectivePagesCount,
+        connectedPagesCount: connectedPages.length,
+        activeFormsCount: forms,
       })
     : {
         status: "disconnected",

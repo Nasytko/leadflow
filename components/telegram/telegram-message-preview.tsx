@@ -39,7 +39,7 @@ export function TelegramMessagePreview({ html, buttons = [], className }: Props)
                 LB
               </div>
               <div>
-                <p className="text-white text-sm font-medium">LeadBridge Bot</p>
+                <p className="text-white text-sm font-medium">ORVIX Bot</p>
                 <p className="text-[#6c7883] text-xs">online</p>
               </div>
             </div>

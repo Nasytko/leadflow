@@ -39,7 +39,7 @@ export default async function DashboardLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col pb-16 lg:pb-0 min-h-screen">
         <Header />
-        <main className="flex-1 app-mesh-bg p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 app-shell-bg px-6 py-10 sm:px-8 lg:px-12 lg:py-14 overflow-x-hidden">{children}</main>
         <AppFooter />
       </div>
       <MobileNav />

@@ -1,0 +1,45 @@
+---
+description: ORVIX product system — design language, architecture, and quality gates. Read docs/orvix before UI/UX changes.
+alwaysApply: true
+---
+
+# ORVIX Product Rules
+
+## Source of truth
+
+Before major UI, UX, or frontend architecture work, read `/docs/orvix/` (start with README.md).
+
+## Product identity
+
+- ORVIX is an **operations platform for business events** — not a CRM, not a connector dashboard.
+- Core cycle: **Connect → Understand → Decide → Deliver → Observe**.
+- No features without product rationale. No decoration without function.
+
+## Design language
+
+- Premium B2B SaaS: calm, minimal, typography-first (Linear / Stripe direction).
+- Tokens: background `#FAFAFA`, text `#171717`, border `#E8E8E8`, accent `#5E6AD2` (sparingly).
+- **No** glassmorphism, decorative gradients, or heavy shadows on surfaces.
+- Use `.type-display|title|body|caption|label`, `.surface`, `.nav-item-active`, `.hairline-b`.
+- Status: `StatusBadge` (dot + text). KPIs: `KpiCard` minimal mode or divided surfaces.
+
+## Architecture
+
+- `components/ui/` — primitives only; extend, do not duplicate.
+- `components/layout/` — app shell (sidebar, header, footer).
+- Feature UI in `components/<feature>/`; `app/` pages are thin composition layers.
+- No inline styles. No new colors without updating `globals.css` + `docs/orvix/05_design_system.md`.
+
+## Prohibited without explicit request
+
+- Prisma / API / auth / integration logic changes in design-only tasks.
+- New components that mirror existing ui primitives (`button-v2`, `metric-card`, etc.).
+
+## Quality before done
+
+```bash
+npm run build
+npm run lint
+```
+
+Report: what changed, files touched, checks passed, docs updated.

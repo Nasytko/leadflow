@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/utils";
 import { createAuditLog } from "@/lib/audit";
 import { verifyTurnstileToken, isTurnstileEnabled } from "@/lib/turnstile";
-import { getRegistrationMode, consumeInviteCode } from "@/lib/registration";
+import {
+  getRegistrationMode,
+  createRegisteredUser,
+} from "@/lib/registration";
 import {
   createEmailVerificationToken,
   sendVerificationEmail,
@@ -23,6 +26,12 @@ const registerSchema = z.object({
   turnstileToken: z.string().optional(),
   inviteCode: z.string().optional(),
 });
+
+const INVITE_ERRORS: Record<string, string> = {
+  INVITE_INVALID: "Invalid invite code",
+  INVITE_USED: "Invite code already used",
+  INVITE_EXPIRED: "Invite code expired",
+};
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -86,19 +95,13 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name,
-        locale: locale ?? "ru",
-        status: "pending_email_verification",
-      },
+    const user = await createRegisteredUser({
+      email,
+      passwordHash,
+      name,
+      locale: locale ?? "ru",
+      inviteCode,
     });
-
-    if (mode === "invite_only") {
-      await consumeInviteCode(inviteCode!, user.id);
-    }
 
     const { verifyUrl } = await createEmailVerificationToken({
       userId: user.id,
@@ -125,7 +128,14 @@ export async function POST(request: Request) {
         registrationMode: mode,
       },
     });
-  } catch {
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code in INVITE_ERRORS) {
+      return NextResponse.json(
+        { error: { code, message: INVITE_ERRORS[code] } },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: { code: "INTERNAL", message: "Registration failed" } },
       { status: 500 }

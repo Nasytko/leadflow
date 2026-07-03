@@ -2,30 +2,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Link } from "@/i18n/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  TrendingUp,
   BarChart3,
   RefreshCw,
-  Settings2,
   Activity,
-  Clock,
   Zap,
   CheckCircle2,
   Circle,
+  ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { DashboardStats } from "@/types";
 import { DashboardLineChart, DashboardDonutChart } from "@/components/dashboard/dashboard-charts";
+import { IntegrationPipeline } from "@/components/dashboard/integration-pipeline";
 
 type HealthCard = {
   id: string;
@@ -103,17 +100,10 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
-        <Skeleton className="h-16 w-full rounded-lg" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Skeleton className="h-64 rounded-lg lg:col-span-1" />
-          <Skeleton className="h-64 rounded-lg lg:col-span-2" />
-        </div>
+      <div className="mx-auto max-w-[1080px] space-y-16">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-72 w-full" />
       </div>
     );
   }
@@ -128,245 +118,244 @@ export function DashboardContent() {
     ) ?? [];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-            {t("title")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
+    <div className="mx-auto max-w-[1080px]">
+      {/* Page hero */}
+      <header className="mb-16 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-3 max-w-xl">
+          <h1 className="type-display">{t("title")}</h1>
+          <p className="type-body text-muted-foreground">{t("welcomeHint")}</p>
+          <p className="type-caption">
+            {t("lastLead")}{" "}
+            <span className="text-foreground/80">
+              {timeAgo(stats?.lastLeadAt ?? null, locale)}
+            </span>
+            {refreshedAt && (
+              <>
+                <span className="mx-2 text-border">·</span>
+                {t("lastRefresh", {
+                  time: refreshedAt.toLocaleTimeString(locale, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                })}
+              </>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          {refreshedAt && (
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              {t("lastRefresh", {
-                time: refreshedAt.toLocaleTimeString(locale, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              })}
-            </span>
-          )}
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="rounded-lg"
             onClick={() => loadStats(true)}
             disabled={refreshing}
           >
-            <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             {t("refresh")}
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg" asChild>
-            <Link href="/settings">
-              <Settings2 className="h-4 w-4 mr-2" />
-              {t("configure")}
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/leads">
+              {t("actionLeads")}
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>
-      </div>
+      </header>
 
       {stats && setupPercent < 100 && (
-        <Card className="rounded-lg border-primary/15 bg-primary/[0.02]">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm flex items-center gap-2 font-semibold">
-              <Zap className="h-4 w-4 text-primary" />
-              {t("gettingStarted")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 space-y-3">
-            <ProgressBar
-              value={stats.setupCompleted}
-              max={stats.setupTotal}
-              label={t("setupLabel")}
-            />
-            <div className="flex flex-wrap gap-2">
-              {SETUP_STEPS.map((step) => {
-                const done = stats.setupSteps[step.key];
-                return (
-                  <Link
-                    key={step.key}
-                    href={step.href}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
-                      done
-                        ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
-                        : "border-border hover:border-primary/30"
-                    )}
-                  >
-                    {done ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    {t(step.labelKey)}
-                  </Link>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <section className="mb-16 surface px-6 py-6 sm:px-8 sm:py-7">
+          <div className="mb-5 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+            <p className="type-title">{t("gettingStarted")}</p>
+            <span className="type-caption ml-auto">{setupPercent}%</span>
+          </div>
+          <ProgressBar value={stats.setupCompleted} max={stats.setupTotal} />
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+            {SETUP_STEPS.map((step) => {
+              const done = stats.setupSteps[step.key];
+              return (
+                <Link
+                  key={step.key}
+                  href={step.href}
+                  className={cn(
+                    "inline-flex items-center gap-2 type-caption transition-colors hover:text-foreground",
+                    done ? "text-foreground/70" : "text-muted-foreground"
+                  )}
+                >
+                  {done ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" strokeWidth={1.5} />
+                  ) : (
+                    <Circle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  )}
+                  {t(step.labelKey)}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard
-          label={t("leadsToday")}
-          value={stats?.leadsToday ?? 0}
-          icon={Users}
-          variant="brand"
-          trend={stats?.todayTrend ?? undefined}
-          trendLabel={t("vsYesterday")}
-        />
-        <KpiCard
-          label={t("leadsThisWeek")}
-          value={stats?.leadsThisWeek ?? 0}
-          icon={TrendingUp}
-          variant="success"
-          trend={stats?.weekTrend ?? undefined}
-          trendLabel={t("vsPrevWeek")}
-        />
-        <KpiCard
-          label={t("leadsThisMonth")}
-          value={stats?.leadsThisMonth ?? 0}
-          icon={BarChart3}
-          trend={stats?.monthTrend ?? undefined}
-          trendLabel={t("vsPrevMonth")}
-        />
-        <KpiCard
-          label={t("totalLeadsLabel")}
-          value={stats?.totalLeads ?? 0}
-          sublabel={t("allTime")}
-          icon={Users}
-        />
-        <KpiCard
-          label={t("lastLead")}
-          value={timeAgo(stats?.lastLeadAt ?? null, locale)}
-          sublabel={t("lastLeadDesc")}
-          icon={Clock}
-        />
-      </div>
+      {/* Metrics — single rhythm strip */}
+      <section className="mb-20">
+        <div className="grid grid-cols-2 border border-border/70 rounded-lg overflow-hidden lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border/70 bg-card">
+          <KpiCard
+            minimal
+            className="!px-6 !py-7"
+            label={t("leadsToday")}
+            value={stats?.leadsToday ?? 0}
+            trend={stats?.todayTrend ?? undefined}
+            trendLabel={t("vsYesterday")}
+          />
+          <KpiCard
+            minimal
+            className="!px-6 !py-7"
+            label={t("leadsThisWeek")}
+            value={stats?.leadsThisWeek ?? 0}
+            trend={stats?.weekTrend ?? undefined}
+            trendLabel={t("vsPrevWeek")}
+          />
+          <KpiCard
+            minimal
+            className="!px-6 !py-7"
+            label={t("leadsThisMonth")}
+            value={stats?.leadsThisMonth ?? 0}
+            trend={stats?.monthTrend ?? undefined}
+            trendLabel={t("vsPrevMonth")}
+          />
+          <KpiCard
+            minimal
+            className="!px-6 !py-7"
+            label={t("totalLeadsLabel")}
+            value={stats?.totalLeads ?? 0}
+            sublabel={t("allTime")}
+          />
+        </div>
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-lg lg:col-span-1">
-          <CardHeader className="pb-2 px-4 pt-4">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              {t("systemStatus")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <ul className="space-y-2">
-              {systemCards.map((card) => (
-                <li
-                  key={card.id}
-                  className="flex items-center justify-between gap-2 text-sm py-1"
-                >
-                  <span>{t(`health_${card.id}` as "health_facebook")}</span>
-                  <StatusBadge
-                    status={card.status}
-                    label={t(`healthStatus_${card.status}`)}
-                  />
-                </li>
-              ))}
-              <li className="flex items-center justify-between gap-2 text-sm py-1">
-                <span>{t("health_database")}</span>
-                <StatusBadge status="ok" label={t("healthStatus_ok")} />
+      {/* Pipeline */}
+      <section className="mb-20">
+        <SectionHeader title={t("pipelineTitle")} description={t("pipelineSubtitle")} />
+        <div className="surface px-6 py-8 sm:px-8">
+          <IntegrationPipeline
+            facebookConnected={stats?.facebookConnected ?? false}
+            telegramConnected={stats?.telegramConnected ?? false}
+            activeForms={stats?.activeForms ?? 0}
+            webhookVerified={stats?.webhookVerified ?? false}
+          />
+        </div>
+      </section>
+
+      {/* Chart + health */}
+      <section className="mb-20 grid gap-12 lg:grid-cols-[1fr_280px] lg:gap-16">
+        <div>
+          <SectionHeader title={t("leadsChart30d")} description={t("leadsChartDesc")} />
+          <div className="surface px-6 py-8 sm:px-8">
+            <DashboardLineChart data={stats?.leadsByDay ?? []} height={280} />
+          </div>
+        </div>
+        <div>
+          <SectionHeader title={t("systemStatus")} />
+          <ul className="space-y-4">
+            {systemCards.map((card) => (
+              <li key={card.id} className="flex items-center justify-between gap-4">
+                <span className="type-caption text-foreground/80">
+                  {t(`health_${card.id}` as "health_facebook")}
+                </span>
+                <StatusBadge
+                  status={card.status}
+                  label={t(`healthStatus_${card.status}`)}
+                />
               </li>
-            </ul>
-          </CardContent>
-        </Card>
+            ))}
+            <li className="flex items-center justify-between gap-4">
+              <span className="type-caption text-foreground/80">{t("health_database")}</span>
+              <StatusBadge status="ok" label={t("healthStatus_ok")} />
+            </li>
+          </ul>
+        </div>
+      </section>
 
-        <Card className="rounded-lg lg:col-span-2">
-          <CardHeader className="pb-2 px-4 pt-4">
-            <CardTitle className="text-sm font-semibold">{t("leadsChart30d")}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <DashboardLineChart data={stats?.leadsByDay ?? []} height={220} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-lg">
-          <CardHeader className="pb-2 px-4 pt-4">
-            <CardTitle className="text-sm font-semibold">{t("leadSources")}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+      {/* Sources + activity */}
+      <section className="mb-20 grid gap-12 lg:grid-cols-2 lg:gap-16">
+        <div>
+          <SectionHeader title={t("leadSources")} description={t("leadSourcesDesc")} />
+          <div className="surface px-6 py-8 sm:px-8">
             {stats?.leadSources?.length ? (
               <DashboardDonutChart data={stats.leadSources} />
             ) : (
               <EmptyState icon={BarChart3} title={t("noSources")} description={t("noSourcesDesc")} />
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        <div>
+          <SectionHeader title={t("recentEvents")} description={t("recentEventsDesc")} />
+          {stats?.recentEvents?.length ? (
+            <ul className="space-y-5">
+              {stats.recentEvents.map((ev) => (
+                <li key={ev.id} className="flex gap-4">
+                  <span
+                    className={cn(
+                      "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",
+                      ev.status === "ok" && "bg-emerald-500",
+                      ev.status === "warning" && "bg-amber-500",
+                      ev.status === "error" && "bg-red-500"
+                    )}
+                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="type-body">
+                      {t(ev.messageKey as "eventLeadReceived", ev.messageParams ?? {})}
+                    </p>
+                    <p className="type-caption">{timeAgo(ev.at, locale)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={Activity} title={t("noEvents")} description={t("noEventsDesc")} />
+          )}
+        </div>
+      </section>
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-2 px-4 pt-4">
-            <CardTitle className="text-sm font-semibold">{t("campaignsTable")}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            {stats?.campaignSummary?.length ? (
-              <div className="overflow-x-auto -mx-1">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-muted-foreground border-b">
-                      <th className="pb-2 font-medium">{t("campaignName")}</th>
-                      <th className="pb-2 font-medium">{t("campaignChannel")}</th>
-                      <th className="pb-2 font-medium text-right">{t("campaignLeads")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.campaignSummary.map((row) => (
-                      <tr key={row.name} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 pr-2 max-w-[140px] truncate">{row.name}</td>
-                        <td className="py-2 text-muted-foreground">{row.channel}</td>
-                        <td className="py-2 text-right font-medium">{row.leads}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <EmptyState icon={BarChart3} title={t("noCampaigns")} description={t("noCampaignsDesc")} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg">
-          <CardHeader className="pb-2 px-4 pt-4">
-            <CardTitle className="text-sm font-semibold">{t("recentEvents")}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            {stats?.recentEvents?.length ? (
-              <ul className="space-y-3">
-                {stats.recentEvents.map((ev) => (
-                  <li key={ev.id} className="flex gap-3 text-sm">
-                    <span
-                      className={cn(
-                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                        ev.status === "ok" && "bg-emerald-500",
-                        ev.status === "warning" && "bg-amber-500",
-                        ev.status === "error" && "bg-red-500"
-                      )}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="leading-snug">
-                        {t(ev.messageKey as "eventLeadReceived", ev.messageParams ?? {})}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {timeAgo(ev.at, locale)}
-                      </p>
-                    </div>
-                  </li>
+      {stats?.campaignSummary?.length ? (
+        <section>
+          <SectionHeader
+            title={t("campaignsTable")}
+            description={t("campaignsTableDesc")}
+            action={
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/meta/audit">
+                  {t("viewAll")}
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            }
+          />
+          <div className="surface overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="hairline-b text-left">
+                  <th className="type-label px-6 py-4 font-medium">{t("campaignName")}</th>
+                  <th className="type-label px-6 py-4 font-medium">{t("campaignChannel")}</th>
+                  <th className="type-label px-6 py-4 font-medium text-right">
+                    {t("campaignLeads")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.campaignSummary.map((row) => (
+                  <tr
+                    key={row.name}
+                    className="hairline-b last:border-0 transition-colors hover:bg-foreground/[0.02]"
+                  >
+                    <td className="type-body px-6 py-4 max-w-[240px] truncate">{row.name}</td>
+                    <td className="type-caption px-6 py-4">{row.channel}</td>
+                    <td className="type-body px-6 py-4 text-right tabular-nums">{row.leads}</td>
+                  </tr>
                 ))}
-              </ul>
-            ) : (
-              <EmptyState icon={Activity} title={t("noEvents")} description={t("noEventsDesc")} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -10,7 +10,9 @@ import { useLocale } from "next-intl";
 import { ScrollText, Webhook } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 
 type Log = {
   id: string;
@@ -111,7 +113,7 @@ export function LogsContent() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} icon={ScrollText} gradient />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} icon={ScrollText} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard label={t("kpiTotal")} value={logs.length} icon={ScrollText} />
@@ -130,7 +132,16 @@ export function LogsContent() {
           <div>
             <h3 className="text-sm font-medium mb-2">{t("verificationAttempts")}</h3>
             {verificationLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noVerificationLogs")}</p>
+              <EmptyState
+                icon={Webhook}
+                title={t("noVerificationLogs")}
+                description={t("noVerificationLogsDesc")}
+                className="py-8"
+              >
+                <Button variant="outline" asChild className="min-h-11">
+                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                </Button>
+              </EmptyState>
             ) : (
               <div className="space-y-2">
                 {verificationLogs.slice(0, 5).map((row) => (
@@ -149,9 +160,32 @@ export function LogsContent() {
           <div>
             <h3 className="text-sm font-medium mb-2">{t("webhookEvents")}</h3>
             {webhookEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noWebhookEvents")}</p>
+              <EmptyState
+                icon={Webhook}
+                title={t("noWebhookEvents")}
+                description={t("noWebhookEventsDesc")}
+                className="py-8"
+              >
+                <Button variant="outline" asChild className="min-h-11">
+                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                </Button>
+              </EmptyState>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="space-y-2 md:hidden">
+                {webhookEvents.map((e) => (
+                  <div key={e.id} className="rounded-lg border p-3 text-sm space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant={statusVariant(e.status)}>{statusLabel(e.status)}</Badge>
+                      <span className="type-caption text-muted-foreground">{formatDate(e.createdAt, locale)}</span>
+                    </div>
+                    {e.leadgenId && <p className="font-mono text-xs truncate">leadgen: {e.leadgenId}</p>}
+                    {e.lastError && <p className="text-destructive text-xs">{e.lastError}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {webhookEvents.length > 0 && (
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
@@ -186,9 +220,31 @@ export function LogsContent() {
         </CardHeader>
         <CardContent className="p-0">
           {logs.length === 0 ? (
-            <p className="p-6 text-muted-foreground">{t("noLogs")}</p>
+            <EmptyState icon={ScrollText} title={t("noLogs")} description={t("noLogsDesc")}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                <Button asChild className="min-h-11">
+                  <Link href="/meta/connect">{t("noLogsCtaConnect")}</Link>
+                </Button>
+                <Button variant="outline" asChild className="min-h-11">
+                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                </Button>
+              </div>
+            </EmptyState>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="md:hidden divide-y">
+              {logs.map((log) => (
+                <div key={log.id} className="p-4 space-y-1 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{typeLabel(log.type)}</span>
+                    <Badge variant={statusVariant(log.status)}>{statusLabel(log.status)}</Badge>
+                  </div>
+                  <p className="type-caption text-muted-foreground">{formatDate(log.createdAt, locale)}</p>
+                  {log.errorMessage && <p className="text-destructive text-xs">{log.errorMessage}</p>}
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
@@ -214,6 +270,7 @@ export function LogsContent() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

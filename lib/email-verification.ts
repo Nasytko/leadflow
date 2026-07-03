@@ -30,11 +30,11 @@ export async function sendVerificationEmail(params: {
   verifyUrl: string;
 }) {
   const subject =
-    params.locale === "ru" ? "Подтвердите email в LeadBridge" : "Verify your email in LeadBridge";
+    params.locale === "ru" ? "Подтвердите email в ORVIX" : "Verify your email in ORVIX";
   const text =
     params.locale === "ru"
-      ? `Подтвердите email, чтобы активировать аккаунт в LeadBridge:\n\n${params.verifyUrl}\n\nСсылка действует 1 час.`
-      : `Verify your email to activate your LeadBridge account:\n\n${params.verifyUrl}\n\nLink expires in 1 hour.`;
+      ? `Подтвердите email, чтобы активировать аккаунт в ORVIX:\n\n${params.verifyUrl}\n\nСсылка действует 1 час.`
+      : `Verify your email to activate your ORVIX account:\n\n${params.verifyUrl}\n\nLink expires in 1 hour.`;
 
   await sendEmail({ to: params.to, subject, text });
 }

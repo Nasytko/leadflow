@@ -48,7 +48,7 @@ export function FacebookPagesSection({
   const showNoPagesWarning = hasFacebookSession && pages.length === 0;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl overflow-hidden">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Layers className="h-5 w-5 text-[#1877F2]" />

@@ -8,11 +8,8 @@ import {
 import { rateLimitByIp } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/utils";
 import { writeSystemLog } from "@/lib/system-log";
-import {
-  isWebhookSignatureRequired,
-  verifyMetaWebhookSignature,
-} from "@/lib/meta-webhook-signature";
-import { getWebhookAppSecret } from "@/lib/webhook-app-secret";
+import { verifyMetaWebhookSignature } from "@/lib/meta-webhook-signature";
+import { getEnvMetaAppSecret } from "@/lib/meta-platform-credentials";
 
 export async function GET(request: Request) {
   const ip = getClientIp(request);
@@ -57,36 +54,30 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signatureHeader = request.headers.get("x-hub-signature-256");
 
-  if (isWebhookSignatureRequired()) {
-    const appSecret = await getWebhookAppSecret();
-    if (!appSecret) {
-      await writeSystemLog({
-        level: "error",
-        source: "webhook",
-        action: "signature.misconfigured",
-        message: "Webhook signature required but META_APP_SECRET is not configured",
-        metadata: { ipAddress: ip },
-      });
-      return NextResponse.json(
-        { error: "Webhook signature verification not configured" },
-        { status: 503 }
-      );
-    }
-
-    const valid = verifyMetaWebhookSignature(
-      rawBody,
-      signatureHeader,
-      appSecret
+  const appSecret = getEnvMetaAppSecret();
+  if (!appSecret) {
+    await writeSystemLog({
+      level: "error",
+      source: "webhook",
+      action: "signature.misconfigured",
+      message: "META_APP_SECRET is not configured for webhook signature verification",
+      metadata: { ipAddress: ip },
+    });
+    return NextResponse.json(
+      { error: "Webhook signature verification not configured" },
+      { status: 503 }
     );
+  }
 
-    if (!valid) {
-      await logWebhookSignatureFailure({
-        sourceIp: ip,
-        userAgent,
-        reason: signatureHeader ? "invalid_signature" : "missing_signature",
-      });
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  const valid = verifyMetaWebhookSignature(rawBody, signatureHeader, appSecret);
+
+  if (!valid) {
+    await logWebhookSignatureFailure({
+      sourceIp: ip,
+      userAgent,
+      reason: signatureHeader ? "invalid_signature" : "missing_signature",
+    });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   try {

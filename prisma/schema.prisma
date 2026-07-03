@@ -92,7 +92,7 @@ model IntegrationSettings {
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
+  tokenHash String   @unique
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
@@ -110,6 +110,7 @@ model FacebookConnection {
   tokenExpiresAt         DateTime?
   facebookUserId         String?
   facebookUserName       String?
+  facebookUserEmail      String?
   facebookUserPictureUrl String?
   metaAppIdAtAuth        String?
   metaLoginConfigIdAtAuth String?

@@ -20,6 +20,7 @@
     "meta:cleanup-legacy-settings": "tsx scripts/meta-cleanup-legacy-settings.ts",
     "meta:credentials-check": "tsx scripts/meta-credentials-self-check.ts",
     "production:readiness-check": "tsx scripts/production-readiness-check.ts",
+    "test": "tsx --test tests/**/*.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

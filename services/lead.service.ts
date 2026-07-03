@@ -20,6 +20,7 @@ import {
 } from "./telegram.service";
 import { parseTelegramTemplateSettings } from "@/lib/telegram-template-settings";
 import { extractLeadAttribution } from "@/lib/lead-mapper";
+import { tenantLeadWhere } from "@/lib/lead-tenant";
 import { resolveLeadAttributionLinks } from "@/services/meta-ads.service";
 
 const RETRY_DELAYS = [60_000, 300_000, 900_000];
@@ -476,7 +477,7 @@ export async function updateLeadCrmStatus(
     | "processed",
   managerNote?: string
 ) {
-  const lead = await prisma.lead.findFirst({ where: { id: leadId, userId } });
+  const lead = await prisma.lead.findFirst({ where: tenantLeadWhere(userId, leadId) });
   if (!lead) throw new Error("Lead not found");
 
   const normalizedStatus =
@@ -516,7 +517,7 @@ export async function updateLeadCrmStatus(
 
 export async function resendLeadToTelegram(userId: string, leadId: string) {
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, userId },
+    where: tenantLeadWhere(userId, leadId),
     include: {
       form: { include: { page: { include: { business: true } } } },
     },

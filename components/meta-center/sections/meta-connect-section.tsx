@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Facebook } from "lucide-react";
 import { MetaSectionShell } from "@/components/meta-center/meta-section-shell";
 import { FacebookOAuthErrorAlert } from "@/components/facebook/facebook-oauth-error-alert";
 import { FacebookLoginConfigCard } from "@/components/facebook/facebook-login-config-card";
+import { MetaAccountCard } from "@/components/features/meta/meta-account-card";
 import type { LastOAuthErrorData } from "@/components/facebook/facebook-oauth-error-alert";
 import { apiFetch } from "@/lib/client-api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 async function fetchWithTimeout(url: string, ms = 10000) {
   const c = new AbortController();
@@ -22,106 +20,129 @@ async function fetchWithTimeout(url: string, ms = 10000) {
   }
 }
 
+type StatusPayload = {
+  metaConfigured: boolean;
+  connected: boolean;
+  connectedPagesCount: number;
+  activeFormsCount: number;
+  facebook: {
+    status: string;
+    uiStatus: string;
+    tokenInvalid?: boolean;
+    facebookUserId?: string | null;
+    facebookUserName?: string | null;
+    facebookUserEmail?: string | null;
+    facebookUserPictureUrl?: string | null;
+    connectedAt?: string | null;
+    lastCheckedAt?: string | null;
+    updatedAt?: string | null;
+    tokenExpiresAt?: string | null;
+    connectedPagesCount?: number;
+    activeFormsCount?: number;
+    lastError?: string | null;
+  };
+  lastOAuthError?: LastOAuthErrorData | null;
+};
+
 export function MetaConnectSection() {
   const t = useTranslations("metaCenter.connect");
-  const tFb = useTranslations("facebook");
-  const [connecting, setConnecting] = useState(false);
-  const [metaConfigured, setMetaConfigured] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [facebookName, setFacebookName] = useState<string | null>(null);
-  const [lastOAuthError, setLastOAuthError] = useState<LastOAuthErrorData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<StatusPayload | null>(null);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configPresent, setConfigPresent] = useState(false);
   const [configValid, setConfigValid] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
       const [statusRes, debugRes] = await Promise.all([
         fetchWithTimeout("/api/facebook/status"),
         fetchWithTimeout("/api/facebook/oauth-debug"),
       ]);
-      const status = await statusRes.json();
+      const statusJson = await statusRes.json();
       const debug = await debugRes.json();
-      if (status.data) {
-        setMetaConfigured(status.data.metaConfigured);
-        setConnected(status.data.connected);
-        setFacebookName(status.data.facebook?.facebookUserName ?? null);
-        setLastOAuthError(status.data.lastOAuthError ?? null);
-      }
+      if (statusJson.data) setStatus(statusJson.data);
       if (debug.data) {
         setConfigId(debug.data.configId ?? debug.data.loginConfigIdUsed);
         setConfigPresent(debug.data.configIdPresent ?? !!debug.data.loginConfigIdUsed);
         setConfigValid(debug.data.configIdValid ?? debug.data.isLoginConfigIdValid);
       }
-    })();
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function handleConnect() {
-    if (!metaConfigured) {
-      toast.error(tFb("connectDisabled"));
-      return;
-    }
-    setConnecting(true);
-    try {
-      const res = await fetchWithTimeout("/api/facebook/connect");
-      const data = await res.json();
-      if (data.data?.url) window.location.href = data.data.url;
-      else toast.error(data.error?.message ?? tFb("oauthFailed"));
-    } catch {
-      toast.error(tFb("oauthFailed"));
-    } finally {
-      setConnecting(false);
-    }
-  }
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const account = status?.facebook
+    ? {
+        connected: status.connected,
+        status: status.facebook.status,
+        uiStatus: status.facebook.uiStatus,
+        tokenInvalid: status.facebook.tokenInvalid,
+        facebookUserId: status.facebook.facebookUserId,
+        facebookUserName: status.facebook.facebookUserName,
+        facebookUserEmail: status.facebook.facebookUserEmail,
+        facebookUserPictureUrl: status.facebook.facebookUserPictureUrl,
+        connectedAt: status.facebook.connectedAt,
+        lastCheckedAt: status.facebook.lastCheckedAt,
+        updatedAt: status.facebook.updatedAt,
+        tokenExpiresAt: status.facebook.tokenExpiresAt,
+        connectedPagesCount:
+          status.facebook.connectedPagesCount ?? status.connectedPagesCount,
+        activeFormsCount: status.facebook.activeFormsCount ?? status.activeFormsCount,
+        lastError: status.facebook.lastError,
+      }
+    : null;
 
   return (
     <MetaSectionShell title={t("title")} description={t("description")} helpKey="connect">
-      {lastOAuthError && !connected && (
-        <FacebookOAuthErrorAlert
-          error={lastOAuthError}
-          onOpenDiagnostics={() => {
-            window.location.href = "/meta/health";
-          }}
-        />
-      )}
-
-      <FacebookLoginConfigCard
-        configId={configId}
-        configIdPresent={configPresent}
-        configIdValid={configValid}
-      />
-
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Facebook className="h-5 w-5 text-[#1877F2]" />
-            {connected ? t("connectedTitle") : t("ctaTitle")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {connected && facebookName && (
-            <p className="text-sm">
-              {tFb("connectedAs")}: <strong>{facebookName}</strong>
-            </p>
+      {loading && !status ? (
+        <div className="space-y-4">
+          <Skeleton className="h-56 w-full rounded-lg" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      ) : (
+        <>
+          {status?.lastOAuthError && !status.connected && (
+            <FacebookOAuthErrorAlert
+              error={status.lastOAuthError}
+              onOpenDiagnostics={() => {
+                window.location.href = "/meta/health";
+              }}
+            />
           )}
-          <p className="text-sm text-muted-foreground">{t("permissionsHint")}</p>
-          <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-            <li>{t("permPages")}</li>
-            <li>{t("permLeads")}</li>
-            <li>{t("permAds")}</li>
-            <li>{t("permBusiness")}</li>
-          </ul>
-          <Button
-            size="lg"
-            onClick={() => void handleConnect()}
-            disabled={!metaConfigured || connecting}
-            className="bg-[#1877F2] hover:bg-[#166FE5] text-white"
-          >
-            <Facebook className="h-4 w-4 mr-2" />
-            {connecting ? t("connecting") : connected ? tFb("reconnectButton") : t("connectButton")}
-          </Button>
-        </CardContent>
-      </Card>
+
+          <MetaAccountCard
+            account={account}
+            metaConfigured={status?.metaConfigured ?? false}
+            loading={loading}
+            onRefresh={load}
+          />
+
+          {!status?.connected && (
+            <>
+              <FacebookLoginConfigCard
+                configId={configId}
+                configIdPresent={configPresent}
+                configIdValid={configValid}
+              />
+
+              <div className="surface px-6 py-6 sm:px-8 space-y-3">
+                <p className="type-body text-muted-foreground">{t("permissionsHint")}</p>
+                <ul className="type-caption text-muted-foreground list-disc pl-5 space-y-1">
+                  <li>{t("permPages")}</li>
+                  <li>{t("permLeads")}</li>
+                  <li>{t("permAds")}</li>
+                  <li>{t("permBusiness")}</li>
+                </ul>
+              </div>
+            </>
+          )}
+        </>
+      )}
     </MetaSectionShell>
   );
 }

@@ -190,9 +190,9 @@ export async function testPlatformEmail(to: string) {
   await transporter.sendMail({
     from,
     to,
-    subject: "LeadBridge — test email",
-    text: "This is a test email from LeadBridge Platform Admin.",
-    html: "<p>This is a <b>test email</b> from LeadBridge Platform Admin.</p>",
+    subject: "ORVIX — test email",
+    text: "This is a test email from ORVIX Platform Admin.",
+    html: "<p>This is a <b>test email</b> from ORVIX Platform Admin.</p>",
   });
 
   if (source === "db") {

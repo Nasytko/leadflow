@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       await prisma.passwordResetToken.create({
         data: {
           userId: user.id,
-          token: tokenHash,
+          tokenHash,
           expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         },
       });

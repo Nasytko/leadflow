@@ -94,6 +94,7 @@ export type GraphPageDetail = {
 export type FacebookProfile = {
   id: string;
   name: string;
+  email?: string;
   pictureUrl?: string;
 };
 
@@ -138,12 +139,14 @@ export async function getFacebookProfile(
   const data = await graphFetch<{
     id: string;
     name: string;
+    email?: string;
     picture?: { data?: { url?: string } };
-  }>("/me?fields=id,name,picture", accessToken);
+  }>("/me?fields=id,name,email,picture", accessToken);
 
   return {
     id: data.id,
     name: data.name,
+    email: data.email,
     pictureUrl: data.picture?.data?.url,
   };
 }
@@ -418,6 +421,7 @@ export async function saveFacebookConnection(
     expiresIn?: number;
     facebookUserId?: string;
     facebookUserName?: string;
+    facebookUserEmail?: string;
     facebookUserPictureUrl?: string;
     metaAppIdAtAuth?: string;
     metaLoginConfigIdAtAuth?: string;
@@ -447,6 +451,7 @@ export async function saveFacebookConnection(
       tokenExpiresAt,
       facebookUserId: options.facebookUserId,
       facebookUserName: options.facebookUserName,
+      facebookUserEmail: options.facebookUserEmail,
       facebookUserPictureUrl: options.facebookUserPictureUrl,
       metaAppIdAtAuth: options.metaAppIdAtAuth,
       metaLoginConfigIdAtAuth: options.metaLoginConfigIdAtAuth ?? null,
@@ -465,6 +470,7 @@ export async function saveFacebookConnection(
       tokenExpiresAt,
       facebookUserId: options.facebookUserId,
       facebookUserName: options.facebookUserName,
+      facebookUserEmail: options.facebookUserEmail,
       facebookUserPictureUrl: options.facebookUserPictureUrl,
       metaAppIdAtAuth: options.metaAppIdAtAuth,
       metaLoginConfigIdAtAuth: options.metaLoginConfigIdAtAuth ?? null,
@@ -587,6 +593,7 @@ export async function checkFacebookConnection(userId: string) {
         status,
         facebookUserId: profile.id,
         facebookUserName: profile.name,
+        facebookUserEmail: profile.email ?? null,
         facebookUserPictureUrl: profile.pictureUrl,
         grantedScopes: debug.scopes,
         granularScopes: debug.granularScopes,
@@ -758,6 +765,7 @@ export async function syncFacebookIdentity(
     data: {
       facebookUserId: profile.id,
       facebookUserName: profile.name,
+      facebookUserEmail: profile.email ?? null,
       facebookUserPictureUrl: profile.pictureUrl,
       businessIds: metaBusinessIds,
       primaryBusinessId: metaBusinessIds[0] ?? null,
@@ -1208,6 +1216,7 @@ export function mapFacebookConnectionPublic(conn: {
   status: string;
   facebookUserId: string | null;
   facebookUserName: string | null;
+  facebookUserEmail?: string | null;
   facebookUserPictureUrl: string | null;
   metaAppIdAtAuth?: string | null;
   metaLoginConfigIdAtAuth?: string | null;
@@ -1220,7 +1229,8 @@ export function mapFacebookConnectionPublic(conn: {
   lastErrorCode: string | null;
   lastErrorAt: Date | null;
   tokenExpiresAt: Date | null;
-}, options?: { hasLoginConfigId?: boolean; pagesCount?: number }) {
+  updatedAt?: Date | null;
+}, options?: { hasLoginConfigId?: boolean; pagesCount?: number; connectedPagesCount?: number; activeFormsCount?: number }) {
   const grantedScopes = Array.isArray(conn.grantedScopes)
     ? (conn.grantedScopes as string[])
     : [];
@@ -1254,6 +1264,7 @@ export function mapFacebookConnectionPublic(conn: {
     diagnosis,
     facebookUserId: conn.facebookUserId,
     facebookUserName: conn.facebookUserName,
+    facebookUserEmail: conn.facebookUserEmail ?? null,
     facebookUserPictureUrl: conn.facebookUserPictureUrl,
     appIdUsed: conn.metaAppIdAtAuth ?? null,
     loginConfigIdAtAuth: conn.metaLoginConfigIdAtAuth ?? null,
@@ -1269,6 +1280,9 @@ export function mapFacebookConnectionPublic(conn: {
     lastErrorCode: conn.lastErrorCode,
     lastErrorAt: conn.lastErrorAt,
     tokenExpiresAt: conn.tokenExpiresAt,
+    updatedAt: conn.updatedAt ?? null,
+    connectedPagesCount: options?.connectedPagesCount ?? 0,
+    activeFormsCount: options?.activeFormsCount ?? 0,
     connected: profileConnected,
     fullyConnected,
     tokenInvalid: conn.status === "invalid" || conn.status === "expired",

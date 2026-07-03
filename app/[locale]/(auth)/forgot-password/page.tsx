@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthBrandMark } from "@/components/auth/auth-brand-mark";
 import { AppFooter } from "@/components/layout/footer";
 import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
@@ -44,6 +45,7 @@ export default function ForgotPasswordPage() {
       <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <AuthBrandMark />
           <CardTitle className="text-2xl">{t("resetTitle")}</CardTitle>
           <CardDescription>{t("resetSubtitle")}</CardDescription>
         </CardHeader>

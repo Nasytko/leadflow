@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     const tokenHash = hashToken(parsed.data.token);
     const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { token: tokenHash },
+      where: { tokenHash },
       include: { user: true },
     });
 

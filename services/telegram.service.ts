@@ -80,7 +80,7 @@ export async function validateTelegramConnection(
   const result = await sendTelegramMessage(
     botToken,
     chatId,
-    "✅ LeadBridge connection test"
+    "✅ ORVIX connection test"
   );
   return {
     valid: result.ok,
@@ -185,7 +185,7 @@ export async function testTelegramConnection(userId: string, message?: string) {
     return { ok: false as const, error: botInfo.error, errorCode: botInfo.errorCode };
   }
 
-  const testMessage = message ?? "✅ LeadBridge — test message";
+  const testMessage = message ?? "✅ ORVIX — test message";
   const result = await sendTelegramMessage(conn.botToken, conn.chatId, testMessage);
 
   if (result.ok) {

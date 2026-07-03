@@ -60,7 +60,7 @@ function labels(locale: NotificationLocale): Labels {
       cpl: "CPL",
       utm: "UTM",
       additional: "Additional fields",
-      signature: "Sent via LeadBridge",
+      signature: "Sent via ORVIX",
       divider: "────────────",
     };
   }
@@ -81,7 +81,7 @@ function labels(locale: NotificationLocale): Labels {
     cpl: "CPL",
     utm: "UTM",
     additional: "Дополнительные поля",
-    signature: "Отправлено через LeadBridge",
+    signature: "Отправлено через ORVIX",
     divider: "────────────",
   };
 }
@@ -371,7 +371,7 @@ export const SAMPLE_LEAD_CONTEXT: TelegramLeadContext = {
     email: "anna@example.com",
     comment: "Интересует консультация в выходные",
   },
-  pageName: "LeadBridge Demo",
+  pageName: "ORVIX Demo",
   businessName: "Demo Business",
   campaignName: "Летняя акция",
   adsetName: "Москва 25-45",
