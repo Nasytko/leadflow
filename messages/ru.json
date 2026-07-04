@@ -57,23 +57,30 @@
     "inviteCreated": "Инвайт-код скопирован: {code}"
   },
   "nav": {
+    "missionControl": "Mission Control",
     "dashboard": "Дашборд",
     "wiki": "Wiki",
     "facebook": "Facebook",
+    "telegram": "Telegram",
+    "webhookApi": "Webhook / API",
     "metaCenter": "Meta Center",
     "adAudit": "Аудит рекламы",
     "forms": "Формы",
-    "telegram": "Telegram",
-    "leads": "Лиды",
+    "leads": "Лиды / События",
+    "activity": "Активность",
     "logs": "Логи",
+    "analytics": "Аналитика",
+    "health": "Здоровье",
     "settings": "Настройки",
     "admin": "Админка",
     "adminCenter": "Admin Center",
     "adminPlatform": "Platform Meta",
     "logout": "Выйти",
     "groupOverview": "Обзор",
+    "groupConnections": "Подключения",
     "groupIntegrations": "Интеграции",
     "groupData": "Данные",
+    "groupWorkspace": "Рабочая область",
     "groupSystem": "Система",
     "groupAdmin": "Админ",
     "wikiHint": "Нужна помощь?",
@@ -87,7 +94,6 @@
     "telegramGroup": "Telegram",
     "telegramBots": "Боты",
     "telegramTemplates": "Шаблоны сообщений",
-    "analytics": "Аналитика",
     "analyticsCampaigns": "Рекламные кампании",
     "adminQueue": "Очереди и задачи",
     "adminSystemLogs": "Системные логи",
@@ -597,6 +603,203 @@
     "leadCount": "Лидов",
     "lastLead": "Последний лид",
     "syncEnabled": "Синхронизация"
+  },
+  "connections": {
+    "facebook": {
+      "title": "Facebook",
+      "description": "Подключите Meta Lead Ads и настройте страницы, формы и webhook.",
+      "stepProgress": "Шаг {current} из {total}",
+      "back": "Назад",
+      "next": "Далее",
+      "connectHint": "Войдите через Facebook, чтобы ORVIX получил доступ к страницам и формам лидов.",
+      "connectFirst": "Сначала подключите Facebook-аккаунт.",
+      "summaryReady": "Facebook подключён и готов",
+      "openHealth": "Открыть Health",
+      "webhookHealth": "Состояние webhook",
+      "completeDesc": "Интеграция Facebook настроена. Новые лиды будут поступать в ORVIX автоматически.",
+      "goMissionControl": "Перейти в Mission Control",
+      "steps": {
+        "connect": "Подключить аккаунт",
+        "business": "Выбрать компанию",
+        "pages": "Синхронизировать страницы",
+        "forms": "Выбрать формы лидов",
+        "webhook": "Проверить webhook",
+        "complete": "Готово"
+      },
+      "stepsDesc": {
+        "business": "Синхронизируйте портфели компаний из Meta Business Manager.",
+        "pages": "Выберите Facebook-страницы для получения webhook лидов.",
+        "forms": "Включите формы лидов, которые ORVIX должен отслеживать.",
+        "webhook": "Отправьте тестовый лид и подтвердите доставку webhook."
+      },
+      "links": {
+        "audit": "Аудит рекламы",
+        "adAccounts": "Рекл. кабинеты",
+        "templates": "Шаблоны Telegram"
+      },
+      "overview": {
+        "setupIncomplete": "Настройка не завершена",
+        "setupIncompleteDesc": "Ещё есть шаги, которые нужно выполнить для автоматического приёма лидов.",
+        "continueSetup": "Продолжить настройку",
+        "syncSuccess": "Синхронизация завершена",
+        "syncFailed": "Ошибка синхронизации",
+        "account": {
+          "unknownUser": "Пользователь Facebook",
+          "userId": "Facebook User ID",
+          "token": "Токен",
+          "permissions": "Разрешений выдано",
+          "connectedAt": "Подключён",
+          "lastChecked": "Последняя проверка",
+          "lastSync": "Последняя синхронизация",
+          "expiresIn": "Истекает через {days} дн.",
+          "viewActivity": "Активность"
+        },
+        "health": {
+          "title": "Здоровье Facebook",
+          "score": "Оценка",
+          "checks": {
+            "notConnected": "Facebook не подключён",
+            "tokenValid": "Токен действителен",
+            "tokenInvalid": "Токен недействителен — нужно переподключение",
+            "tokenExpired": "Токен истёк — нужно переподключение",
+            "pagesConnected": "Подключено страниц: {count}",
+            "noPagesConnected": "Нет подключённых страниц для webhook",
+            "formsSynced": "Включено форм лидов: {count}",
+            "noActiveForms": "Формы лидов ещё не включены",
+            "webhookActive": "Webhook активен",
+            "webhookMissing": "Webhook не подтверждён",
+            "pageWebhookIssues": "Проблемы webhook на {count} стр.",
+            "formsNoLeads": "{count} форм(ы) без лидов",
+            "connectionError": "Есть ошибка подключения"
+          }
+        },
+        "activity": {
+          "title": "Недавняя активность",
+          "empty": "Недавней активности Facebook пока нет.",
+          "tokenRefreshed": "Подключение обновлено",
+          "connected": "Facebook-аккаунт подключён",
+          "pageSynced": "Страницы синхронизированы",
+          "newLead": "Получен новый лид",
+          "newLeadNamed": "Новый лид — {name}",
+          "lastChecked": "Подключение проверено",
+          "error": "Ошибка синхронизации или подключения",
+          "generic": "Активность Facebook"
+        },
+        "business": {
+          "title": "Business Manager",
+          "id": "ID",
+          "verification": "Верификация",
+          "setPrimary": "Сделать основным",
+          "setPrimarySuccess": "Основной бизнес обновлён",
+          "setPrimaryFailed": "Не удалось обновить основной бизнес",
+          "primaryLabel": "Основной бизнес для этого workspace",
+          "emptyTitle": "Business Manager не найден",
+          "emptyDesc": "ORVIX не нашёл портфели Business Manager на этом аккаунте. Синхронизируйте страницы после подключения или проверьте права в Meta Business Settings.",
+          "health": {
+            "ready": "Готов",
+            "warning": "Нужны формы",
+            "empty": "Нет страниц"
+          },
+          "assets": {
+            "pages": "Страницы",
+            "adAccounts": "Рекл. кабинеты",
+            "forms": "Формы"
+          }
+        },
+        "pages": {
+          "title": "Facebook-страницы",
+          "connected": "Подключена",
+          "notConnected": "Не подключена",
+          "leadAccess": "Доступ к лидам",
+          "leadAccessEnabled": "Включён",
+          "leadAccessDisabled": "Выключен",
+          "forms": "Формы",
+          "activeForms": "{count} активных",
+          "lastSync": "Последняя синхронизация",
+          "viewForms": "К формам",
+          "sync": "Синхронизировать страницы",
+          "syncAll": "Синхронизировать",
+          "emptyTitle": "Facebook-страниц пока нет",
+          "emptyDesc": "ORVIX не обнаружил страниц на этом аккаунте. Переподключите Facebook с доступом к страницам и синхронизируйте снова."
+        },
+        "forms": {
+          "title": "Формы лидов",
+          "statusActive": "Активна",
+          "statusInactive": "Выключена",
+          "statusArchived": "Архив",
+          "created": "Создана",
+          "leadsCollected": "Лидов получено",
+          "lastLead": "Последний лид",
+          "noLeadsYet": "Лидов пока нет",
+          "warningNoLeads": "По этой форме ещё не было лидов",
+          "warningWebhook": "Webhook страницы не подписан — лиды могут не приходить",
+          "sync": "Синхронизировать формы",
+          "syncAll": "Синхронизировать",
+          "emptyTitle": "Форм лидов пока нет",
+          "emptyDesc": "ORVIX нашёл вашу Facebook-страницу, но Lead Forms недоступны. Создайте форму в Meta Ads Manager и синхронизируйте снова."
+        },
+        "adAccounts": {
+          "title": "Рекламные кабинеты",
+          "currency": "Валюта",
+          "timezone": "Часовой пояс",
+          "campaigns": "Кампании",
+          "spend": "Потрачено",
+          "lastActivity": "Последняя активность",
+          "sync": "Синхронизировать кабинеты",
+          "syncAll": "Синхронизировать",
+          "statusActive": "Активен",
+          "statusDisabled": "Отключён",
+          "statusUnsettled": "Не оплачен",
+          "statusOther": "Другой",
+          "statusUnknown": "Неизвестно",
+          "emptyTitle": "Рекл. кабинеты не синхронизированы",
+          "emptyDesc": "Синхронизируйте рекламные кабинеты для обзора кампаний и расходов. Для доставки лидов это необязательно."
+        }
+      }
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Подключите бота для мгновенных уведомлений о лидах.",
+      "stepProgress": "Шаг {current} из {total}",
+      "back": "Назад",
+      "next": "Далее",
+      "summaryTitle": "Telegram-бот подключён",
+      "lastTest": "Последний тест",
+      "testVerified": "Проверен",
+      "templateStatus": "Шаблоны сообщений",
+      "manageTemplates": "Управление шаблонами",
+      "lastDelivery": "Последняя попытка доставки",
+      "updateToken": "Обновить токен",
+      "updateChat": "Обновить chat ID",
+      "viewActivity": "Активность / логи",
+      "saveBeforeTest": "Сохраните токен и chat ID перед отправкой теста.",
+      "completeDesc": "Уведомления Telegram готовы. Вы будете получать алерты о новых лидах.",
+      "goMissionControl": "Перейти в Mission Control",
+      "steps": {
+        "botfather": "Создать бота в BotFather",
+        "token": "Добавить токен бота",
+        "chat": "Добавить chat ID",
+        "test": "Отправить тестовое сообщение",
+        "complete": "Готово"
+      },
+      "stepsDesc": {
+        "botfather": "Создайте бота в Telegram через @BotFather и скопируйте токен.",
+        "token": "Вставьте токен бота из BotFather.",
+        "chat": "Укажите chat ID пользователя или группы для уведомлений.",
+        "test": "Отправьте тестовое сообщение, чтобы убедиться, что бот может писать в чат."
+      },
+      "errors": {
+        "forbiddenBotChat": "Бот не может отправить сообщение самому себе. Вероятно, указан chat ID самого бота, или вы ещё не начали чат с ботом.\n\nОткройте Telegram, найдите бота, нажмите Start, затем укажите chat ID пользователя или группы. Для группы сначала добавьте бота в группу.",
+        "chatNotFound": "Чат не найден. Проверьте chat ID и убедитесь, что бот добавлен в группу или канал.",
+        "botBlocked": "Бот заблокирован. Разблокируйте его в Telegram и повторите попытку."
+      }
+    },
+    "webhook": {
+      "title": "Webhook / API",
+      "description": "Проверка доставки Meta webhook и отправка тестовых лидов.",
+      "testLeadTitle": "Тестовая доставка лида",
+      "testLeadDesc": "Используйте Meta Lead Ads Testing Tool или отправьте тестовый лид из ORVIX, чтобы подтвердить получение webhook."
+    }
   },
   "telegram": {
     "title": "Telegram",

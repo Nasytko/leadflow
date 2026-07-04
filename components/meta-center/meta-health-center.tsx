@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MetaCenterNav } from "@/components/meta-center/meta-center-nav";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client-api";
@@ -211,8 +210,6 @@ export function MetaHealthCenter() {
           {t("health.refresh")}
         </Button>
       </PageHeader>
-
-      <MetaCenterNav />
 
       {loading && !report ? (
         <div className="space-y-4">

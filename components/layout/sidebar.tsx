@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -13,72 +11,85 @@ import {
   Shield,
   BookOpen,
   Users,
-  ChevronDown,
-  ChevronRight,
   Megaphone,
   Send,
-  FileText,
   Webhook,
-  Building2,
   BarChart3,
+  Activity,
   ListTodo,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-type NavLeaf = { href: string; key: string; icon?: React.ElementType };
-type NavNode = { key: string; icon?: React.ElementType; href?: string; children?: NavLeaf[] };
+type NavItem = { href: string; key: string; icon: React.ElementType };
 
-const navStructure: Array<{ labelKey: string; items: NavNode[] }> = [
+const navStructure: Array<{ labelKey: string; items: NavItem[] }> = [
   {
     labelKey: "groupOverview",
     items: [
-      { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { key: "wiki", href: "/wiki", icon: BookOpen },
+      { href: "/dashboard", key: "missionControl", icon: LayoutDashboard },
+      { href: "/wiki", key: "wiki", icon: BookOpen },
     ],
   },
   {
-    labelKey: "groupIntegrations",
+    labelKey: "groupConnections",
     items: [
-      {
-        key: "metaPlatform",
-        icon: Megaphone,
-        children: [
-          { href: "/meta/connect", key: "metaAccounts", icon: Building2 },
-          { href: "/meta/pages", key: "metaPages", icon: FileText },
-          { href: "/meta/forms", key: "metaForms", icon: FileText },
-          { href: "/meta/ad-accounts", key: "metaAdAccounts", icon: BarChart3 },
-          { href: "/meta/webhook", key: "metaWebhook", icon: Webhook },
-        ],
-      },
-      {
-        key: "telegramGroup",
-        icon: Send,
-        children: [
-          { href: "/meta/telegram", key: "telegramBots", icon: Send },
-          { href: "/meta/telegram/messages", key: "telegramTemplates", icon: FileText },
-        ],
-      },
+      { href: "/connections/facebook", key: "facebook", icon: Megaphone },
+      { href: "/connections/telegram", key: "telegram", icon: Send },
+      { href: "/connections/webhook", key: "webhookApi", icon: Webhook },
     ],
   },
   {
     labelKey: "groupData",
     items: [
-      { key: "leads", href: "/leads", icon: Users },
-      {
-        key: "analytics",
-        icon: BarChart3,
-        children: [{ href: "/meta/audit", key: "analyticsCampaigns", icon: BarChart3 }],
-      },
-      { key: "logs", href: "/logs", icon: ScrollText },
+      { href: "/leads", key: "leads", icon: Users },
+      { href: "/logs", key: "activity", icon: ScrollText },
+      { href: "/meta/audit", key: "analytics", icon: BarChart3 },
     ],
   },
   {
-    labelKey: "groupSystem",
-    items: [{ key: "settings", href: "/settings", icon: Settings }],
+    labelKey: "groupWorkspace",
+    items: [
+      { href: "/settings", key: "settings", icon: Settings },
+      { href: "/meta/health", key: "health", icon: Activity },
+    ],
   },
 ];
 
-function isPathActive(pathname: string, href: string) {
-  if (href === "/meta") return pathname === "/meta" || pathname.startsWith("/meta/");
+function isPathActive(pathname: string, href: string, key: string) {
+  if (key === "facebook") {
+    return (
+      pathname.startsWith("/connections/facebook") ||
+      pathname.startsWith("/meta/connect") ||
+      pathname.startsWith("/meta/businesses") ||
+      pathname.startsWith("/meta/pages") ||
+      pathname.startsWith("/meta/forms") ||
+      pathname === "/meta"
+    );
+  }
+  if (key === "telegram") {
+    return (
+      pathname.startsWith("/connections/telegram") ||
+      pathname.startsWith("/meta/telegram")
+    );
+  }
+  if (key === "webhookApi") {
+    return (
+      pathname.startsWith("/connections/webhook") ||
+      pathname.startsWith("/meta/webhook")
+    );
+  }
+  if (key === "missionControl") {
+    return pathname === "/dashboard";
+  }
+  if (key === "health") {
+    return pathname.startsWith("/meta/health") || pathname.startsWith("/facebook/health");
+  }
+  if (key === "analytics") {
+    return pathname.startsWith("/meta/audit") || pathname.startsWith("/ad-audit");
+  }
+  if (key === "activity") {
+    return pathname.startsWith("/logs");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -87,96 +98,33 @@ function NavLink({
   icon: Icon,
   label,
   isActive,
-  indent,
 }: {
   href: string;
-  icon?: React.ElementType;
+  icon: React.ElementType;
   label: string;
   isActive: boolean;
-  indent?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors",
-        indent && "pl-7",
+        "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors min-h-[44px] lg:min-h-0",
         isActive
           ? "nav-item-active"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
       )}
     >
-      {Icon && <Icon className="h-4 w-4 shrink-0 opacity-60" strokeWidth={1.5} />}
+      <Icon className="h-4 w-4 shrink-0 opacity-60" strokeWidth={1.5} />
       <span className="truncate">{label}</span>
     </Link>
   );
 }
 
-function NavGroup({
-  node,
-  pathname,
-  t,
-}: {
-  node: NavNode;
-  pathname: string;
-  t: (key: string) => string;
-}) {
-  const childActive = node.children?.some((c) => isPathActive(pathname, c.href)) ?? false;
-  const [open, setOpen] = useState(childActive);
-
-  if (node.href && !node.children) {
-    return (
-      <NavLink
-        href={node.href}
-        icon={node.icon}
-        label={t(node.key)}
-        isActive={isPathActive(pathname, node.href)}
-      />
-    );
-  }
-  if (!node.children) return null;
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex w-full items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors",
-          childActive ? "text-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
-        )}
-      >
-        {node.icon && <node.icon className="h-4 w-4 shrink-0 opacity-60" strokeWidth={1.5} />}
-        <span className="flex-1 truncate text-left">{t(node.key)}</span>
-        {open ? (
-          <ChevronDown className="h-3 w-3 shrink-0 opacity-40" />
-        ) : (
-          <ChevronRight className="h-3 w-3 shrink-0 opacity-40" />
-        )}
-      </button>
-      {open && (
-        <div className="mt-0.5 space-y-0.5">
-          {node.children.map((child) => (
-            <NavLink
-              key={child.href}
-              href={child.href}
-              icon={child.icon}
-              label={t(child.key)}
-              isActive={isPathActive(pathname, child.href)}
-              indent
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const mobileFlat = [
-  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  { href: "/meta", key: "metaCenter", icon: Megaphone },
+  { href: "/dashboard", key: "missionControl", icon: LayoutDashboard },
+  { href: "/connections/facebook", key: "facebook", icon: Megaphone },
   { href: "/leads", key: "leads", icon: Users },
-  { href: "/logs", key: "logs", icon: ScrollText },
+  { href: "/connections/telegram", key: "telegram", icon: Send },
   { href: "/settings", key: "settings", icon: Settings },
 ] as const;
 
@@ -230,19 +178,15 @@ export function Sidebar() {
           <div key={group.labelKey}>
             <p className="mb-2 px-2.5 type-label">{t(group.labelKey)}</p>
             <div className="space-y-0.5">
-              {group.items.map((item) =>
-                item.children ? (
-                  <NavGroup key={item.key} node={item} pathname={pathname} t={t} />
-                ) : item.href ? (
-                  <NavLink
-                    key={item.key}
-                    href={item.href}
-                    icon={item.icon}
-                    label={t(item.key)}
-                    isActive={isPathActive(pathname, item.href)}
-                  />
-                ) : null
-              )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.key}
+                  href={item.href}
+                  icon={item.icon}
+                  label={t(item.key)}
+                  isActive={isPathActive(pathname, item.href, item.key)}
+                />
+              ))}
             </div>
           </div>
         ))}
@@ -256,27 +200,24 @@ export function Sidebar() {
               label={t("adminCenter")}
               isActive={pathname === "/admin" || pathname.startsWith("/admin/")}
             />
-            <div className="mt-0.5 space-y-0.5">
+            <div className="mt-0.5 space-y-0.5 pl-4">
               <NavLink
                 href="/admin/queue"
                 icon={ListTodo}
                 label={t("adminQueue")}
-                isActive={isPathActive(pathname, "/admin/queue")}
-                indent
+                isActive={isPathActive(pathname, "/admin/queue", "adminQueue")}
               />
               <NavLink
                 href="/admin/logs"
                 icon={ScrollText}
                 label={t("adminSystemLogs")}
-                isActive={isPathActive(pathname, "/admin/logs")}
-                indent
+                isActive={isPathActive(pathname, "/admin/logs", "adminSystemLogs")}
               />
               <NavLink
                 href="/admin/audit-log"
                 icon={ScrollText}
                 label={t("adminAuditLog")}
-                isActive={isPathActive(pathname, "/admin/audit-log")}
-                indent
+                isActive={isPathActive(pathname, "/admin/audit-log", "adminAuditLog")}
               />
             </div>
           </div>
@@ -301,13 +242,13 @@ export function MobileNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
       <div className="flex px-2 py-2">
         {items.map((item) => {
-          const isActive = isPathActive(pathname, item.href);
+          const isActive = isPathActive(pathname, item.href, item.key);
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-[10px] transition-colors",
+                "flex flex-1 flex-col items-center gap-1 rounded-md px-1 py-2 text-[10px] transition-colors min-h-[44px] justify-center",
                 isActive ? "text-foreground" : "text-muted-foreground"
               )}
             >

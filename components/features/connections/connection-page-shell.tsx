@@ -2,7 +2,7 @@
 
 import { MetaHelpTip } from "@/components/meta-center/meta-help-tip";
 
-export function MetaSectionShell({
+export function ConnectionPageShell({
   title,
   description,
   helpKey,
@@ -14,14 +14,14 @@ export function MetaSectionShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
+    <div className="mx-auto max-w-[1080px] space-y-8">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <h1 className="type-display">{title}</h1>
           {helpKey && <MetaHelpTip tipKey={helpKey} />}
         </div>
         {description && (
-          <p className="text-muted-foreground mt-1 max-w-2xl">{description}</p>
+          <p className="type-body text-muted-foreground max-w-2xl">{description}</p>
         )}
       </div>
       {children}

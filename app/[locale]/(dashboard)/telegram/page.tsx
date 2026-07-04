@@ -6,5 +6,5 @@ export default async function TelegramRedirectPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/meta/telegram`);
+  redirect(`/${locale}/connections/telegram`);
 }

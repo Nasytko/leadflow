@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Megaphone, Activity } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { MetaCenterNav } from "@/components/meta-center/meta-center-nav";
 import { MetaStatusCardGrid } from "@/components/meta-center/meta-status-card-grid";
 import { MetaOnboardingWizard } from "@/components/meta-center/meta-onboarding-wizard";
 import type { MetaCenterStatusCard } from "@/lib/meta-center-health";
@@ -55,7 +54,6 @@ export function MetaCenterOverview() {
           {t("refresh")}
         </Button>
       </PageHeader>
-      <MetaCenterNav />
 
       {loading && !data ? (
         <p className="text-muted-foreground">{t("loading")}</p>

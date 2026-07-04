@@ -56,23 +56,30 @@
     "inviteCreated": "Invite code copied: {code}"
   },
   "nav": {
+    "missionControl": "Mission Control",
     "dashboard": "Dashboard",
     "wiki": "Wiki",
     "facebook": "Facebook",
+    "telegram": "Telegram",
+    "webhookApi": "Webhook / API",
     "metaCenter": "Meta Center",
     "adAudit": "Ad audit",
     "forms": "Forms",
-    "telegram": "Telegram",
-    "leads": "Leads",
+    "leads": "Leads / Events",
+    "activity": "Activity",
     "logs": "Logs",
+    "analytics": "Analytics",
+    "health": "Health",
     "settings": "Settings",
     "admin": "Admin",
     "adminCenter": "Admin Center",
     "adminPlatform": "Platform Meta",
     "logout": "Logout",
     "groupOverview": "Overview",
+    "groupConnections": "Connections",
     "groupIntegrations": "Integrations",
     "groupData": "Data",
+    "groupWorkspace": "Workspace",
     "groupSystem": "System",
     "groupAdmin": "Admin",
     "wikiHint": "Need help?",
@@ -86,7 +93,6 @@
     "telegramGroup": "Telegram",
     "telegramBots": "Bots",
     "telegramTemplates": "Message Templates",
-    "analytics": "Analytics",
     "analyticsCampaigns": "Ad Campaigns",
     "adminQueue": "Queues & Tasks",
     "adminSystemLogs": "System Logs",
@@ -609,6 +615,203 @@
     "leadCount": "Leads",
     "lastLead": "Last lead",
     "syncEnabled": "Sync"
+  },
+  "connections": {
+    "facebook": {
+      "title": "Facebook",
+      "description": "Connect Meta Lead Ads and configure pages, forms, and webhook delivery.",
+      "stepProgress": "Step {current} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "connectHint": "Sign in with Facebook to grant ORVIX access to your pages and lead forms.",
+      "connectFirst": "Connect your Facebook account first to continue.",
+      "summaryReady": "Facebook connection is ready",
+      "openHealth": "Open Health",
+      "webhookHealth": "Webhook health",
+      "completeDesc": "Your Facebook integration is configured. New leads will flow into ORVIX automatically.",
+      "goMissionControl": "Go to Mission Control",
+      "steps": {
+        "connect": "Connect account",
+        "business": "Choose business",
+        "pages": "Sync pages",
+        "forms": "Select lead forms",
+        "webhook": "Verify webhook",
+        "complete": "Complete"
+      },
+      "stepsDesc": {
+        "business": "Sync business portfolios from Meta Business Manager.",
+        "pages": "Choose which Facebook Pages should receive lead webhooks.",
+        "forms": "Enable the lead forms you want ORVIX to track.",
+        "webhook": "Send a test lead and confirm webhook delivery."
+      },
+      "links": {
+        "audit": "Ad audit",
+        "adAccounts": "Ad accounts",
+        "templates": "Telegram templates"
+      },
+      "overview": {
+        "setupIncomplete": "Setup not finished",
+        "setupIncompleteDesc": "Some steps still need attention before leads flow automatically.",
+        "continueSetup": "Continue setup",
+        "syncSuccess": "Sync completed",
+        "syncFailed": "Sync failed",
+        "account": {
+          "unknownUser": "Facebook user",
+          "userId": "Facebook User ID",
+          "token": "Token",
+          "permissions": "Permissions granted",
+          "connectedAt": "Connected at",
+          "lastChecked": "Last checked",
+          "lastSync": "Last sync",
+          "expiresIn": "Expires in {days} days",
+          "viewActivity": "View activity"
+        },
+        "health": {
+          "title": "Facebook Health",
+          "score": "Score",
+          "checks": {
+            "notConnected": "Facebook is not connected",
+            "tokenValid": "Token valid",
+            "tokenInvalid": "Token invalid — reconnect required",
+            "tokenExpired": "Token expired — reconnect required",
+            "pagesConnected": "{count} pages connected",
+            "noPagesConnected": "No pages connected for webhooks",
+            "formsSynced": "{count} lead forms enabled",
+            "noActiveForms": "No lead forms enabled yet",
+            "webhookActive": "Webhook active",
+            "webhookMissing": "Webhook not verified",
+            "pageWebhookIssues": "{count} page(s) have webhook issues",
+            "formsNoLeads": "{count} enabled form(s) have no leads yet",
+            "connectionError": "Connection reported an error"
+          }
+        },
+        "activity": {
+          "title": "Recent activity",
+          "empty": "No recent Facebook activity yet.",
+          "tokenRefreshed": "Connection refreshed",
+          "connected": "Facebook account connected",
+          "pageSynced": "Pages synced",
+          "newLead": "New lead received",
+          "newLeadNamed": "New lead — {name}",
+          "lastChecked": "Connection checked",
+          "error": "Sync or connection error",
+          "generic": "Facebook activity"
+        },
+        "business": {
+          "title": "Business Manager",
+          "id": "ID",
+          "verification": "Verification",
+          "setPrimary": "Set as primary business",
+          "setPrimarySuccess": "Primary business updated",
+          "setPrimaryFailed": "Failed to update primary business",
+          "primaryLabel": "Primary business for this workspace",
+          "emptyTitle": "No Business Manager found",
+          "emptyDesc": "ORVIX could not find Business Manager portfolios on this account. Sync pages after connecting, or check permissions in Meta Business Settings.",
+          "health": {
+            "ready": "Ready",
+            "warning": "Needs forms",
+            "empty": "No pages"
+          },
+          "assets": {
+            "pages": "Pages",
+            "adAccounts": "Ad accounts",
+            "forms": "Forms"
+          }
+        },
+        "pages": {
+          "title": "Facebook Pages",
+          "connected": "Connected",
+          "notConnected": "Not connected",
+          "leadAccess": "Lead access",
+          "leadAccessEnabled": "Enabled",
+          "leadAccessDisabled": "Disabled",
+          "forms": "Forms",
+          "activeForms": "{count} active",
+          "lastSync": "Last sync",
+          "viewForms": "View forms",
+          "sync": "Sync pages",
+          "syncAll": "Sync pages",
+          "emptyTitle": "No Facebook Pages yet",
+          "emptyDesc": "ORVIX has not discovered any Pages on this account. Reconnect Facebook and approve Page access, then sync again."
+        },
+        "forms": {
+          "title": "Lead Forms",
+          "statusActive": "Active",
+          "statusInactive": "Disabled",
+          "statusArchived": "Archived",
+          "created": "Created",
+          "leadsCollected": "Leads collected",
+          "lastLead": "Last lead",
+          "noLeadsYet": "No leads yet",
+          "warningNoLeads": "No leads received yet for this form",
+          "warningWebhook": "Page webhook not subscribed — leads may not arrive",
+          "sync": "Sync forms",
+          "syncAll": "Sync forms",
+          "emptyTitle": "No Lead Forms yet",
+          "emptyDesc": "ORVIX found your Facebook Page, but no Lead Forms are available. Create a form in Meta Ads Manager and sync again."
+        },
+        "adAccounts": {
+          "title": "Ad Accounts",
+          "currency": "Currency",
+          "timezone": "Timezone",
+          "campaigns": "Campaigns",
+          "spend": "Amount spent",
+          "lastActivity": "Last activity",
+          "sync": "Sync ad accounts",
+          "syncAll": "Sync ad accounts",
+          "statusActive": "Active",
+          "statusDisabled": "Disabled",
+          "statusUnsettled": "Unsettled",
+          "statusOther": "Other",
+          "statusUnknown": "Unknown",
+          "emptyTitle": "No ad accounts synced",
+          "emptyDesc": "Sync ad accounts to see campaigns and spend overview. This is optional for lead delivery."
+        }
+      }
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Connect a bot to receive instant lead notifications.",
+      "stepProgress": "Step {current} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "summaryTitle": "Telegram bot connected",
+      "lastTest": "Last test",
+      "testVerified": "Verified",
+      "templateStatus": "Message templates",
+      "manageTemplates": "Manage templates",
+      "lastDelivery": "Last delivery attempt",
+      "updateToken": "Update token",
+      "updateChat": "Update chat ID",
+      "viewActivity": "View activity / logs",
+      "saveBeforeTest": "Save bot token and chat ID before sending a test.",
+      "completeDesc": "Telegram notifications are ready. You will receive alerts for new leads.",
+      "goMissionControl": "Go to Mission Control",
+      "steps": {
+        "botfather": "Create bot in BotFather",
+        "token": "Add bot token",
+        "chat": "Add chat ID",
+        "test": "Send test message",
+        "complete": "Complete"
+      },
+      "stepsDesc": {
+        "botfather": "Create a new bot in Telegram via @BotFather and copy the token.",
+        "token": "Paste the bot token from BotFather.",
+        "chat": "Enter the chat or group ID where notifications should be sent.",
+        "test": "Send a test message to confirm the bot can reach your chat."
+      },
+      "errors": {
+        "forbiddenBotChat": "The bot cannot message itself. You likely entered the bot's own chat ID, or you have not started a chat with the bot yet.\n\nOpen Telegram, find your bot, tap Start, then use your user or group chat ID. For groups, add the bot to the group first.",
+        "chatNotFound": "Chat not found. Check the chat ID and make sure the bot was added to the group or channel.",
+        "botBlocked": "The bot was blocked. Unblock it in Telegram and try again."
+      }
+    },
+    "webhook": {
+      "title": "Webhook / API",
+      "description": "Verify Meta webhook delivery and send test leads.",
+      "testLeadTitle": "Test lead delivery",
+      "testLeadDesc": "Use Meta's Lead Ads Testing Tool or send a test lead from ORVIX to confirm webhook events arrive."
+    }
   },
   "telegram": {
     "title": "Telegram",
