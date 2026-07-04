@@ -98,23 +98,29 @@ function NavLink({
   icon: Icon,
   label,
   isActive,
+  indent,
 }: {
   href: string;
   icon: React.ElementType;
   label: string;
   isActive: boolean;
+  indent?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] transition-colors min-h-[44px] lg:min-h-0",
+        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors min-h-[44px] lg:min-h-0",
+        indent && "ml-2",
         isActive
           ? "nav-item-active"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
       )}
     >
-      <Icon className="h-4 w-4 shrink-0 opacity-60" strokeWidth={1.5} />
+      <Icon
+        className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-primary" : "opacity-55")}
+        strokeWidth={1.5}
+      />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -140,18 +146,18 @@ function SidebarUser() {
     : session?.user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <div className="border-t border-sidebar-border px-4 py-4">
+    <div className="mx-3 mb-4 mt-auto rounded-2xl border border-sidebar-border bg-sidebar-accent/50 px-3 py-3">
       <div className="flex items-center gap-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06] text-[10px] font-medium text-foreground/70">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-foreground">
+          <p className="truncate text-sm font-medium text-foreground">
             {session?.user?.name ?? session?.user?.email}
           </p>
-          {session?.user?.name && (
-            <p className="truncate text-[11px] text-muted-foreground">{session?.user?.email}</p>
-          )}
+          <p className="truncate text-xs text-muted-foreground">
+            {session?.user?.name ? session.user.email : null}
+          </p>
         </div>
       </div>
     </div>
@@ -166,18 +172,18 @@ export function Sidebar() {
   const isAdmin = session?.user?.isAdmin === true;
 
   return (
-    <aside className="hidden lg:flex w-[240px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-14 items-center px-5">
+    <aside className="hidden lg:flex w-[252px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex h-16 items-center px-6">
         <Link href="/dashboard" className="flex items-center" aria-label={tCommon("appName")}>
-          <OrvixLogo variant="logo" className="h-7 w-auto" priority />
+          <OrvixLogo variant="logo" className="h-8 w-auto" priority />
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-7">
+      <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-8">
         {navStructure.map((group) => (
           <div key={group.labelKey}>
-            <p className="mb-2 px-2.5 type-label">{t(group.labelKey)}</p>
-            <div className="space-y-0.5">
+            <p className="mb-3 px-3 type-label">{t(group.labelKey)}</p>
+            <div className="space-y-1">
               {group.items.map((item) => (
                 <NavLink
                   key={item.key}
@@ -193,31 +199,34 @@ export function Sidebar() {
 
         {isAdmin && (
           <div>
-            <p className="mb-2 px-2.5 type-label">{t("groupAdmin")}</p>
+            <p className="mb-3 px-3 type-label">{t("groupAdmin")}</p>
             <NavLink
               href="/admin"
               icon={Shield}
               label={t("adminCenter")}
               isActive={pathname === "/admin" || pathname.startsWith("/admin/")}
             />
-            <div className="mt-0.5 space-y-0.5 pl-4">
+            <div className="mt-1 space-y-1">
               <NavLink
                 href="/admin/queue"
                 icon={ListTodo}
                 label={t("adminQueue")}
                 isActive={isPathActive(pathname, "/admin/queue", "adminQueue")}
+                indent
               />
               <NavLink
                 href="/admin/logs"
                 icon={ScrollText}
                 label={t("adminSystemLogs")}
                 isActive={isPathActive(pathname, "/admin/logs", "adminSystemLogs")}
+                indent
               />
               <NavLink
                 href="/admin/audit-log"
                 icon={ScrollText}
                 label={t("adminAuditLog")}
                 isActive={isPathActive(pathname, "/admin/audit-log", "adminAuditLog")}
+                indent
               />
             </div>
           </div>
@@ -239,7 +248,7 @@ export function MobileNav() {
     : mobileFlat;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
       <div className="flex px-2 py-2">
         {items.map((item) => {
           const isActive = isPathActive(pathname, item.href, item.key);
@@ -248,8 +257,8 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-md px-1 py-2 text-[10px] transition-colors min-h-[44px] justify-center",
-                isActive ? "text-foreground" : "text-muted-foreground"
+                "flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] transition-colors min-h-[44px] justify-center",
+                isActive ? "text-primary font-medium" : "text-muted-foreground"
               )}
             >
               <item.icon className="h-5 w-5" strokeWidth={1.5} />

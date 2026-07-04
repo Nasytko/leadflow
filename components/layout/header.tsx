@@ -29,13 +29,13 @@ export function Header() {
     : session?.user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center justify-end gap-1 border-b border-border/60 bg-background/90 px-5 sm:px-8 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 flex h-14 lg:h-16 items-center justify-end gap-2 border-b border-border/80 bg-background/95 px-5 sm:px-8 backdrop-blur-sm">
       <LanguageSwitcher />
       <ThemeToggle />
-      <div className="hidden md:flex items-center gap-2.5 pl-3 ml-2 border-l border-border/60">
+      <div className="hidden md:flex items-center pl-3 ml-1 border-l border-border/80">
         <div
           className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-full bg-foreground/[0.06] text-[11px] font-medium text-foreground/80"
+            "flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
           )}
         >
           {initials}
@@ -45,7 +45,7 @@ export function Header() {
         variant="ghost"
         size="icon"
         onClick={handleLogout}
-        className="h-8 w-8 text-muted-foreground"
+        className="text-muted-foreground hover:text-foreground"
       >
         <LogOut className="h-4 w-4" strokeWidth={1.5} />
         <span className="sr-only">{t("logout")}</span>

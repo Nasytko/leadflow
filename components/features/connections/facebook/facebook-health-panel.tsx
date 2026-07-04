@@ -16,7 +16,7 @@ export function FacebookHealthPanel({ health }: { health: FacebookHealthResult }
 
   const scoreColor =
     health.status === "healthy"
-      ? "text-emerald-600"
+      ? "text-primary"
       : health.status === "attention"
         ? "text-amber-600"
         : "text-destructive";

@@ -268,7 +268,15 @@
     "pipelineForms": "{count} активных форм",
     "pipelineStatus": "Пайплайн",
     "pipelineActive": "Активен",
-    "pipelineSetup": "Нужна настройка"
+    "pipelineSetup": "Нужна настройка",
+    "activeFlowsTitle": "Активные потоки",
+    "systemHealthTitle": "Здоровье системы",
+    "allSystemsOperational": "Все системы работают",
+    "flowFacebook": "Facebook Lead Ads",
+    "flowTelegram": "Telegram",
+    "flowWebhook": "Meta Webhook",
+    "flowOrvix": "ORVIX",
+    "donutCenter": "лидов"
   },
   "facebook": {
     "title": "Facebook",

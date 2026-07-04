@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -22,7 +21,9 @@ import { cn } from "@/lib/utils";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { DashboardStats } from "@/types";
 import { DashboardLineChart, DashboardDonutChart } from "@/components/dashboard/dashboard-charts";
-import { IntegrationPipeline } from "@/components/dashboard/integration-pipeline";
+import { DashboardActiveFlows } from "@/components/dashboard/dashboard-active-flows";
+import { DashboardSystemHealth } from "@/components/dashboard/dashboard-system-health";
+import { formatTimeAgo } from "@/lib/utils";
 
 type HealthCard = {
   id: string;
@@ -50,26 +51,14 @@ type StatsResponse = DashboardStats & {
 const SYSTEM_STATUS_IDS = ["facebook", "pages", "forms", "webhook", "telegram", "queue"] as const;
 
 const SETUP_STEPS = [
-  { key: "facebookAccount", href: "/meta/connect", labelKey: "setupFacebook" },
-  { key: "businessPortfolio", href: "/meta/connect", labelKey: "setupBusiness" },
-  { key: "pagesSelected", href: "/meta/pages", labelKey: "setupPages" },
-  { key: "formsEnabled", href: "/meta/forms", labelKey: "setupForms" },
-  { key: "webhookVerified", href: "/meta/webhook", labelKey: "setupWebhook" },
-  { key: "telegram", href: "/meta/telegram", labelKey: "setupTelegram" },
+  { key: "facebookAccount", href: "/connections/facebook", labelKey: "setupFacebook" },
+  { key: "businessPortfolio", href: "/connections/facebook?step=business", labelKey: "setupBusiness" },
+  { key: "pagesSelected", href: "/connections/facebook?step=pages", labelKey: "setupPages" },
+  { key: "formsEnabled", href: "/connections/facebook?step=forms", labelKey: "setupForms" },
+  { key: "webhookVerified", href: "/connections/facebook?step=webhook", labelKey: "setupWebhook" },
+  { key: "telegram", href: "/connections/telegram", labelKey: "setupTelegram" },
   { key: "testLead", href: "/leads", labelKey: "setupTestLead" },
 ] as const;
-
-function timeAgo(iso: string | null, locale: string): string {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return locale === "ru" ? "только что" : "just now";
-  if (minutes < 60) return locale === "ru" ? `${minutes} мин назад` : `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return locale === "ru" ? `${hours} ч назад` : `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return locale === "ru" ? `${days} дн назад` : `${days}d ago`;
-}
 
 export function DashboardContent() {
   const t = useTranslations("dashboard");
@@ -100,10 +89,14 @@ export function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1080px] space-y-16">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-72 w-full" />
+      <div className="mx-auto max-w-[1200px] space-y-8">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     );
   }
@@ -118,16 +111,15 @@ export function DashboardContent() {
     ) ?? [];
 
   return (
-    <div className="mx-auto max-w-[1080px]">
-      {/* Page hero */}
-      <header className="mb-16 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-3 max-w-xl">
+    <div className="mx-auto max-w-[1200px] space-y-10">
+      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2 max-w-xl">
           <h1 className="type-display">{t("title")}</h1>
           <p className="type-body text-muted-foreground">{t("welcomeHint")}</p>
           <p className="type-caption">
             {t("lastLead")}{" "}
-            <span className="text-foreground/80">
-              {timeAgo(stats?.lastLeadAt ?? null, locale)}
+            <span className="text-foreground/80 font-medium">
+              {formatTimeAgo(stats?.lastLeadAt ?? null, locale)}
             </span>
             {refreshedAt && (
               <>
@@ -144,29 +136,30 @@ export function DashboardContent() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="sm"
+            variant="outline"
+            size="default"
             onClick={() => loadStats(true)}
             disabled={refreshing}
+            className="min-h-11"
           >
             <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             {t("refresh")}
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          <Button size="default" asChild className="min-h-11">
             <Link href="/leads">
               {t("actionLeads")}
-              <ArrowUpRight className="h-3.5 w-3.5" />
+              <ArrowUpRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
       </header>
 
       {stats && setupPercent < 100 && (
-        <section className="mb-16 surface px-6 py-6 sm:px-8 sm:py-7">
-          <div className="mb-5 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+        <section className="surface px-6 py-6 sm:px-8">
+          <div className="mb-4 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" strokeWidth={1.5} />
             <p className="type-title">{t("gettingStarted")}</p>
-            <span className="type-caption ml-auto">{setupPercent}%</span>
+            <span className="type-caption ml-auto tabular-nums">{setupPercent}%</span>
           </div>
           <ProgressBar value={stats.setupCompleted} max={stats.setupTotal} />
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
@@ -177,8 +170,8 @@ export function DashboardContent() {
                   key={step.key}
                   href={step.href}
                   className={cn(
-                    "inline-flex items-center gap-2 type-caption transition-colors hover:text-foreground",
-                    done ? "text-foreground/70" : "text-muted-foreground"
+                    "inline-flex items-center gap-2 type-caption transition-colors hover:text-primary",
+                    done ? "text-foreground/75" : "text-muted-foreground"
                   )}
                 >
                   {done ? (
@@ -194,124 +187,92 @@ export function DashboardContent() {
         </section>
       )}
 
-      {/* Metrics — single rhythm strip */}
-      <section className="mb-20">
-        <div className="grid grid-cols-2 border border-border/70 rounded-lg overflow-hidden lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border/70 bg-card">
-          <KpiCard
-            minimal
-            className="!px-6 !py-7"
-            label={t("leadsToday")}
-            value={stats?.leadsToday ?? 0}
-            trend={stats?.todayTrend ?? undefined}
-            trendLabel={t("vsYesterday")}
-          />
-          <KpiCard
-            minimal
-            className="!px-6 !py-7"
-            label={t("leadsThisWeek")}
-            value={stats?.leadsThisWeek ?? 0}
-            trend={stats?.weekTrend ?? undefined}
-            trendLabel={t("vsPrevWeek")}
-          />
-          <KpiCard
-            minimal
-            className="!px-6 !py-7"
-            label={t("leadsThisMonth")}
-            value={stats?.leadsThisMonth ?? 0}
-            trend={stats?.monthTrend ?? undefined}
-            trendLabel={t("vsPrevMonth")}
-          />
-          <KpiCard
-            minimal
-            className="!px-6 !py-7"
-            label={t("totalLeadsLabel")}
-            value={stats?.totalLeads ?? 0}
-            sublabel={t("allTime")}
-          />
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          minimal
+          label={t("leadsToday")}
+          value={stats?.leadsToday ?? 0}
+          trend={stats?.todayTrend ?? undefined}
+          trendLabel={t("vsYesterday")}
+        />
+        <KpiCard
+          minimal
+          label={t("leadsThisWeek")}
+          value={stats?.leadsThisWeek ?? 0}
+          trend={stats?.weekTrend ?? undefined}
+          trendLabel={t("vsPrevWeek")}
+        />
+        <KpiCard
+          minimal
+          label={t("leadsThisMonth")}
+          value={stats?.leadsThisMonth ?? 0}
+          trend={stats?.monthTrend ?? undefined}
+          trendLabel={t("vsPrevMonth")}
+        />
+        <KpiCard
+          minimal
+          label={t("totalLeadsLabel")}
+          value={stats?.totalLeads ?? 0}
+          sublabel={t("allTime")}
+        />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 surface px-6 py-6 sm:px-8">
+          <SectionHeader title={t("leadsChart30d")} description={t("leadsChartDesc")} className="mb-4" />
+          <DashboardLineChart data={stats?.leadsByDay ?? []} height={280} />
+        </div>
+        <div className="surface px-6 py-6 sm:px-8">
+          <SectionHeader title={t("leadSources")} description={t("leadSourcesDesc")} className="mb-4" />
+          {stats?.leadSources?.length ? (
+            <DashboardDonutChart data={stats.leadSources} centerLabel={t("donutCenter")} />
+          ) : (
+            <EmptyState icon={BarChart3} title={t("noSources")} description={t("noSourcesDesc")} />
+          )}
         </div>
       </section>
 
-      {/* Pipeline */}
-      <section className="mb-20">
-        <SectionHeader title={t("pipelineTitle")} description={t("pipelineSubtitle")} />
-        <div className="surface px-6 py-8 sm:px-8">
-          <IntegrationPipeline
+      <section className="grid gap-6 lg:grid-cols-3">
+        <div className="surface px-6 py-6 sm:px-8">
+          <SectionHeader title={t("activeFlowsTitle")} description={t("pipelineSubtitle")} className="mb-4" />
+          <DashboardActiveFlows
             facebookConnected={stats?.facebookConnected ?? false}
             telegramConnected={stats?.telegramConnected ?? false}
-            activeForms={stats?.activeForms ?? 0}
             webhookVerified={stats?.webhookVerified ?? false}
           />
         </div>
-      </section>
-
-      {/* Chart + health */}
-      <section className="mb-20 grid gap-12 lg:grid-cols-[1fr_280px] lg:gap-16">
-        <div>
-          <SectionHeader title={t("leadsChart30d")} description={t("leadsChartDesc")} />
-          <div className="surface px-6 py-8 sm:px-8">
-            <DashboardLineChart data={stats?.leadsByDay ?? []} height={280} />
-          </div>
-        </div>
-        <div>
-          <SectionHeader title={t("systemStatus")} />
-          <ul className="space-y-4">
-            {systemCards.map((card) => (
-              <li key={card.id} className="flex items-center justify-between gap-4">
-                <span className="type-caption text-foreground/80">
-                  {t(`health_${card.id}` as "health_facebook")}
-                </span>
-                <StatusBadge
-                  status={card.status}
-                  label={t(`healthStatus_${card.status}`)}
-                />
-              </li>
-            ))}
-            <li className="flex items-center justify-between gap-4">
-              <span className="type-caption text-foreground/80">{t("health_database")}</span>
-              <StatusBadge status="ok" label={t("healthStatus_ok")} />
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      {/* Sources + activity */}
-      <section className="mb-20 grid gap-12 lg:grid-cols-2 lg:gap-16">
-        <div>
-          <SectionHeader title={t("leadSources")} description={t("leadSourcesDesc")} />
-          <div className="surface px-6 py-8 sm:px-8">
-            {stats?.leadSources?.length ? (
-              <DashboardDonutChart data={stats.leadSources} />
-            ) : (
-              <EmptyState icon={BarChart3} title={t("noSources")} description={t("noSourcesDesc")} />
-            )}
-          </div>
-        </div>
-        <div>
-          <SectionHeader title={t("recentEvents")} description={t("recentEventsDesc")} />
+        <div className="surface px-6 py-6 sm:px-8">
+          <SectionHeader title={t("recentEvents")} description={t("recentEventsDesc")} className="mb-4" />
           {stats?.recentEvents?.length ? (
-            <ul className="space-y-5">
-              {stats.recentEvents.map((ev) => (
-                <li key={ev.id} className="flex gap-4">
-                  <span
-                    className={cn(
-                      "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",
-                      ev.status === "ok" && "bg-emerald-500",
-                      ev.status === "warning" && "bg-amber-500",
-                      ev.status === "error" && "bg-red-500"
-                    )}
-                  />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="type-body">
+            <ul className="space-y-4">
+              {stats.recentEvents.slice(0, 6).map((ev) => (
+                <li key={ev.id} className="flex items-start justify-between gap-3">
+                  <div className="flex gap-3 min-w-0">
+                    <span
+                      className={cn(
+                        "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",
+                        ev.status === "ok" && "bg-emerald-500",
+                        ev.status === "warning" && "bg-amber-500",
+                        ev.status === "error" && "bg-red-500"
+                      )}
+                    />
+                    <p className="type-body line-clamp-2">
                       {t(ev.messageKey as "eventLeadReceived", ev.messageParams ?? {})}
                     </p>
-                    <p className="type-caption">{timeAgo(ev.at, locale)}</p>
                   </div>
+                  <time className="type-caption shrink-0 tabular-nums">
+                    {formatTimeAgo(ev.at, locale)}
+                  </time>
                 </li>
               ))}
             </ul>
           ) : (
             <EmptyState icon={Activity} title={t("noEvents")} description={t("noEventsDesc")} />
           )}
+        </div>
+        <div className="surface px-6 py-6 sm:px-8">
+          <SectionHeader title={t("systemHealthTitle")} className="mb-4" />
+          <DashboardSystemHealth cards={systemCards} />
         </div>
       </section>
 
@@ -330,12 +291,23 @@ export function DashboardContent() {
             }
           />
           <div className="surface overflow-hidden">
-            <table className="w-full">
+            <div className="divide-y divide-border/70 lg:hidden">
+              {stats.campaignSummary.map((row) => (
+                <div key={row.name} className="px-6 py-4 space-y-1">
+                  <p className="type-body font-medium truncate">{row.name}</p>
+                  <div className="flex justify-between type-caption">
+                    <span>{row.channel}</span>
+                    <span className="tabular-nums font-medium">{row.leads} {t("campaignLeads").toLowerCase()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <table className="hidden lg:table w-full">
               <thead>
                 <tr className="hairline-b text-left">
-                  <th className="type-label px-6 py-4 font-medium">{t("campaignName")}</th>
-                  <th className="type-label px-6 py-4 font-medium">{t("campaignChannel")}</th>
-                  <th className="type-label px-6 py-4 font-medium text-right">
+                  <th className="type-label px-6 py-4 font-medium normal-case">{t("campaignName")}</th>
+                  <th className="type-label px-6 py-4 font-medium normal-case">{t("campaignChannel")}</th>
+                  <th className="type-label px-6 py-4 font-medium text-right normal-case">
                     {t("campaignLeads")}
                   </th>
                 </tr>
@@ -344,7 +316,7 @@ export function DashboardContent() {
                 {stats.campaignSummary.map((row) => (
                   <tr
                     key={row.name}
-                    className="hairline-b last:border-0 transition-colors hover:bg-foreground/[0.02]"
+                    className="hairline-b last:border-0 transition-colors hover:bg-primary/[0.02]"
                   >
                     <td className="type-body px-6 py-4 max-w-[240px] truncate">{row.name}</td>
                     <td className="type-caption px-6 py-4">{row.channel}</td>

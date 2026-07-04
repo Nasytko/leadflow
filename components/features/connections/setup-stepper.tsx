@@ -59,8 +59,8 @@ export function SetupStepper({
               onClick={() => onStepClick?.(i)}
               disabled={!onStepClick}
               className={cn(
-                "w-full rounded-lg border px-3 py-2.5 text-left transition-colors min-h-[44px]",
-                step.status === "current" && "border-primary/40 bg-primary/5",
+                "w-full rounded-xl border px-3 py-3 text-left transition-colors min-h-[44px]",
+                step.status === "current" && "border-primary/35 bg-primary/[0.06] shadow-sm",
                 step.status === "completed" && "border-border bg-background",
                 step.status === "pending" && "border-border/60 opacity-60",
                 step.status === "warning" && "border-amber-500/40 bg-amber-500/5",

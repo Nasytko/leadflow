@@ -267,7 +267,15 @@
     "pipelineForms": "{count} active forms",
     "pipelineStatus": "Pipeline",
     "pipelineActive": "Active",
-    "pipelineSetup": "Setup needed"
+    "pipelineSetup": "Setup needed",
+    "activeFlowsTitle": "Active flows",
+    "systemHealthTitle": "System health",
+    "allSystemsOperational": "All systems operational",
+    "flowFacebook": "Facebook Lead Ads",
+    "flowTelegram": "Telegram",
+    "flowWebhook": "Meta Webhook",
+    "flowOrvix": "ORVIX",
+    "donutCenter": "leads"
   },
   "facebook": {
     "title": "Facebook",

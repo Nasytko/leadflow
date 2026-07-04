@@ -14,7 +14,7 @@ export function ConnectionPageShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-[1080px] space-y-8">
+    <div className="mx-auto max-w-[1200px] space-y-10">
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <h1 className="type-display">{title}</h1>

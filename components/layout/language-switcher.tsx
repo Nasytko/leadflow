@@ -22,7 +22,7 @@ export function LanguageSwitcher() {
         router.replace(pathname, { locale: value });
       }}
     >
-      <SelectTrigger className="w-[100px] h-8">
+      <SelectTrigger className="control-pill w-[88px] border-border bg-card">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
