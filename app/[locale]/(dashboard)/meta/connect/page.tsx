@@ -1,11 +1,20 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { FacebookSetupFlow } from "@/components/features/connections/facebook/facebook-setup-flow";
+import { redirect } from "next/navigation";
 
-export default function MetaConnectPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <FacebookSetupFlow />
-    </Suspense>
-  );
+function buildQuery(searchParams: Record<string, string | string[] | undefined>) {
+  const q = new URLSearchParams();
+  if (typeof searchParams.step === "string") q.set("step", searchParams.step);
+  const qs = q.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export default async function MetaConnectRedirect({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { locale } = await params;
+  const sp = await searchParams;
+  redirect(`/${locale}/connections/facebook${buildQuery(sp)}`);
 }

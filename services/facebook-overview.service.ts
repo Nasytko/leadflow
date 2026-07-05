@@ -67,6 +67,7 @@ export async function getFacebookOverview(userId: string) {
     auditLogs,
     systemLogs,
     lastLead,
+    telegramConn,
   ] = await Promise.all([
     prisma.facebookConnection.findUnique({ where: { userId } }),
     prisma.facebookPage.findMany({
@@ -126,6 +127,10 @@ export async function getFacebookOverview(userId: string) {
       where: { userId },
       orderBy: { createdTime: "desc" },
       select: { id: true, createdTime: true, name: true },
+    }),
+    prisma.telegramConnection.findUnique({
+      where: { userId },
+      select: { status: true },
     }),
   ]);
 
@@ -344,6 +349,7 @@ export async function getFacebookOverview(userId: string) {
       adAccounts: adAccounts.length,
     },
     webhookVerified,
+    telegramConnected: telegramConn?.status === "connected",
     activity: activity.slice(0, 12),
   };
 }

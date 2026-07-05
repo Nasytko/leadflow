@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { LeadsContent } from "@/components/leads/leads-content";
 
-export default async function LeadsRedirectPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-  redirect(`/${locale}/meta/leads`);
+export default function LeadsPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <LeadsContent />
+    </Suspense>
+  );
 }

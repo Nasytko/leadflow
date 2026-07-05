@@ -210,7 +210,7 @@ export async function runMetaHealthReport(
   const graphChecks: MetaHealthCheck[] = [];
   if (!token) {
     graphChecks.push(
-      mkCheck("me", "unknown", "health.api", "Not connected", { href: "/meta/connect", labelKey: "health.actions.connect" })
+      mkCheck("me", "unknown", "health.api", "Not connected", { href: "/connections/facebook", labelKey: "health.actions.connect" })
     );
     for (const ep of ["accounts", "businesses", "adaccounts"]) {
       graphChecks.push(mkCheck(ep, "unknown", "health.api"));
@@ -230,7 +230,7 @@ export async function runMetaHealthReport(
           result.ok ? "ok" : "error",
           "health.api",
           result.ok ? String((result.body as { name?: string })?.name ?? id) : `HTTP ${result.status}`,
-          result.ok ? undefined : { href: "/meta/connect", labelKey: "health.actions.reconnect" }
+          result.ok ? undefined : { href: "/connections/facebook", labelKey: "health.actions.reconnect" }
         )
       );
     }
@@ -302,7 +302,7 @@ export async function runMetaHealthReport(
       !!oauthPreview?.oauthUrl,
       "health.oauth",
       null,
-      !oauthPreview?.oauthUrl ? { href: "/meta/connect", labelKey: "health.actions.connect" } : undefined
+      !oauthPreview?.oauthUrl ? { href: "/connections/facebook", labelKey: "health.actions.connect" } : undefined
     ),
     mkCheck(
       "callback",
@@ -325,7 +325,7 @@ export async function runMetaHealthReport(
           ? `${lastOAuthError.reason}: ${lastOAuthError.safeMessage}`
           : lastOAuthError.reason
         : null,
-      lastOAuthError ? { href: "/meta/connect", labelKey: "health.actions.reconnect" } : undefined,
+      lastOAuthError ? { href: "/connections/facebook", labelKey: "health.actions.reconnect" } : undefined,
       !!lastOAuthError
     ),
   ];
@@ -351,7 +351,7 @@ export async function runMetaHealthReport(
       !connection ? "unknown" : granted ? "ok" : "warning",
       "health.permissions",
       granted ? "granted" : "missing",
-      !granted ? { href: "/meta/connect", labelKey: "health.actions.reconnect" } : undefined,
+      !granted ? { href: "/connections/facebook", labelKey: "health.actions.reconnect" } : undefined,
       scope === "leads_retrieval" || scope === "pages_show_list"
     );
   });
@@ -362,7 +362,7 @@ export async function runMetaHealthReport(
       businesses.length > 0,
       "health.business",
       String(businesses.length),
-      businesses.length === 0 ? { href: "/meta/businesses", labelKey: "health.actions.syncBusinesses" } : undefined
+      businesses.length === 0 ? { href: "/connections/facebook", labelKey: "health.actions.syncBusinesses" } : undefined
     ),
     mkCheck(
       "primary",
@@ -373,22 +373,22 @@ export async function runMetaHealthReport(
   ];
 
   const pagesChecks: MetaHealthCheck[] = [
-    mkCheck("count", pages.length > 0, "health.pages", String(pages.length), { href: "/meta/pages", labelKey: "health.actions.syncPages" }),
-    mkCheck("connected", connectedPages.length > 0, "health.pages", `${connectedPages.length}/${pages.length}`, { href: "/meta/pages", labelKey: "health.actions.connectPages" }),
+    mkCheck("count", pages.length > 0, "health.pages", String(pages.length), { href: "/connections/facebook", labelKey: "health.actions.syncPages" }),
+    mkCheck("connected", connectedPages.length > 0, "health.pages", `${connectedPages.length}/${pages.length}`, { href: "/connections/facebook", labelKey: "health.actions.connectPages" }),
     mkCheck("lastSync", !!lastPageSync?.lastSyncedAt, "health.pages", lastPageSync?.lastSyncedAt?.toISOString() ?? null),
-    mkCheck("lastError", !lastPageError?.lastError, "health.pages", lastPageError ? `${lastPageError.pageName}: ${lastPageError.lastError}` : null, { href: "/meta/pages", labelKey: "health.actions.syncPages" }),
+    mkCheck("lastError", !lastPageError?.lastError, "health.pages", lastPageError ? `${lastPageError.pageName}: ${lastPageError.lastError}` : null, { href: "/connections/facebook", labelKey: "health.actions.syncPages" }),
   ];
 
   const formsChecks: MetaHealthCheck[] = [
-    mkCheck("count", forms.length > 0, "health.forms", String(forms.length), { href: "/meta/forms", labelKey: "health.actions.syncForms" }),
+    mkCheck("count", forms.length > 0, "health.forms", String(forms.length), { href: "/connections/facebook", labelKey: "health.actions.syncForms" }),
     mkCheck("active", activeForms.length > 0, "health.forms", String(activeForms.length)),
-    mkCheck("enabled", enabledForms.length > 0, "health.forms", `${enabledForms.length}/${forms.length}`, { href: "/meta/forms", labelKey: "health.actions.enableForms" }),
+    mkCheck("enabled", enabledForms.length > 0, "health.forms", `${enabledForms.length}/${forms.length}`, { href: "/connections/facebook", labelKey: "health.actions.enableForms" }),
     mkCheck("lastSync", !!lastFormSync?.lastSyncAt, "health.forms", lastFormSync?.lastSyncAt?.toISOString() ?? null),
     mkCheck("lastLead", !!lastLead, "health.forms", lastLead?.createdTime?.toISOString() ?? null),
   ];
 
   const adAccountChecks: MetaHealthCheck[] = [
-    mkCheck("count", adAccounts.length > 0, "health.adAccounts", String(adAccounts.length), { href: "/meta/ad-accounts", labelKey: "health.actions.syncAdAccounts" }),
+    mkCheck("count", adAccounts.length > 0, "health.adAccounts", String(adAccounts.length), { href: "/connections/facebook", labelKey: "health.actions.syncAdAccounts" }),
     mkCheck(
       "primary",
       !!primaryAdAccount,
@@ -402,22 +402,22 @@ export async function runMetaHealthReport(
       campaignsCount > 0,
       "health.adAccounts",
       String(campaignsCount),
-      { href: "/meta/ad-accounts", labelKey: "health.actions.syncCampaigns" }
+      { href: "/connections/facebook", labelKey: "health.actions.syncCampaigns" }
     ),
   ];
 
   const campaignChecks: MetaHealthCheck[] = [
     mkCheck("count", campaignsCount > 0, "health.campaigns", String(campaignsCount)),
-    mkCheck("lastSync", !!lastCampaignSync?.lastSyncedAt, "health.campaigns", lastCampaignSync?.lastSyncedAt?.toISOString() ?? null, { href: "/meta/ad-accounts", labelKey: "health.actions.syncCampaigns" }),
+    mkCheck("lastSync", !!lastCampaignSync?.lastSyncedAt, "health.campaigns", lastCampaignSync?.lastSyncedAt?.toISOString() ?? null, { href: "/connections/facebook", labelKey: "health.actions.syncCampaigns" }),
   ];
 
   const webhookChecks: MetaHealthCheck[] = [
-    mkCheck("verified", !!lastVerification, "health.webhook", lastVerification?.createdAt.toISOString() ?? null, { href: "/meta/webhook", labelKey: "health.actions.checkWebhook" }, !lastVerification && connectedPages.length > 0),
+    mkCheck("verified", !!lastVerification, "health.webhook", lastVerification?.createdAt.toISOString() ?? null, { href: "/connections/webhook", labelKey: "health.actions.checkWebhook" }, !lastVerification && connectedPages.length > 0),
     mkCheck("verifyToken", integrationSettings.hasWebhookToken || !!(process.env.META_WEBHOOK_VERIFY_TOKEN?.trim()), "health.webhook", null, { href: "/admin/platform", labelKey: "health.actions.adminSettings" }),
     mkCheck("signature", process.env.META_WEBHOOK_SIGNATURE_REQUIRED !== "false", "health.webhook", "enabled"),
     mkCheck("lastEvent", !!lastWebhook, "health.webhook", lastWebhook?.createdAt.toISOString() ?? null),
     mkCheck("lastLeadgen", !!lastWebhook?.leadgenId, "health.webhook", lastWebhook?.leadgenId ?? null),
-    mkCheck("errors", failedWebhooks === 0, "health.webhook", String(failedWebhooks), failedWebhooks > 0 ? { href: "/meta/webhook", labelKey: "health.actions.checkWebhook" } : undefined, failedWebhooks > 5),
+    mkCheck("errors", failedWebhooks === 0, "health.webhook", String(failedWebhooks), failedWebhooks > 0 ? { href: "/connections/webhook", labelKey: "health.actions.checkWebhook" } : undefined, failedWebhooks > 5),
   ];
 
   const workerChecks: MetaHealthCheck[] = [
@@ -433,11 +433,11 @@ export async function runMetaHealthReport(
       telegram?.status === "connected",
       "health.telegram",
       telegram?.status ?? "disconnected",
-      { href: "/meta/telegram", labelKey: "health.actions.connectTelegram" },
+      { href: "/connections/telegram", labelKey: "health.actions.connectTelegram" },
       enabledForms.length > 0 && telegram?.status !== "connected"
     ),
     mkCheck("lastMessage", lastDelivery?.status === "success", "health.telegram", lastDelivery?.createdAt.toISOString() ?? null),
-    mkCheck("lastError", !telegram?.lastError, "health.telegram", telegram?.lastError ?? null, { href: "/meta/telegram", labelKey: "health.actions.testTelegram" }),
+    mkCheck("lastError", !telegram?.lastError, "health.telegram", telegram?.lastError ?? null, { href: "/connections/telegram", labelKey: "health.actions.testTelegram" }),
   ];
 
   const sections: MetaHealthSection[] = [
@@ -464,13 +464,13 @@ export async function runMetaHealthReport(
   const overallDescriptionKey = `health.overall.${overallStatus}Desc`;
 
   const actions: MetaHealthAction[] = [
-    { id: "connect", labelKey: "health.actions.connect", href: "/meta/connect" },
+    { id: "connect", labelKey: "health.actions.connect", href: "/connections/facebook" },
     { id: "reconnect", labelKey: "health.actions.reconnect", apiAction: "reconnect" },
     { id: "syncPages", labelKey: "health.actions.syncPages", apiAction: "sync_pages" },
     { id: "syncForms", labelKey: "health.actions.syncForms", apiAction: "sync_forms" },
     { id: "syncAdAccounts", labelKey: "health.actions.syncAdAccounts", apiAction: "sync_ad_accounts" },
-    { id: "checkWebhook", labelKey: "health.actions.checkWebhook", href: "/meta/webhook" },
-    { id: "testLead", labelKey: "health.actions.testLead", href: "/meta/webhook" },
+    { id: "checkWebhook", labelKey: "health.actions.checkWebhook", href: "/connections/webhook" },
+    { id: "testLead", labelKey: "health.actions.testLead", href: "/connections/webhook" },
     { id: "testTelegram", labelKey: "health.actions.testTelegram", apiAction: "test_telegram" },
     { id: "rerun", labelKey: "health.actions.rerun", apiAction: "full_test", variant: "default" },
   ];

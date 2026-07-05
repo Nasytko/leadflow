@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaPagesSection } from "@/components/meta-center/sections/meta-pages-section";
+import { redirect } from "next/navigation";
 
-export default function MetaPagesPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaPagesSection />
-    </Suspense>
-  );
+export default async function MetaPagesRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/connections/facebook`);
 }

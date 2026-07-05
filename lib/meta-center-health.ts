@@ -108,7 +108,7 @@ export function buildMetaCenterStatusCards(input: {
           : oauthStatus === "error"
           ? "statusCards.oauth.error"
           : "statusCards.oauth.unknown",
-      fixHref: "/meta/connect",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixConnect",
       lastCheckedAt: input.lastCheckedAt,
       lastError: input.facebookLastError,
@@ -125,7 +125,7 @@ export function buildMetaCenterStatusCards(input: {
         permStatus === "ok"
           ? "statusCards.permissions.ok"
           : "statusCards.permissions.warning",
-      fixHref: "/meta/connect",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixPermissions",
       lastCheckedAt: input.lastCheckedAt,
       lastError:
@@ -140,7 +140,7 @@ export function buildMetaCenterStatusCards(input: {
         bizStatus === "ok"
           ? "statusCards.businesses.ok"
           : "statusCards.businesses.warning",
-      fixHref: "/meta/businesses",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixDetails",
       lastCheckedAt: now,
       lastError: null,
@@ -154,7 +154,7 @@ export function buildMetaCenterStatusCards(input: {
         adStatus === "ok"
           ? "statusCards.adAccounts.ok"
           : "statusCards.adAccounts.warning",
-      fixHref: "/meta/ad-accounts",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixDetails",
       lastCheckedAt: now,
       lastError: null,
@@ -170,7 +170,7 @@ export function buildMetaCenterStatusCards(input: {
           : pagesStatus === "error"
           ? "statusCards.pages.error"
           : "statusCards.pages.warning",
-      fixHref: "/meta/pages",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixPages",
       lastCheckedAt: now,
       lastError: null,
@@ -184,7 +184,7 @@ export function buildMetaCenterStatusCards(input: {
         formsStatus === "ok"
           ? "statusCards.forms.ok"
           : "statusCards.forms.warning",
-      fixHref: "/meta/forms",
+      fixHref: "/connections/facebook",
       fixLabelKey: "statusCards.fixForms",
       lastCheckedAt: now,
       lastError: null,
@@ -200,7 +200,7 @@ export function buildMetaCenterStatusCards(input: {
           : webhookStatus === "error"
           ? "statusCards.webhook.error"
           : "statusCards.webhook.warning",
-      fixHref: "/meta/webhook",
+      fixHref: "/connections/webhook",
       fixLabelKey: "statusCards.fixWebhook",
       lastCheckedAt: input.lastWebhookAt?.toISOString() ?? null,
       lastError: null,
@@ -214,7 +214,7 @@ export function buildMetaCenterStatusCards(input: {
         telegramStatus === "ok"
           ? "statusCards.telegram.ok"
           : "statusCards.telegram.warning",
-      fixHref: "/meta/telegram",
+      fixHref: "/connections/telegram",
       fixLabelKey: "statusCards.fixTelegram",
       lastCheckedAt: now,
       lastError: input.telegramLastError,
@@ -230,7 +230,7 @@ export function buildMetaCenterStatusCards(input: {
           : workerStatus === "error"
           ? "statusCards.worker.error"
           : "statusCards.worker.warning",
-      fixHref: "/meta/health",
+      fixHref: "/health",
       fixLabelKey: "statusCards.fixDiagnostics",
       lastCheckedAt: now,
       lastError:

@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaCenterOverview } from "@/components/meta-center/meta-center-overview";
+import { redirect } from "next/navigation";
 
-export default function MetaCenterPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaCenterOverview />
-    </Suspense>
-  );
+export default async function MetaRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/dashboard`);
 }

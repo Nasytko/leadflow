@@ -293,7 +293,7 @@ export function SystemHealthCard({ data }: { data: SystemHealthData }) {
         ))}
         {!data.overallOk && (
           <Button size="sm" variant="outline" className="mt-2" asChild>
-            <Link href="/meta/health">{t("systemHealthFix")}</Link>
+            <Link href="/health">{t("systemHealthFix")}</Link>
           </Button>
         )}
       </CardContent>
@@ -347,7 +347,7 @@ export function MatchRateCard({ data }: { data: LeadSyncData }) {
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {t("matchRateWarning")}
             <Button size="sm" variant="outline" className="ml-auto" asChild>
-              <Link href="/meta/webhook">{t("actionCheckWebhook")}</Link>
+              <Link href="/connections/webhook">{t("actionCheckWebhook")}</Link>
             </Button>
           </div>
         )}

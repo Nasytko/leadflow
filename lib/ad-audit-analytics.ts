@@ -190,7 +190,7 @@ export function buildAdAuditRecommendations(
         currency: ctx.currency,
       },
       actionLabelKey: "actionViewCampaign",
-      actionHref: `/meta/audit?campaign=${best.metaCampaignId}`,
+      actionHref: `/analytics?campaign=${best.metaCampaignId}`,
     });
   }
 
@@ -210,7 +210,7 @@ export function buildAdAuditRecommendations(
         currency: ctx.currency,
       },
       actionLabelKey: "actionViewAd",
-      actionHref: `/meta/audit?ad=${worstAd.metaAdId}`,
+      actionHref: `/analytics?ad=${worstAd.metaAdId}`,
     });
   }
 
@@ -221,7 +221,7 @@ export function buildAdAuditRecommendations(
       category: "creative",
       messageKey: "recLowCtr",
       actionLabelKey: "actionOpenAds",
-      actionHref: "/meta/audit#ads",
+      actionHref: "/analytics#ads",
     });
   }
 
@@ -240,7 +240,7 @@ export function buildAdAuditRecommendations(
         meta: ctx.summary.metaLeads,
       },
       actionLabelKey: "actionCheckWebhook",
-      actionHref: "/meta/webhook",
+      actionHref: "/connections/webhook",
     });
   }
 
@@ -255,7 +255,7 @@ export function buildAdAuditRecommendations(
       category: "leads",
       messageKey: "recNoActivity",
       actionLabelKey: "actionOpenConnect",
-      actionHref: "/meta/connect",
+      actionHref: "/connections/facebook",
     });
   } else if (ctx.summary.metaLeads === 0 && ctx.summary.leadBridgeLeads === 0) {
     items.push({
@@ -264,7 +264,7 @@ export function buildAdAuditRecommendations(
       category: "leads",
       messageKey: "recNoLeadsPeriod",
       actionLabelKey: "actionOpenForms",
-      actionHref: "/meta/forms",
+      actionHref: "/connections/facebook",
     });
   }
 
@@ -275,7 +275,7 @@ export function buildAdAuditRecommendations(
       category: "webhook",
       messageKey: "recWebhookIssue",
       actionLabelKey: "actionCheckWebhook",
-      actionHref: "/meta/webhook",
+      actionHref: "/connections/webhook",
     });
   }
 
@@ -286,7 +286,7 @@ export function buildAdAuditRecommendations(
       category: "telegram",
       messageKey: "recTelegramIssue",
       actionLabelKey: "actionOpenTelegram",
-      actionHref: "/meta/telegram",
+      actionHref: "/connections/telegram",
     });
   }
 
@@ -297,7 +297,7 @@ export function buildAdAuditRecommendations(
       category: "forms",
       messageKey: "recFormsDisabled",
       actionLabelKey: "actionOpenForms",
-      actionHref: "/meta/forms",
+      actionHref: "/connections/facebook",
     });
   }
 

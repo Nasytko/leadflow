@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaAdAccountsPageSection } from "@/components/meta-center/sections/meta-ad-accounts-section";
+import { redirect } from "next/navigation";
 
-export default function MetaAdAccountsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaAdAccountsPageSection />
-    </Suspense>
-  );
+export default async function MetaAdAccountsRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/connections/facebook`);
 }

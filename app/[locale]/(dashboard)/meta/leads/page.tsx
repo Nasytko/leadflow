@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaLeadsSection } from "@/components/meta-center/sections/meta-leads-section";
+import { redirect } from "next/navigation";
 
-export default function MetaLeadsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaLeadsSection />
-    </Suspense>
-  );
+export default async function MetaLeadsRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/leads`);
 }

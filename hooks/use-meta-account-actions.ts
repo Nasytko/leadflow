@@ -128,11 +128,11 @@ export function useMetaAccountActions(onComplete?: () => void | Promise<void>) {
   );
 
   const viewConnectionLogs = useCallback(() => {
-    router.push("/logs");
+    router.push("/activity");
   }, [router]);
 
   const sendTestLead = useCallback(() => {
-    router.push("/meta/webhook");
+    router.push("/connections/webhook");
   }, [router]);
 
   return { loadingAction, run, viewConnectionLogs, sendTestLead };

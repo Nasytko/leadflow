@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaHealthCenter } from "@/components/meta-center/meta-health-center";
+import { redirect } from "next/navigation";
 
-export default function MetaHealthPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaHealthCenter />
-    </Suspense>
-  );
+export default async function MetaHealthRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/health`);
 }

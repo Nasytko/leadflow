@@ -1,6 +1,6 @@
 "use client";
 
-import { MetaHelpTip } from "@/components/meta-center/meta-help-tip";
+import { ConnectionHelpTip } from "@/components/features/shared/connection-help-tip";
 
 export function ConnectionPageShell({
   title,
@@ -9,21 +9,19 @@ export function ConnectionPageShell({
   children,
 }: {
   title: string;
-  description?: string;
+  description: string;
   helpKey?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-[1200px] space-y-10">
-      <div className="space-y-2">
+    <div className="mx-auto max-w-5xl space-y-8 pb-8">
+      <header className="space-y-2">
         <div className="flex items-center gap-2">
           <h1 className="type-display">{title}</h1>
-          {helpKey && <MetaHelpTip tipKey={helpKey} />}
+          {helpKey ? <ConnectionHelpTip tipKey={helpKey} /> : null}
         </div>
-        {description && (
-          <p className="type-body text-muted-foreground max-w-2xl">{description}</p>
-        )}
-      </div>
+        <p className="type-body text-muted-foreground max-w-2xl">{description}</p>
+      </header>
       {children}
     </div>
   );

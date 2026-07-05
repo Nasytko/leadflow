@@ -139,7 +139,7 @@ export function LogsContent() {
                 className="py-8"
               >
                 <Button variant="outline" asChild className="min-h-11">
-                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                  <Link href="/connections/webhook">{t("noLogsCtaWebhook")}</Link>
                 </Button>
               </EmptyState>
             ) : (
@@ -167,7 +167,7 @@ export function LogsContent() {
                 className="py-8"
               >
                 <Button variant="outline" asChild className="min-h-11">
-                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                  <Link href="/connections/webhook">{t("noLogsCtaWebhook")}</Link>
                 </Button>
               </EmptyState>
             ) : (
@@ -223,10 +223,10 @@ export function LogsContent() {
             <EmptyState icon={ScrollText} title={t("noLogs")} description={t("noLogsDesc")}>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
                 <Button asChild className="min-h-11">
-                  <Link href="/meta/connect">{t("noLogsCtaConnect")}</Link>
+                  <Link href="/connections/facebook">{t("noLogsCtaConnect")}</Link>
                 </Button>
                 <Button variant="outline" asChild className="min-h-11">
-                  <Link href="/meta/webhook">{t("noLogsCtaWebhook")}</Link>
+                  <Link href="/connections/webhook">{t("noLogsCtaWebhook")}</Link>
                 </Button>
               </div>
             </EmptyState>

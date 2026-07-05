@@ -42,53 +42,40 @@ const navStructure: Array<{ labelKey: string; items: NavItem[] }> = [
     labelKey: "groupData",
     items: [
       { href: "/leads", key: "leads", icon: Users },
-      { href: "/logs", key: "activity", icon: ScrollText },
-      { href: "/meta/audit", key: "analytics", icon: BarChart3 },
+      { href: "/activity", key: "activity", icon: ScrollText },
+      { href: "/analytics", key: "analytics", icon: BarChart3 },
     ],
   },
   {
     labelKey: "groupWorkspace",
     items: [
       { href: "/settings", key: "settings", icon: Settings },
-      { href: "/meta/health", key: "health", icon: Activity },
+      { href: "/health", key: "health", icon: Activity },
     ],
   },
 ];
 
 function isPathActive(pathname: string, href: string, key: string) {
   if (key === "facebook") {
-    return (
-      pathname.startsWith("/connections/facebook") ||
-      pathname.startsWith("/meta/connect") ||
-      pathname.startsWith("/meta/businesses") ||
-      pathname.startsWith("/meta/pages") ||
-      pathname.startsWith("/meta/forms") ||
-      pathname === "/meta"
-    );
+    return pathname.startsWith("/connections/facebook");
   }
   if (key === "telegram") {
-    return (
-      pathname.startsWith("/connections/telegram") ||
-      pathname.startsWith("/meta/telegram")
-    );
+    return pathname.startsWith("/connections/telegram");
   }
   if (key === "webhookApi") {
-    return (
-      pathname.startsWith("/connections/webhook") ||
-      pathname.startsWith("/meta/webhook")
-    );
+    return pathname.startsWith("/connections/webhook");
   }
   if (key === "missionControl") {
     return pathname === "/dashboard";
   }
   if (key === "health") {
-    return pathname.startsWith("/meta/health") || pathname.startsWith("/facebook/health");
+    return pathname.startsWith("/health");
   }
   if (key === "analytics") {
-    return pathname.startsWith("/meta/audit") || pathname.startsWith("/ad-audit");
+    return pathname.startsWith("/analytics");
   }
   if (key === "activity") {
-    return pathname.startsWith("/logs");
+    return pathname.startsWith("/activity") || pathname.startsWith("/logs");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaTelegramMessagesSection } from "@/components/meta-center/sections/meta-telegram-messages-section";
+import { redirect } from "next/navigation";
 
-export default function MetaTelegramMessagesPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaTelegramMessagesSection />
-    </Suspense>
-  );
+export default async function MetaTelegramMessagesRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/connections/telegram`);
 }

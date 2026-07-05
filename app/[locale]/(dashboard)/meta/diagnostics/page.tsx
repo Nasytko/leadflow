@@ -6,5 +6,5 @@ export default async function MetaDiagnosticsRedirect({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/meta/health`);
+  redirect(`/${locale}/health`);
 }

@@ -201,6 +201,17 @@
     "webhookNotVerified": "Not verified",
     "webhookLastError": "Last webhook error",
     "gettingStarted": "Getting started",
+    "pipeline": {
+      "title": "Lead pipeline",
+      "source": "Source",
+      "processing": "Processing",
+      "delivery": "Delivery",
+      "statusOk": "Ready",
+      "statusNeedsAttention": "Needs attention"
+    },
+    "deliveredToday": "Delivered today",
+    "failedToday": "Failed deliveries",
+    "problemsTitle": "Needs attention",
     "step1": "Connect Facebook",
     "step2": "Select pages and forms",
     "step3": "Connect Telegram",
@@ -610,6 +621,7 @@
     "syncSuccess": "Synced {count} forms",
     "syncFailed": "Failed to sync forms",
     "importFailed": "Failed to import leads",
+    "importSessionExpired": "Session expired. Refresh the page and try again.",
     "importInProgress": "Importing leads…",
     "importNoLeads": "No new leads to import",
     "importDuplicatesOnly": "No new leads. Duplicates skipped: {duplicates}",
@@ -662,7 +674,64 @@
         "setupIncompleteDesc": "Some steps still need attention before leads flow automatically.",
         "continueSetup": "Continue setup",
         "syncSuccess": "Sync completed",
+        "syncSuccessWithCount": "Synced {count} items",
         "syncFailed": "Sync failed",
+        "actionCenterHint": "Use the Action Center above to sync.",
+        "errors": {
+          "sessionExpired": "Session expired. Refresh the page and try again.",
+          "tokenInvalid": "Facebook token is invalid. Reconnect your account.",
+          "rateLimit": "Meta rate limit reached. Try again in a few minutes.",
+          "network": "Network error while syncing. Check your connection and retry.",
+          "permission": "Missing Meta permissions. Reconnect Facebook and approve access."
+        },
+        "nextSteps": {
+          "title": "Next steps",
+          "allSet": "All set. ORVIX is ready to receive leads.",
+          "steps": {
+            "connect": "Connect Facebook account",
+            "syncPages": "Sync Facebook Pages",
+            "syncForms": "Sync Lead Forms",
+            "enableForms": "Enable at least one Lead Form",
+            "verifyWebhook": "Verify webhook subscription",
+            "connectTelegram": "Connect Telegram to receive lead notifications",
+            "importLeads": "Import existing leads from enabled forms"
+          }
+        },
+        "actions": {
+          "title": "Action center",
+          "subtitle": "Run sync and import actions from one place.",
+          "primary": "Primary actions",
+          "secondary": "More actions",
+          "danger": "Danger zone",
+          "refresh": "Refresh connection",
+          "syncPages": "Sync pages",
+          "syncForms": "Sync forms",
+          "importLeads": "Import existing leads",
+          "syncAdAccounts": "Sync ad accounts",
+          "testLead": "Send test lead",
+          "viewActivity": "View activity",
+          "reconnect": "Reconnect account",
+          "disconnect": "Disconnect account",
+          "disconnectConfirm": "Confirm disconnect",
+          "cancel": "Cancel",
+          "disabled": {
+            "notConnected": "Connect Facebook first.",
+            "noFormsSynced": "Sync lead forms first.",
+            "noEnabledForms": "Enable at least one lead form first.",
+            "syncPagesFirst": "Sync Facebook Pages before syncing forms."
+          }
+        },
+        "import": {
+          "title": "Import existing leads",
+          "description": "Download historical leads from enabled Facebook Lead Forms. New leads require an active webhook.",
+          "enabledForms": "Enabled forms",
+          "totalForms": "Total forms",
+          "importButton": "Import leads",
+          "noEnabledFormsWarning": "No forms are enabled for ORVIX. Enable forms below before importing.",
+          "syncFormsFirst": "No lead forms synced yet. Sync forms first.",
+          "telegramNotConnected": "Telegram is not connected.",
+          "connectTelegram": "Connect Telegram"
+        },
         "account": {
           "unknownUser": "Facebook user",
           "userId": "Facebook User ID",
@@ -747,6 +816,14 @@
           "statusActive": "Active",
           "statusInactive": "Disabled",
           "statusArchived": "Archived",
+          "statusActiveMeta": "Active",
+          "deliveryEnabled": "Enabled for ORVIX",
+          "deliveryDisabled": "Disabled",
+          "formEnabled": "Form enabled",
+          "formDisabled": "Form disabled",
+          "viewLeads": "View leads",
+          "importFromForm": "Import from this form",
+          "importFromFormSoon": "Per-form import coming later. Use Import existing leads below.",
           "created": "Created",
           "leadsCollected": "Leads collected",
           "lastLead": "Last lead",
@@ -795,6 +872,40 @@
       "saveBeforeTest": "Save bot token and chat ID before sending a test.",
       "completeDesc": "Telegram notifications are ready. You will receive alerts for new leads.",
       "goMissionControl": "Go to Mission Control",
+      "overview": {
+        "health": {
+          "title": "Telegram Health",
+          "status_healthy": "Healthy",
+          "status_attention": "Needs attention",
+          "status_critical": "Critical",
+          "checks": {
+            "notConnected": "Telegram is not connected",
+            "connected": "Bot connected",
+            "error": "Connection error",
+            "noChatId": "Chat ID not configured",
+            "chatConfigured": "Chat ID configured",
+            "notVerified": "Test message not verified",
+            "verified": "Test message verified",
+            "deliveryError": "Recent delivery error"
+          }
+        },
+        "delivery": {
+          "title": "Delivery status",
+          "verified": "Test verified",
+          "lastChecked": "Last checked",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "activity": {
+          "title": "Recent activity",
+          "description": "Delivery attempts and webhook events",
+          "viewActivity": "View activity"
+        },
+        "templates": {
+          "title": "Message templates",
+          "description": "Customize how leads appear in Telegram"
+        }
+      },
       "steps": {
         "botfather": "Create bot in BotFather",
         "token": "Add bot token",

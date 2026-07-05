@@ -202,6 +202,17 @@
     "webhookNotVerified": "Не подтверждён",
     "webhookLastError": "Последняя ошибка webhook",
     "gettingStarted": "Начало работы",
+    "pipeline": {
+      "title": "Pipeline лидов",
+      "source": "Источник",
+      "processing": "Обработка",
+      "delivery": "Доставка",
+      "statusOk": "Готово",
+      "statusNeedsAttention": "Нужно внимание"
+    },
+    "deliveredToday": "Доставлено сегодня",
+    "failedToday": "Ошибки доставки",
+    "problemsTitle": "Требует внимания",
     "step1": "Подключите Facebook",
     "step2": "Выберите страницы и формы",
     "step3": "Подключите Telegram",
@@ -598,6 +609,7 @@
     "syncSuccess": "Синхронизировано форм: {count}",
     "syncFailed": "Не удалось синхронизировать формы",
     "importFailed": "Не удалось импортировать лиды",
+    "importSessionExpired": "Сессия истекла. Обновите страницу и повторите попытку.",
     "importInProgress": "Импортируем лиды…",
     "importNoLeads": "Новых лидов для импорта не найдено",
     "importDuplicatesOnly": "Новых лидов нет. Дубликатов пропущено: {duplicates}",
@@ -650,7 +662,64 @@
         "setupIncompleteDesc": "Ещё есть шаги, которые нужно выполнить для автоматического приёма лидов.",
         "continueSetup": "Продолжить настройку",
         "syncSuccess": "Синхронизация завершена",
+        "syncSuccessWithCount": "Синхронизировано: {count}",
         "syncFailed": "Ошибка синхронизации",
+        "actionCenterHint": "Используйте Action Center выше для синхронизации.",
+        "errors": {
+          "sessionExpired": "Сессия истекла. Обновите страницу и повторите попытку.",
+          "tokenInvalid": "Токен Facebook недействителен. Переподключите аккаунт.",
+          "rateLimit": "Достигнут лимит Meta. Повторите через несколько минут.",
+          "network": "Сетевая ошибка при синхронизации. Проверьте соединение и повторите.",
+          "permission": "Недостаточно прав Meta. Переподключите Facebook и подтвердите доступ."
+        },
+        "nextSteps": {
+          "title": "Следующие шаги",
+          "allSet": "Всё готово. ORVIX принимает лиды.",
+          "steps": {
+            "connect": "Подключить Facebook-аккаунт",
+            "syncPages": "Синхронизировать Facebook-страницы",
+            "syncForms": "Синхронизировать формы лидов",
+            "enableForms": "Включить хотя бы одну форму лидов",
+            "verifyWebhook": "Подтвердить подписку webhook",
+            "connectTelegram": "Подключить Telegram для уведомлений о лидах",
+            "importLeads": "Импортировать существующие лиды из включённых форм"
+          }
+        },
+        "actions": {
+          "title": "Центр действий",
+          "subtitle": "Синхронизация и импорт в одном месте.",
+          "primary": "Основные действия",
+          "secondary": "Дополнительно",
+          "danger": "Опасная зона",
+          "refresh": "Обновить подключение",
+          "syncPages": "Синхронизировать страницы",
+          "syncForms": "Синхронизировать формы",
+          "importLeads": "Импортировать лиды",
+          "syncAdAccounts": "Синхронизировать кабинеты",
+          "testLead": "Отправить тестовый лид",
+          "viewActivity": "Активность",
+          "reconnect": "Переподключить",
+          "disconnect": "Отключить аккаунт",
+          "disconnectConfirm": "Подтвердить отключение",
+          "cancel": "Отмена",
+          "disabled": {
+            "notConnected": "Сначала подключите Facebook.",
+            "noFormsSynced": "Сначала синхронизируйте формы лидов.",
+            "noEnabledForms": "Сначала включите хотя бы одну форму.",
+            "syncPagesFirst": "Сначала синхронизируйте Facebook-страницы."
+          }
+        },
+        "import": {
+          "title": "Импортировать существующие лиды",
+          "description": "Загрузите старые лиды из включённых Facebook Lead Forms. Для новых лидов нужен активный webhook.",
+          "enabledForms": "Включённых форм",
+          "totalForms": "Всего форм",
+          "importButton": "Импортировать лиды",
+          "noEnabledFormsWarning": "Нет форм, включённых для ORVIX. Включите формы ниже перед импортом.",
+          "syncFormsFirst": "Формы лидов ещё не синхронизированы. Сначала синхронизируйте формы.",
+          "telegramNotConnected": "Telegram не подключён.",
+          "connectTelegram": "Подключить Telegram"
+        },
         "account": {
           "unknownUser": "Пользователь Facebook",
           "userId": "Facebook User ID",
@@ -735,6 +804,14 @@
           "statusActive": "Активна",
           "statusInactive": "Выключена",
           "statusArchived": "Архив",
+          "statusActiveMeta": "Активна",
+          "deliveryEnabled": "Включена для ORVIX",
+          "deliveryDisabled": "Выключена",
+          "formEnabled": "Форма включена",
+          "formDisabled": "Форма выключена",
+          "viewLeads": "К лидам",
+          "importFromForm": "Импорт из формы",
+          "importFromFormSoon": "Импорт по одной форме — позже. Используйте блок «Импортировать существующие лиды» ниже.",
           "created": "Создана",
           "leadsCollected": "Лидов получено",
           "lastLead": "Последний лид",
@@ -783,6 +860,40 @@
       "saveBeforeTest": "Сохраните токен и chat ID перед отправкой теста.",
       "completeDesc": "Уведомления Telegram готовы. Вы будете получать алерты о новых лидах.",
       "goMissionControl": "Перейти в Mission Control",
+      "overview": {
+        "health": {
+          "title": "Здоровье Telegram",
+          "status_healthy": "В норме",
+          "status_attention": "Нужно внимание",
+          "status_critical": "Критично",
+          "checks": {
+            "notConnected": "Telegram не подключён",
+            "connected": "Бот подключён",
+            "error": "Ошибка подключения",
+            "noChatId": "Chat ID не настроен",
+            "chatConfigured": "Chat ID настроен",
+            "notVerified": "Тест не подтверждён",
+            "verified": "Тест подтверждён",
+            "deliveryError": "Недавняя ошибка доставки"
+          }
+        },
+        "delivery": {
+          "title": "Статус доставки",
+          "verified": "Тест подтверждён",
+          "lastChecked": "Последняя проверка",
+          "yes": "Да",
+          "no": "Нет"
+        },
+        "activity": {
+          "title": "Недавняя активность",
+          "description": "Попытки доставки и события webhook",
+          "viewActivity": "Открыть Activity"
+        },
+        "templates": {
+          "title": "Шаблоны сообщений",
+          "description": "Настройте, как лиды выглядят в Telegram"
+        }
+      },
       "steps": {
         "botfather": "Создать бота в BotFather",
         "token": "Добавить токен бота",

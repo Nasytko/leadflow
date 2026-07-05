@@ -167,7 +167,7 @@ function buildInlineButtons(
     btns.push({
       id: "openAudit",
       label: ru ? "📊 Открыть аудит" : "📊 Open audit",
-      url: "/meta/audit",
+      url: "/analytics",
     });
   }
   return btns;

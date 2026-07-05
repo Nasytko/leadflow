@@ -203,7 +203,7 @@ export function AdminPlatformMetaSettings() {
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href="/meta/health">{t("checkOAuth")}</Link>
+                <Link href="/health">{t("checkOAuth")}</Link>
               </Button>
               {!data.legacyDbOverridesInSaas && data.saasMode && (
                 <Button variant="outline" size="sm" onClick={() => void cleanupLegacy()} disabled={cleaning}>

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { DashboardStats } from "@/types";
 import { DashboardLineChart, DashboardDonutChart } from "@/components/dashboard/dashboard-charts";
+import { DashboardLeadPipeline } from "@/components/dashboard/dashboard-lead-pipeline";
 import { DashboardActiveFlows } from "@/components/dashboard/dashboard-active-flows";
 import { DashboardSystemHealth } from "@/components/dashboard/dashboard-system-health";
 import { formatTimeAgo } from "@/lib/utils";
@@ -187,6 +188,14 @@ export function DashboardContent() {
         </section>
       )}
 
+      {stats && (
+        <DashboardLeadPipeline
+          sourceOk={stats.healthCards?.find((c) => c.id === "facebook")?.status === "ok"}
+          processingOk={stats.healthCards?.find((c) => c.id === "webhook")?.status === "ok"}
+          deliveryOk={stats.healthCards?.find((c) => c.id === "telegram")?.status === "ok"}
+        />
+      )}
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           minimal
@@ -283,7 +292,7 @@ export function DashboardContent() {
             description={t("campaignsTableDesc")}
             action={
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/meta/audit">
+                <Link href="/analytics">
                   {t("viewAll")}
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>

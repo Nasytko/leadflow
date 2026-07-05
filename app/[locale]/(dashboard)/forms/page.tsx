@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
-export default async function FormsRedirectPage({
+export default async function FormsRedirect({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect(`/${locale}/meta/forms`);
+  redirect(`/${locale}/connections/facebook`);
 }

@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
-import { MetaAuditSection } from "@/components/meta-center/sections/meta-audit-section";
+import { redirect } from "next/navigation";
 
-export default function MetaAuditPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <MetaAuditSection />
-    </Suspense>
-  );
+export default async function MetaAuditRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/analytics`);
 }

@@ -345,10 +345,10 @@ export function LeadsContent({ embedded = false }: { embedded?: boolean }) {
             <EmptyState icon={Users} title={t("noLeads")} description={t("noLeadsDesc")}>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
                 <Button asChild className="min-h-11">
-                  <Link href="/meta/connect">{t("noLeadsCtaConnect")}</Link>
+                  <Link href="/connections/facebook">{t("noLeadsCtaConnect")}</Link>
                 </Button>
                 <Button variant="outline" asChild className="min-h-11">
-                  <Link href="/meta/webhook">{t("noLeadsCtaTest")}</Link>
+                  <Link href="/connections/webhook">{t("noLeadsCtaTest")}</Link>
                 </Button>
               </div>
             </EmptyState>
