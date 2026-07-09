@@ -36,6 +36,7 @@ import {
 import { useTelegramActions, type TelegramConnectionStatus } from "@/hooks/use-telegram-actions";
 import { TelegramIntelligenceDashboard } from "@/components/features/telegram/telegram-intelligence-dashboard";
 import { useLocale } from "next-intl";
+import { TelegramHealthDiagnostics } from "@/components/features/telegram/telegram-health-diagnostics";
 
 type TelegramStatus = TelegramConnectionStatus;
 
@@ -251,6 +252,7 @@ export function TelegramSetupFlow() {
                     )}
                   </div>
                 )}
+                <TelegramHealthDiagnostics lastError={connStatus?.lastError} />
                 <Button
                   className="min-h-11"
                   disabled={testing || connStatus?.status !== "connected"}

@@ -11,7 +11,7 @@ type Props = {
 
 export function FacebookAccountOverview({ connection }: Props) {
   const t = useTranslations("connections.facebook.overview.account");
-  const tCard = useTranslations("metaCenter.accountCard");
+  const tCard = useTranslations("connections.facebook.accountCard");
   const locale = useLocale();
 
   const initials =

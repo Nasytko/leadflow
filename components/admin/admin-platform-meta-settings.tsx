@@ -36,7 +36,7 @@ type PlatformMeta = {
 };
 
 export function AdminPlatformMetaSettings() {
-  const t = useTranslations("metaCenter.adminPlatform");
+  const t = useTranslations("admin.platformMeta");
   const [data, setData] = useState<PlatformMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [cleaning, setCleaning] = useState(false);

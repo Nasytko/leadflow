@@ -10,7 +10,7 @@ import { HelpCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export function ConnectionHelpTip({ tipKey }: { tipKey: string }) {
-  const t = useTranslations("metaCenter.help");
+  const t = useTranslations("connections.shared.help");
   return (
     <TooltipProvider>
       <Tooltip>

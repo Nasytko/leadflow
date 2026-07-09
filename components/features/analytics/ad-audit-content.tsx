@@ -27,8 +27,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AdAuditMiniChart } from "@/components/meta/ad-audit-mini-chart";
-import { AdAuditDetailSheet } from "@/components/meta/ad-audit-detail-sheet";
+import { AdAuditMiniChart } from "@/components/features/analytics/ad-audit-mini-chart";
+import { AdAuditDetailSheet } from "@/components/features/analytics/ad-audit-detail-sheet";
 import {
   MarketingScoreCard,
   MainInsightCard,
@@ -37,7 +37,7 @@ import {
   MatchRateCard,
   ActivityCard,
   HealthHistoryCard,
-} from "@/components/meta/ad-audit-polish";
+} from "@/components/features/analytics/ad-audit-polish";
 import { apiFetch } from "@/lib/client-api";
 import { formatPeriodRangeLabel } from "@/lib/ad-audit-periods";
 import { kpiVariantForMetric } from "@/lib/ad-audit-analytics";
@@ -414,9 +414,9 @@ export function AdAuditContent({ embedded = false }: { embedded?: boolean }) {
               variant={kpiVariantForMetric("leads", audit.summary.metaLeads, audit.comparison.metaLeads)}
             />
             <KpiCard
-              label={t("kpiLeadBridgeLeads")}
+              label={t("kpiORVIXLeads")}
               value={String(audit.summary.leadBridgeLeads)}
-              sublabel={t("kpiLeadBridgeHint")}
+              sublabel={t("kpiORVIXHint")}
               variant={audit.summary.leadBridgeLeads > 0 ? "success" : "default"}
             />
             <KpiCard

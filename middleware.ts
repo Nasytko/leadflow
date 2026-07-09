@@ -8,13 +8,20 @@ const intlMiddleware = createMiddleware(routing);
 const protectedPaths = [
   "/dashboard",
   "/admin",
-  "/facebook",
-  "/forms",
-  "/telegram",
+  "/connections",
   "/leads",
-  "/logs",
-  "/wiki",
+  "/activity",
+  "/analytics",
+  "/health",
   "/settings",
+  "/wiki",
+  // Legacy aliases (redirect via next.config — still require auth)
+  "/meta",
+  "/facebook",
+  "/telegram",
+  "/forms",
+  "/logs",
+  "/ad-audit",
 ];
 
 export default async function middleware(request: NextRequest) {

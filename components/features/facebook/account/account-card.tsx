@@ -105,7 +105,7 @@ export function MetaAccountCard({
   loading?: boolean;
   onRefresh?: () => void | Promise<void>;
 }) {
-  const t = useTranslations("metaCenter.accountCard");
+  const t = useTranslations("connections.facebook.accountCard");
   const locale = useLocale();
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);

@@ -23,7 +23,7 @@ function syncCount(resource: FacebookSyncResource, data: Record<string, unknown>
 
 export function useFacebookSyncActions(onComplete?: () => void | Promise<void>) {
   const tOverview = useTranslations("connections.facebook.overview");
-  const tAccount = useTranslations("metaCenter.accountCard");
+  const tAccount = useTranslations("connections.facebook.accountCard");
   const tFb = useTranslations("facebook");
   const [syncing, setSyncing] = useState<FacebookSyncResource | null>(null);
 

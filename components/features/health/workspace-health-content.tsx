@@ -147,7 +147,7 @@ function SectionCard({
 }
 
 export function WorkspaceHealthContent() {
-  const t = useTranslations("metaCenter");
+  const t = useTranslations("workspaceHealth");
   const locale = useLocale();
   const { data: session } = useSession();
   const [report, setReport] = useState<MetaHealthReport | null>(null);

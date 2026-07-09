@@ -67,7 +67,7 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-LeadBridge <no-reply@leadbridge.app>}
+      SMTP_FROM: ${SMTP_FROM:-ORVIX <no-reply@orvix.app>}
       NODE_ENV: production
     depends_on:
       postgres:

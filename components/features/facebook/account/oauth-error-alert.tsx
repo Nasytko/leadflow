@@ -41,7 +41,7 @@ export function FacebookOAuthErrorAlert({
   diagnosticsLoading?: boolean;
   className?: string;
 }) {
-  const tMeta = useTranslations("metaCenter");
+  const tMeta = useTranslations("connections.facebook.oauthErrors");
   const tFb = useTranslations("facebook");
   const locale = useLocale();
   const { data: session } = useSession();
@@ -52,7 +52,7 @@ export function FacebookOAuthErrorAlert({
   const title = getMetaUserErrorMessage(
     reason,
     isAdmin,
-    (key) => tMeta(key as "errors.invalid_app_secret.user"),
+    (key) => tMeta(key as "invalid_app_secret.user"),
     error.safeMessage
   );
 

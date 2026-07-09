@@ -19,7 +19,7 @@ async function fetchWithTimeout(url: string, init?: RequestInit, ms = 20000) {
 export type MetaAccountAction = "refresh" | "reconnect" | "disconnect" | "syncPages" | "syncForms";
 
 export function useMetaAccountActions(onComplete?: () => void | Promise<void>) {
-  const t = useTranslations("metaCenter.accountCard");
+  const t = useTranslations("connections.facebook.accountCard");
   const tFb = useTranslations("facebook");
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<MetaAccountAction | null>(null);

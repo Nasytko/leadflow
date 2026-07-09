@@ -21,6 +21,7 @@
     "meta:credentials-check": "tsx scripts/meta-credentials-self-check.ts",
     "production:readiness-check": "tsx scripts/production-readiness-check.ts",
     "test": "tsx --test tests/**/*.test.ts",
+    "unused": "tsx scripts/unused-check.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -67,10 +68,12 @@
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
+    "depcheck": "^1.4.7",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",
     "prisma": "6.9.0",
     "tailwindcss": "^4.1.8",
+    "ts-prune": "^0.10.3",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   },

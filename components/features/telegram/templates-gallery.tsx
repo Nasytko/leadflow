@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TelegramMessagePreview } from "@/components/telegram/telegram-message-preview";
+import { TelegramMessagePreview } from "@/components/features/telegram/telegram-message-preview";
 import { TELEGRAM_MESSAGE_TEMPLATES } from "@/lib/telegram-message-templates";
 import {
   DEFAULT_TELEGRAM_TEMPLATE_SETTINGS,

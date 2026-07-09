@@ -12,6 +12,8 @@ import { FacebookBusinessesSection } from "@/components/features/facebook/busine
 import { FacebookPagesSection } from "@/components/features/facebook/pages/pages-setup-section";
 import { FacebookTestLeadCard } from "@/components/features/facebook/health/test-lead-card";
 import { FacebookWebhookDiagnostics } from "@/components/features/facebook/health/webhook-diagnostics";
+import { WebhookSetupWizard } from "@/components/features/facebook/webhook/webhook-setup-wizard";
+import { FacebookTestLeadExperience } from "@/components/features/facebook/testing/test-lead-experience";
 import { FacebookFormsSetupPanel } from "@/components/features/facebook/forms/forms-setup-panel";
 import { FacebookIntelligenceDashboard } from "@/components/features/facebook/intelligence-dashboard";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -286,7 +288,9 @@ export function FacebookSetupFlow() {
             {activeStepId === "webhook" && (
               <div className="space-y-6">
                 <p className="type-body text-muted-foreground">{t("stepsDesc.webhook")}</p>
+                <WebhookSetupWizard />
                 <FacebookTestLeadCard />
+                <FacebookTestLeadExperience />
                 <FacebookWebhookDiagnostics />
               </div>
             )}

@@ -5,10 +5,19 @@ import { buildWizardSteps } from "@/lib/facebook-diagnosis";
 import { buildDashboardHealthCards } from "@/lib/dashboard-health";
 import {
   getLeadsByDay,
+  getLeadsChartSeries,
   getLeadSources,
   getCampaignSummary,
   getRecentEvents,
   getLeadTrends,
+  getTodaySourceBreakdown,
+  getDeliveredToday,
+  getTodayDeliveryRate,
+  getAvgProcessingTimeMs,
+  getFormOverview,
+  getTelegramTodayStats,
+  computeAttentionCount,
+  type PipelineNode,
 } from "@/lib/dashboard-analytics";
 import { checkRateLimit } from "@/lib/api-helpers";
 
@@ -179,14 +188,71 @@ export async function GET(request: Request) {
     queuedWebhooks,
   });
 
-  const [leadsByDay, leadSources, campaignSummary, recentEvents, trends] =
+  const [leadsByDay, leadsChartSeries, leadSources, campaignSummary, recentEvents, trends, todayBreakdown, deliveredToday, deliveryRateToday, avgProcessingMs, formsOverview, telegramToday] =
     await Promise.all([
       getLeadsByDay(userId, 30),
+      getLeadsChartSeries(userId, 30),
       getLeadSources(userId),
       getCampaignSummary(userId),
-      getRecentEvents(userId, 8),
+      getRecentEvents(userId, 10),
       getLeadTrends(userId),
+      getTodaySourceBreakdown(userId, startOfDay),
+      getDeliveredToday(userId, startOfDay),
+      getTodayDeliveryRate(userId, startOfDay),
+      getAvgProcessingTimeMs(userId, startOfDay),
+      getFormOverview(userId, startOfDay),
+      getTelegramTodayStats(userId, startOfDay),
     ]);
+
+  const attentionCount = computeAttentionCount({
+    failedDeliveriesToday,
+    failedWebhookEvents,
+    failedFormsSync,
+    facebookStatus,
+    webhookVerified: !!lastSuccessVerification,
+    telegramStatus,
+    activeForms,
+  });
+
+  const sourceHealth = healthCards.find((c) => c.id === "facebook")?.status ?? "unknown";
+  const processingHealth = healthCards.find((c) => c.id === "webhook")?.status ?? "unknown";
+  const deliveryHealth = healthCards.find((c) => c.id === "telegram")?.status ?? "unknown";
+
+  const pipelineNodes: PipelineNode[] = [
+    {
+      id: "source",
+      status: sourceHealth,
+      healthLabelKey: "pipelineNodeSource",
+      todayCount: leadsToday,
+      manageHref: "/connections/facebook",
+      fixHref: facebookStatus !== "connected" ? "/connections/facebook" : null,
+    },
+    {
+      id: "processing",
+      status: processingHealth,
+      healthLabelKey: "pipelineNodeProcessing",
+      todayCount: deliveryLogsToday,
+      manageHref: "/connections/webhook",
+      fixHref: !lastSuccessVerification && activeForms > 0 ? "/connections/webhook" : null,
+    },
+    {
+      id: "delivery",
+      status: deliveryHealth,
+      healthLabelKey: "pipelineNodeDelivery",
+      todayCount: deliveredToday,
+      manageHref: "/connections/telegram",
+      fixHref: telegramStatus !== "connected" && activeForms > 0 ? "/connections/telegram" : null,
+    },
+  ];
+
+  const activationSteps = {
+    facebook: setupSteps.facebookAccount,
+    forms: setupSteps.formsEnabled,
+    telegram: setupSteps.telegram,
+    testLead: setupSteps.testLead || totalLeads > 0,
+  };
+  const activationCompleted = Object.values(activationSteps).filter(Boolean).length;
+  const activationMode = totalLeads === 0 && activationCompleted < 4;
 
   return apiSuccess({
     facebookConnected: facebookStatus === "connected",
@@ -228,5 +294,18 @@ export async function GET(request: Request) {
     todayTrend: trends.todayTrend,
     weekTrend: trends.weekTrend,
     monthTrend: trends.monthTrend,
+    todayBreakdown,
+    deliveredToday,
+    deliveryRateToday,
+    avgProcessingMs,
+    attentionCount,
+    leadsChartSeries,
+    formsOverview,
+    telegramToday,
+    pipelineNodes,
+    activationMode,
+    activationSteps,
+    activationCompleted,
+    activationTotal: 4,
   });
 }
